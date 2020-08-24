@@ -1,14 +1,7 @@
 import cv2, time, sys, glob, os
-import matplotlib
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import numpy
-import scipy
-import scipy.signal
 import scipy.cluster.hierarchy as hier
 import scipy.spatial.distance as dist
-import datetime
-from scipy.interpolate import interp1d
 import collections
 
 # process and plot related parameters:
@@ -21,11 +14,13 @@ HAAR_CASCADE_PATH_PROFILE = "haarcascade_frontalface_default.xml"
 # flow-related parameters:
 lk_params = dict( winSize  = (15, 15), 
                   maxLevel = 5, 
-                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
+                              10, 0.03))
 feature_params = dict( maxCorners = 500,
                        qualityLevel = 0.3,
                        minDistance = 3,
                        blockSize = 5 )
+
 
 def angleDiff(angle1, angle2):
     # angles (in degs) difference
@@ -33,6 +28,7 @@ def angleDiff(angle1, angle2):
     if numpy.abs(Diff) > 180:
         Diff = 360 - Diff
     return Diff
+
 
 def anglesSTD(angles, MEAN):
     # computes the standard deviation between a set of angles
@@ -43,8 +39,10 @@ def anglesSTD(angles, MEAN):
     S = numpy.sqrt(S)
     return S
 
+
 def anglesCluster(angles):
-    # this function uses hierarchical clustering to find the clusters of a set of angle values
+    # this function uses hierarchical clustering to find the
+    # clusters of a set of angle values
     Dists = dist.pdist(angles, angleDiff)
     linkageMatrix = hier.linkage(Dists, metric = angleDiff)
     C = hier.fcluster(linkageMatrix, 5, 'maxclust')
@@ -52,7 +50,8 @@ def anglesCluster(angles):
     return C
     
 
-def drawArrow(image, p, q, color, arrowMagnitude = 5, thickness=1, line_type=8, shift=0):
+def drawArrow(image, p, q, color, arrowMagnitude = 5, thickness=1, line_type=8,
+              shift=0):
     # Draw the principle line
     cv2.line(image, tuple(p), tuple(q), color, thickness, line_type, shift);
     # compute the angle alpha
@@ -68,8 +67,8 @@ def drawArrow(image, p, q, color, arrowMagnitude = 5, thickness=1, line_type=8, 
 
     # Draw the second segment
     cv2.line(image, tuple(p), tuple(q), color, thickness, line_type, shift);
-#    cv2.putText(image, str(int(180.0*angle/numpy.pi)), tuple(p), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, 255 )
     return image
+
 
 def plotCV(Fun, Width, Height, MAX):
     if len(Fun)>Width:
@@ -106,9 +105,7 @@ def initialize_face():
 
 def detect_faces(image, cascadeFrontal, cascadeProfile):
     facesFrontal = []; facesProfile = []
-#    detectedFrontal = cv2.cv.HaarDetectObjects(image, cascadeFrontal, 1.3, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (newWidth/10,newWidth/10))
     detectedFrontal = cascadeFrontal.detectMultiScale(image, 1.3, 5)
-    #detectedProfile = cv2.cv.HaarDetectObjects(image, cascadeProfile, storage, 1.3, 2, cv2.cv.CV_HAAR_DO_CANNY_PRUNING, (newWidth/10,newWidth/10))
     print(detectedFrontal)
     if len(detectedFrontal)>0:
         for (x,y,w,h) in detectedFrontal:
@@ -123,7 +120,8 @@ def detect_faces(image, cascadeFrontal, cascadeProfile):
         for i in range(len(facesFrontal)):
             for j in range(len(facesFrontal)):
                 if i != j:
-                    interRatio = intersect_rectangles(facesFrontal[i], facesFrontal[j])
+                    interRatio = intersect_rectangles(facesFrontal[i],
+                                                      facesFrontal[j])
                     if interRatio>0.3:
                         Found = True;
                         del facesFrontal[i]
@@ -141,7 +139,7 @@ def detect_faces(image, cascadeFrontal, cascadeProfile):
 def resizeFrame(frame, targetWidth):    
     (Width, Height) = frame.shape[1], frame.shape[0]
 
-    if targetWidth > 0:                             # Use FrameWidth = 0 for NO frame resizing
+    if targetWidth > 0:  # Use FrameWidth = 0 for NO frame resizing
         ratio = float(Width) / targetWidth        
         newHeight = int(round(float(Height) / ratio))
         frameFinal = cv2.resize(frame, (targetWidth, newHeight))
@@ -174,25 +172,34 @@ def getHSVHistograms(HSVimage):
 
 def getHSHistograms_2D(HSVimage):
     (Width, Height) = HSVimage.shape[1], HSVimage.shape[0]    
-    H, xedges, yedges = numpy.histogram2d(numpy.reshape(HSVimage[:,:,0], Width*Height), numpy.reshape(HSVimage[:,:,1], Width*Height), bins=(range(-1,180, 30), range(-1, 256, 64)))
+    H, xedges, yedges = numpy.histogram2d(numpy.reshape(HSVimage[:,:,0],
+                                                        Width*Height),
+                                          numpy.reshape(HSVimage[:,:,1],
+                                                        Width*Height),
+                                          bins=(range(-1,180, 30),
+                                                range(-1, 256, 64)))
     H = H / numpy.sum(H);
     return (H, xedges, yedges)
 
 def computeFlowFeatures(Grayscale, GrayscalePrev, p0, lk_params):
-    p1, st, err = cv2.calcOpticalFlowPyrLK(GrayscalePrev, Grayscale, p0, None, **lk_params)
+    p1, st, err = cv2.calcOpticalFlowPyrLK(GrayscalePrev, Grayscale, p0,
+                                           None, **lk_params)
     good_new = p1[st==1]
     good_old = p0[st==1]
     angles = []
     mags = []
     dxS = []; dyS = []
-    for i,(new,old) in enumerate(zip(good_new, good_old)):            # draw motion arrows
+    # draw motion arrows
+    for i,(new,old) in enumerate(zip(good_new, good_old)):
         x1, y1 = new.ravel(); x2, y2 = old.ravel()
         dx = x2 - x1; dy = y2 - y1
         if dy < 0:
             angles.append([numpy.abs(180.0 * numpy.arctan2( dy, dx) / numpy.pi)])
         else:
             angles.append([360.0 - 180.0 * numpy.arctan2( dy, dx) / numpy.pi])
-        mags.append(numpy.sqrt(dx*dx + dy*dy) / numpy.sqrt(Grayscale.shape[0]*Grayscale.shape[0] + Grayscale.shape[1]*Grayscale.shape[1]))
+        mags.append(numpy.sqrt(dx*dx + dy*dy) /
+                    numpy.sqrt(Grayscale.shape[0]*Grayscale.shape[0] +
+                               Grayscale.shape[1]*Grayscale.shape[1]))
         dxS.append(dx); dyS.append(dy);
     angles = numpy.array(angles);
     mags = numpy.array(mags);
@@ -200,13 +207,15 @@ def computeFlowFeatures(Grayscale, GrayscalePrev, p0, lk_params):
     if len(angles)>0:
         meanDx = numpy.mean(dxS); meanDy = numpy.mean(dyS);
         if meanDy < 0:
-            MEANANGLE = -(180.0 * numpy.arctan2( int(meanDy), int(meanDx)) / numpy.pi);
+            MEANANGLE = -(180.0 * numpy.arctan2( int(meanDy),
+                                                 int(meanDx)) / numpy.pi)
         else:
-            MEANANGLE = 360.0 - (180.0 * numpy.arctan2( int(meanDy), int(meanDx)) / numpy.pi);
+            MEANANGLE = 360.0 - (180.0 * numpy.arctan2( int(meanDy),
+                                                        int(meanDx)) / numpy.pi)
         STD = anglesSTD(angles, MEANANGLE)
 
         DistHorizontal = min(angleDiff(MEANANGLE, 180), angleDiff(MEANANGLE, 0))
-        TitlPanConfidence = numpy.mean(mags) / numpy.sqrt(STD + 0.000000010);
+        TitlPanConfidence = numpy.mean(mags) / numpy.sqrt(STD + 0.000000010)
         TitlPanConfidence = TitlPanConfidence[0]
         # TODO: 
         # CHECK PANCONFIDENCE
@@ -223,27 +232,8 @@ def computeFlowFeatures(Grayscale, GrayscalePrev, p0, lk_params):
         STD = 0
         TitlPanConfidence = 0.0
 
-#    cIndexAngles = anglesCluster(angles)
-#    cCenterAngles = []
-#    cCenterWeights = []
-#    for i in range(len(numpy.unique(cIndexAngles))):
-#        idx = numpy.nonzero(cIndexAngles==i+1)[0]
-#        cCenterAngles.append(numpy.mean(idx))
-#        cCenterWeights.append(len(idx))
-#    countAngle = 0.0; angleDist = 0.0
-#    for i in range(len(cCenterAngles)):
-#        for j in range(len(cCenterAngles)):
-#            if i != j:
-#                countAngle += ( cCenterWeights[i] + cCenterWeights[j] )
-#                angleDist  += ( cCenterWeights[i] + cCenterWeights[j] ) * angleDiff(cCenterAngles[i], cCenterAngles[j])
-#    angleDist /= float(countAngle)
-#    print "{0:5.2f} {1:5.2f} {2:5.2f}".format(TitlPanConfidence, DistHorizontal, angleDist)
-
-#    print "{0:5.2f} {1:5.2f}".format(TitlPanConfidence, DistHorizontal)
-
-#    print cCenterAngles, cCenterWeights
-
     return (angles, mags, MEANANGLE, STD, good_new, good_old, dxS, dyS, TitlPanConfidence)
+
 
 def processMovie(moviePath, processMode, PLOT):
     Tstart = time.time(); T0 = Tstart;
@@ -251,15 +241,18 @@ def processMovie(moviePath, processMode, PLOT):
     nFrames = capture.get(cv2.CAP_PROP_FRAME_COUNT)
     fps = capture.get(cv2.CAP_PROP_FPS)
     duration = nFrames / fps
-    secondsD  = duration; HoursD   = int(secondsD/3600); MinutesD = int(secondsD/60); SecondsD = int(secondsD) % 60; DsecsD = int(100*(secondsD - int(secondsD)));
-    StringTimeD = '{0:02d}:{1:02d}:{2:02d}.{3:02d}'.format(HoursD, MinutesD, SecondsD, DsecsD);
+    secondsD  = duration; HoursD   = int(secondsD/3600)
+    MinutesD = int(secondsD/60)
+    SecondsD = int(secondsD) % 60; DsecsD = int(100*(secondsD - int(secondsD)))
+    StringTimeD = '{0:02d}:{1:02d}:{2:02d}.{3:02d}'.format(HoursD, MinutesD,
+                                                           SecondsD, DsecsD)
     if PLOT:
         print("FPS      = " + str(fps))
         print("Duration = " + str(duration) + " - " + StringTimeD)    
 
     pOld = numpy.array([])
     timeStamps = numpy.array([])
-    FrameValue_Diffs = numpy.array([])
+    frame_val_dif = numpy.array([])
     flowAngle = numpy.array([])
     flowMag   = numpy.array([])
     flowStd   = numpy.array([])
@@ -283,7 +276,10 @@ def processMovie(moviePath, processMode, PLOT):
     shotDurations = []
 
     while (1):
-        # cv.SetCaptureProperty( capture, cv.CV_CAP_PROP_POS_FRAMES, count*frameStep );     # THIS IS TOOOOO SLOW (MAKES THE READING PROCESS 2xSLOWER)
+        # cv.SetCaptureProperty( capture, cv.CV_CAP_PROP_POS_FRAMES,
+        # count*frameStep );
+        # (THIS IS TOOOOO SLOW (MAKES THE READING PROCESS 2xSLOWER))
+
         ret, frame = capture.read()
         timeStamp = float(count) / fps
         if timeStamp >= nextTimeStampToProcess:
@@ -291,45 +287,52 @@ def processMovie(moviePath, processMode, PLOT):
             PROCESS_NOW = True
         if ret:
             count += 1; 
-            (Width, Height) = frame.shape[1], frame.shape[0]                # get frame dimensions
-            frame2 = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)                    # convert BGR to RGB
-            RGB = resizeFrame(frame2, newWidth)                        # reduce frame size            
-            Grayscale = cv2.cvtColor(RGB, cv2.COLOR_RGB2GRAY)                # get grayscale image
+            (Width, Height) = frame.shape[1], frame.shape[0]
+            frame2 = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            RGB = resizeFrame(frame2, newWidth)
+            Grayscale = cv2.cvtColor(RGB, cv2.COLOR_RGB2GRAY)
             (Width, Height) = Grayscale.shape[1], Grayscale.shape[0]
 
             if processMode>1:
                 if (count % 25) == 1:    
-                    p0 = cv2.goodFeaturesToTrack(Grayscale, mask = None, **feature_params)
+                    p0 = cv2.goodFeaturesToTrack(Grayscale, mask = None,
+                                                 **feature_params)
                     if (p0 is None):
                         p0 = pOld;
                     pOld = p0;
 
             if PROCESS_NOW:
-                curFV = numpy.array([])                                                                        # current feature vector initalization
+                curFV = numpy.array([])
 
                 countProcess += 1
                 timeStamps = numpy.append(timeStamps, timeStamp)
             
                 if processMode>0:
-                    #[histH, histS, histV] = getHSVHistograms(HSV)                                             # get histograms - HSV
+                    #[histH, histS, histV] = getHSVHistograms(HSV)
                     # PROCESS LEVEL 1:
-                    HSV = cv2.cvtColor(RGB, cv2.COLOR_RGB2HSV)                                                  # get the HSV image            
-                    #histHS, xedges, yedges = getHSHistograms_2D(HSV)                                           # get the HS histogram (2D)
+                    HSV = cv2.cvtColor(RGB, cv2.COLOR_RGB2HSV)
+                    #histHS, xedges, yedges = getHSHistograms_2D(HSV)
 
-                    [histR, histG, histB] = getRGBHistograms(RGB)                                               # get RGB histograms                    
+                    [histR, histG, histB] = getRGBHistograms(RGB)
 
-                    RGBratio = 100.0* (numpy.max(RGB, 2) - numpy.mean(RGB, 2)) / (1.0+numpy.mean(RGB, 2))
+                    RGBratio = 100.0* (numpy.max(RGB, 2) -
+                                       numpy.mean(RGB, 2)) / \
+                               (1.0+numpy.mean(RGB, 2))
                     Vnorm    = (255.0 * HSV[:,:,2]) / numpy.max(HSV[:,:,2]+1.0)                    
                     Snorm    = (255.0 * HSV[:,:,1]) / numpy.max(HSV[:,:,1]+1.0)                    
 
                     RGBratio[RGBratio>199.0] = 199.0;
                     RGBratio[RGBratio<1.0] = 1.0;
-                    [histRGBratio, v_bin_edges] = numpy.histogram(RGBratio, bins=range(-1,200,40))              # get the RGB ratio histogram 
-                    histRGBratio = histRGBratio.astype(float); histRGBratio = histRGBratio / numpy.sum(histRGBratio);                    
-                    [histV, v_bin_edges] = numpy.histogram(Vnorm, bins=range(-1,256,32))                        # get the V histogram 
-                    histV = histV.astype(float); histV = histV / numpy.sum(histV);
-                    [histS, h_bin_edges] = numpy.histogram(Snorm, bins=range(-1,256,32))                        # get the S histogram                                         
-                    histS = histS.astype(float); histS = histS / numpy.sum(histS);
+                    histRGBratio, _ = numpy.histogram(RGBratio, 
+                                                      bins=range(-1,200,40))
+                    histRGBratio = histRGBratio.astype(float)
+                    histRGBratio = histRGBratio / numpy.sum(histRGBratio)
+                    histV, _ = numpy.histogram(Vnorm, bins=range(-1,256,32))
+                    histV = histV.astype(float)
+                    histV = histV / numpy.sum(histV)
+                    histS, _ = numpy.histogram(Snorm, bins=range(-1,256,32))
+                    histS = histS.astype(float)
+                    histS = histS / numpy.sum(histS)
 
                     # update the current feature vector
                     curFV = numpy.concatenate((curFV, histR), 0)  
@@ -338,13 +341,15 @@ def processMovie(moviePath, processMode, PLOT):
                     curFV = numpy.concatenate((curFV, histV), 0)            
                     curFV = numpy.concatenate((curFV, histRGBratio), 0)                                
                     curFV = numpy.concatenate((curFV, histS), 0)                
-                    #curFV = numpy.concatenate((curFV, numpy.reshape(histHS, histHS.shape[0]*histHS.shape[1])), 1)
+                    #curFV = numpy.concatenate((curFV, numpy.reshape(histHS, 
+                    # histHS.shape[0]*histHS.shape[1])), 1)
                     if countProcess>1:
-                        FrameValue_Diffs = numpy.append(FrameValue_Diffs, numpy.mean(numpy.mean(numpy.abs(histV - histVprev))))
+                        frame_val_dif = numpy.append(frame_val_dif,
+                                                     numpy.mean(numpy.mean(numpy.abs(histV - histVprev))))
                     else:
-                        FrameValue_Diffs = numpy.append(FrameValue_Diffs, 0.0);
+                        frame_val_dif = numpy.append(frame_val_dif, 0.0);
 
-                    curFV = numpy.concatenate((curFV, numpy.array([FrameValue_Diffs[-1]])), 0)                    
+                    curFV = numpy.concatenate((curFV, numpy.array([frame_val_dif[-1]])), 0)                    
 
                     #histHSprev = histHS;
                     histVprev = histV;
@@ -375,8 +380,8 @@ def processMovie(moviePath, processMode, PLOT):
                         grayDiff[grayDiff<50] = 0
                         grayDiff[grayDiff>50] = 1
                         grayDiffT = grayDiff.sum() / float(grayDiff.shape[0] * grayDiff.shape[1])                        
-                        #print "{0:.3f}\t{1:.3f}\t{2:.3f}".format(meanMag, grayDiffT, FrameValue_Diffs[-1]),
-                        if (meanMag > 0.06) and (grayDiffT > 0.55) and (FrameValue_Diffs[-1] > 0.002):                                       # shot change detection                        
+                        #print "{0:.3f}\t{1:.3f}\t{2:.3f}".format(meanMag, grayDiffT, frame_val_dif[-1]),
+                        if (meanMag > 0.06) and (grayDiffT > 0.55) and (frame_val_dif[-1] > 0.002):                                       # shot change detection                        
                             if timeStamp - shotChangeTimes[-1] > 1.1:
                                 averageShot = 0
                                 if len(shotChangeTimes)-1 > 5:
@@ -452,7 +457,7 @@ def processMovie(moviePath, processMode, PLOT):
                     if processMode>0:
                         #histHSplot = (histHS / numpy.max(histHS))
                         #cv2.imshow('Hue-Saturation Hist', cv2.resize(histHSplot, (Height, Height), interpolation = cv2.INTER_CUBIC))        
-                        #h = plotCV(FrameValue_Diffs, WidthPlot, Height, 0.020);     cv2.imshow('HSV Diff',h)        
+                        #h = plotCV(frame_val_dif, WidthPlot, Height, 0.020);     cv2.imshow('HSV Diff',h)        
                         #h = plotCV(scipy.signal.resample(histRGBratio, 256), WidthPlot2, Height, numpy.max(histRGBratio)); cv2.imshow('Color Hist', h)                                
                         h = plotCV(numpy.repeat(histRGBratio, WidthPlot2 / histRGBratio.shape[0]), WidthPlot2, Height, numpy.max(histRGBratio)); cv2.imshow('Color Hist', h)        
                         h = plotCV(numpy.repeat(histV, WidthPlot2 / histV.shape[0]), WidthPlot2, Height, numpy.max(histV)); cv2.imshow('Value Hist', h)

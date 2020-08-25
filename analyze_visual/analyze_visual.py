@@ -428,7 +428,8 @@ def processMovie(moviePath, processMode, PLOT):
                         FeatureMatrix = np.concatenate((FeatureMatrix,
                                                         np.reshape(curFV,
                                                                    ( 1, len(curFV)))),
-                                                       0)
+                                                   0)
+                print(FeatureMatrix.shape)
                 if ((countProcess > 2) and (countProcess % plotStep ==0) and (PLOT==1)):
                     # draw RGB image and visualizations
                     vis = cv2.cvtColor(RGB, cv2.COLOR_RGB2BGR)
@@ -554,8 +555,13 @@ def processMovie(moviePath, processMode, PLOT):
     #print shotDurations
     #print shotDurations.shape
     #print shotChangeTimes
+
+    # append shot durations in feature matrix:
     FeatureMatrix = np.append(FeatureMatrix, shotDurations.T, axis = 1)
 
+    # get movie-level feature statistics:
+    # TODO: consider more statistics, OR consider temporal analysis method
+    # eg LSTMs or whatever
     Fm  = FeatureMatrix.mean(axis=0)
     Fs  = FeatureMatrix.std(axis=0)
     Fsm = FeatureMatrix.std(axis=0) / (np.median(FeatureMatrix, axis=0) + 0.0001)

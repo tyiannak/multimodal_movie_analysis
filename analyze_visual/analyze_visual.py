@@ -52,38 +52,35 @@ def angles_std(angles, mu):
     return std
 
 
-def angles_cluster(angles):
-    # NOT WORKING FOR NOW
-
+def display_histogram(data, width, height, maximum, window_name):
     '''
-    This function uses hierarchical clustering
-    to find clusters of a set of angles.
+    Calculates and dispalys on a window
+    the histogram of the data, under
+    specific maximum value
 
     Args:
-        angles (list): list of angles
+        data (ndarray): input data
+        width (int): width of the displayed window
+        height (int): width of the displayed window
+        maximum : maximum number on data
+        window_name (str) : name of the displayed window
 
     Returns:
-        clusters of the set of angle values.
+        None
     '''
-
-    dists = dist.pdist(angles, angle_diff)
-    linkage_matrix = hier.linkage(dists, metric = angle_diff)
-    cluster = hier.fcluster(linkage_matrix, 5, 'maxclust')
-
-    return clusters
-
-
-def plot_cv(fun, width, height, maximum):
-    if len(fun) > width:
-        hist_item = height * (fun[len(fun)-width-1:-1] / maximum)
+    
+    if len(data) > width:
+        hist_item = height * (data[len(data)-width-1:-1] / maximum)
     else:
-        hist_item = height * (fun / maximum)
-    h = np.zeros((height, width, 3))
+        hist_item = height * (data / maximum)
+    img = np.zeros((height, width, 3))
     hist = np.int32(np.around(hist_item))
 
     for x, y in enumerate(hist):
-        cv2.line(h, (x, height), (x, height - y), (255, 0, 255))
-    return h
+        cv2.line(img, (x, height), (x, height - y), (255, 0, 255))
+
+    cv2.imshow(window_name, img)
+    return
 
 def intersect_rectangles(r1, r2):
     x11 = r1[0]; y11 = r1[1]; x12 = r1[0]+r1[2]; y12 = r1[1]+r1[3]
@@ -115,9 +112,6 @@ def detect_faces(image, cascadeFrontal, cascadeProfile):
     if len(detectedFrontal)>0:
         for (x,y,w,h) in detectedFrontal:
             facesFrontal.append((x,y,w,h))
-    #if detectedProfile:
-    #    for (x,y,w,h),n in detectedProfile:
-    #        facesProfile.append((x,y,w,h))
 
     # remove overlaps:
     while (1):
@@ -269,8 +263,8 @@ def processMovie(moviePath, processMode, PLOT):
     processT   = np.array([])
 
     if processMode > 1:
-        NFacesFrontal = collections.deque(maxlen= 200)
-        PFacesFrontal = collections.deque(maxlen= 200)
+        NFacesFrontal = collections.deque(maxlen= 200) #number if faces
+        PFacesFrontal = collections.deque(maxlen= 200) #average "face ratio"
         TitlPanConfidences = collections.deque(maxlen= 200)
     count = 0
     countProcess = 0
@@ -501,22 +495,18 @@ def processMovie(moviePath, processMode, PLOT):
                     cv2.moveWindow('GrayNorm', new_width , 0)
 
                     if processMode>0:
-                        #histHSplot = (histHS / np.max(histHS))
-                        #cv2.imshow('Hue-Saturation Hist', cv2.resize(histHSplot, (height, height), interpolation = cv2.INTER_CUBIC))
-                        #h = plot_cv(f_diff, widthPlot, height, 0.020);     cv2.imshow('HSV Diff',h)
-                        #h = plot_cv(scipy.signal.resample(histRGBratio, 256), widthPlot2, height, np.max(histRGBratio)); cv2.imshow('Color Hist', h)
-                        h = plot_cv(np.repeat(histRGBratio, widthPlot2 / histRGBratio.shape[0]), widthPlot2, height, np.max(histRGBratio)); cv2.imshow('Color Hist', h)
-                        h = plot_cv(np.repeat(histV, widthPlot2 / histV.shape[0]), widthPlot2, height, np.max(histV)); cv2.imshow('Value Hist', h)
-                        h = plot_cv(np.repeat(histS, widthPlot2 / histS.shape[0]), widthPlot2, height, np.max(histS)); cv2.imshow('Sat Hist', h)
-                        #cv2.moveWindow('Hue-Saturation Hist',     width+50, 0)
+                        display_histogram(np.repeat(histRGBratio, widthPlot2 / histRGBratio.shape[0]), widthPlot2, height, np.max(histRGBratio), 'Color Hist')
+                        display_histogram(np.repeat(histV, widthPlot2 / histV.shape[0]), widthPlot2, height, np.max(histV), 'Value Hist')
+                        display_histogram(np.repeat(histS, widthPlot2 / histS.shape[0]), widthPlot2, height, np.max(histS), 'Sat Hist')
                         cv2.moveWindow('Color Hist',   0,                height + 70)
                         cv2.moveWindow('Value Hist',   widthPlot2 ,      height + 70)
                         cv2.moveWindow('HSV Diff',     2 * widthPlot2 ,  height + 70)
                         cv2.moveWindow('Sat Hist',     2 * widthPlot2 ,  height + 70)
+
                     if processMode>1:
-                        h = plot_cv(np.array(NFacesFrontal), widthPlot, height, 5);cv2.imshow('NFacesFrontal', h)
-                        h = plot_cv(np.array(PFacesFrontal), widthPlot, height, 1);cv2.imshow('PFacesFrontal', h)
-                        h = plot_cv(np.array(TitlPanConfidences), widthPlot, height, 50);     cv2.imshow('TitlPanConfidences', h)
+                        display_histogram(np.array(NFacesFrontal), widthPlot, height, 5, 'NFacesFrontal')
+                        display_histogram(np.array(PFacesFrontal), widthPlot, height, 1, 'PFacesFrontal')
+                        display_histogram(np.array(TitlPanConfidences), widthPlot, height, 50, 'TitlPanConfidences')
                         cv2.moveWindow('NFacesFrontal',         0,              2 * height+70)
                         cv2.moveWindow('PFacesFrontal',         widthPlot2,     2 * height+70)
                         cv2.moveWindow('TitlPanConfidences',    2 * widthPlot2, 2 * height+70)

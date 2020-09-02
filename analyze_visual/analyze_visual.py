@@ -68,7 +68,7 @@ def display_histogram(data, width, height, maximum, window_name):
     Returns:
         None
     '''
-    
+
     if len(data) > width:
         hist_item = height * (data[len(data)-width-1:-1] / maximum)
     else:
@@ -83,56 +83,82 @@ def display_histogram(data, width, height, maximum, window_name):
     return
 
 def intersect_rectangles(r1, r2):
-    x11 = r1[0]; y11 = r1[1]; x12 = r1[0]+r1[2]; y12 = r1[1]+r1[3]
-    x21 = r2[0]; y21 = r2[1]; x22 = r2[0]+r2[2]; y22 = r2[1]+r2[3]
+    '''
+    Args:
+        r1: 4 coordinates of the first rectangle
+        r2: 4 coordinates of the second rectangle
 
-    X1 = max(x11, x21); X2 = min(x12, x22)
-    Y1 = max(y11, y21); Y2 = min(y12, y22)
+    Returns:
+        e_ratio: ratio of intersectance
+    '''
+    x1 = max(r1[0], r2[0])
+    x2 = min(r1[0]+r1[2], r2[0]+r2[2])
+    y1 = max(r1[1], r2[1])
+    y2 = min(r1[1]+r1[3], r2[1]+r2[3])
 
-    W = X2 - X1
-    H = Y2 - Y1
-    if (H>0) and (W>0):
-        E = W * H;
+    w = x2 - x1
+    h = y2 - y1
+    if (w > 0) and (h > 0):
+        e = w * h;
     else:
-        E = 0.0;
-    Eratio = 2.0*E / (r1[2]*r1[3] + r2[2]*r2[3])
-    return Eratio
+        e = 0.0;
+    e_ratio = 2.0*e / (r1[2]*r1[3] + r2[2]*r2[3])
+    return e_ratio
 
 
-def initialize_face():
-    cascadeFrontal = cv2.CascadeClassifier(HAAR_CASCADE_PATH_FRONTAL);
-    cascadeProfile = cv2.CascadeClassifier(HAAR_CASCADE_PATH_PROFILE);
-    return (cascadeFrontal, cascadeProfile)
+def initialize_face(frontal_path, profile_path):
+    '''Reads and returns frontal and profile haarcascade classifiers from paths.'''
+
+    cascade_frontal = cv2.CascadeClassifier(frontal_path);
+    cascade_profile = cv2.CascadeClassifier(profile_path);
+    return cascade_frontal, cascade_profile
+
+def remove_overlaps(rectangles):
+    '''
+    Removes overlaped rectangles
+
+    Args:
+        rectangles (list) : list of lists containing rectangles coordinates
+
+    Returns:
+        List of non overlapping rectangles.
+    '''
+    found = False
+    for i, rect_i in enumerate(rectangles):
+        for j, rect_j in enumerate(rectangles):
+            if i != j:
+                inter_ratio = intersect_rectangles(rect_i,
+                                                  rect_j)
+                if inter_ratio > 0.3:
+                    found = True
+                    del rectangles[i]
+                    break
+
+    return rectangles
 
 
-def detect_faces(image, cascadeFrontal, cascadeProfile):
-    facesFrontal = []; facesProfile = []
-    detectedFrontal = cascadeFrontal.detectMultiScale(image, 1.3, 5)
-    print(detectedFrontal)
-    if len(detectedFrontal)>0:
-        for (x,y,w,h) in detectedFrontal:
-            facesFrontal.append((x,y,w,h))
+def detect_faces(image, cascade_frontal, cascade_profile):
+    '''
+    Detects faces on image. Temporarily only detects frontal face.
 
-    # remove overlaps:
-    while (1):
-        Found = False
-        for i in range(len(facesFrontal)):
-            for j in range(len(facesFrontal)):
-                if i != j:
-                    interRatio = intersect_rectangles(facesFrontal[i],
-                                                      facesFrontal[j])
-                    if interRatio>0.3:
-                        Found = True;
-                        del facesFrontal[i]
-                        break;
-            if Found:
-                break;
+    Args:
+        image : image of interest
+        cascade_frontal : haar cascade classifier for fronatl face
+        cascade_profile : haar cascade classifier for profile face
 
-        if not Found:    # not a single overlap has been detected -> exit loop
-            break
+    Returns:
+        faces_frontal (list) : list of rectangles coordinates
+    '''
 
-    #return (facesFrontal, facesProfile)
-    return (facesFrontal)
+    faces_frontal = []
+    detected_frontal = cascade_frontal.detectMultiScale(image, 1.3, 5)
+    print(detected_frontal)
+    if len(detected_frontal)>0:
+        for (x,y,w,h) in detected_frontal:
+            faces_frontal.append((x,y,w,h))
+
+    faces_frontal = remove_overlaps(faces_frontal)
+    return faces_frontal
 
 
 def resizeFrame(frame, targetwidth):
@@ -270,7 +296,7 @@ def processMovie(moviePath, processMode, PLOT):
     countProcess = 0
 
     if processMode>1:
-        (cascadeFrontal, cascadeProfile) = initialize_face()
+        (cascade_frontal, cascade_profile) = initialize_face(HAAR_CASCADE_PATH_FRONTAL, HAAR_CASCADE_PATH_PROFILE)
 
     nextTimeStampToProcess = 0.0
     PROCESS_NOW = False
@@ -359,8 +385,8 @@ def processMovie(moviePath, processMode, PLOT):
 
                 if processMode > 1:
                     # face detection
-                    facesFrontal = detect_faces(RGB, cascadeFrontal,
-                                                cascadeProfile)
+                    facesFrontal = detect_faces(RGB, cascade_frontal,
+                                                cascade_profile)
                     # update number of faces
                     NFacesFrontal.append(float(len(facesFrontal)))
                     if len(facesFrontal)>0:

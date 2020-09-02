@@ -1,19 +1,25 @@
-import cv2, time, sys, glob, os
+import cv2
+import time
+import sys
+import glob
+import os
 import numpy as np
 import scipy.cluster.hierarchy as hier
 import scipy.spatial.distance as dist
 import collections
 
 # process and plot related parameters:
-new_width = 500; process_step = 0.5; plot_step = 2;
+new_width = 500
+process_step = 0.5
+plot_step = 2
 
 # face detection-related paths:
 HAAR_CASCADE_PATH_FRONTAL = "haarcascade_frontalface_default.xml"
 HAAR_CASCADE_PATH_PROFILE = "haarcascade_frontalface_default.xml"
 
 # flow-related parameters:
-lk_params = dict( win_size  = (15, 15),
-                  max_level = 5,
+lk_params = dict( winSize  = (15, 15),
+                  maxLevel = 5,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
                               10, 0.03))
 feature_params = dict( maxCorners = 500,
@@ -21,65 +27,62 @@ feature_params = dict( maxCorners = 500,
                        minDistance = 3,
                        blockSize = 5 )
 
+def angle_diff(angle1, angle2):
+    '''Returns difference between 2 angles.'''
 
-def angleDiff(angle1, angle2):
-    # angles (in degs) difference
-    Diff = np.abs(angle2-angle1);
-    if np.abs(Diff) > 180:
-        Diff = 360 - Diff
-    return Diff
+    diff = np.abs(angle2-angle1);
+    if np.abs(diff) > 180:
+        diff -= 360
+    return diff
 
 
-def anglesSTD(angles, MEAN):
-    # computes the standard deviation between a set of angles
-    S = 0.0;
+def angles_std(angles, mu):
+    '''
+    Args:
+        angles (list): list of angles
+        mu (float): mean value of the angles
+
+    Returns the standard deviation (std) of a set of angles.
+    '''
+    std = 0.0;
     for a in angles:
-        S += (angleDiff(a, MEAN)**2)
-    S /= len(angles)
-    S = np.sqrt(S)
-    return S
+        std += (angle_diff(a, mu)**2)
+    std /= len(angles)
+    std = np.sqrt(std)
+    return std
 
 
-def anglesCluster(angles):
-    # this function uses hierarchical clustering to find the
-    # clusters of a set of angle values
-    Dists = dist.pdist(angles, angleDiff)
-    linkageMatrix = hier.linkage(Dists, metric = angleDiff)
-    C = hier.fcluster(linkageMatrix, 5, 'maxclust')
+def angles_cluster(angles):
+    # NOT WORKING FOR NOW
 
-    return C
+    '''
+    This function uses hierarchical clustering
+    to find clusters of a set of angles.
 
+    Args:
+        angles (list): list of angles
 
-def drawArrow(image, p, q, color, arrowMagnitude = 5, thickness=1, line_type=8,
-              shift=0):
-    # Draw the principle line
-    cv2.line(image, tuple(p), tuple(q), color, thickness, line_type, shift)
-    # compute the angle alpha
-    angle = np.arctan2( p[1]-q[1], p[0]-q[0])
-    # compute the coordinates of the first segment
-    p[0] =  int(q[0] +  arrowMagnitude * np.cos(angle + np.pi/4.0))
-    p[1] =  int(q[1] +  arrowMagnitude * np.sin(angle + np.pi/4.0))
-    # /Draw the first segment
-    cv2.line(image, tuple(p), tuple(q), color, thickness, line_type, shift)
-    # compute the coordinates of the second segment
-    p[0] =  int(q[0] +  arrowMagnitude * np.cos(angle - np.pi/4.0))
-    p[1] =  int(q[1] +  arrowMagnitude * np.sin(angle - np.pi/4.0))
+    Returns:
+        clusters of the set of angle values.
+    '''
 
-    # Draw the second segment
-    cv2.line(image, tuple(p), tuple(q), color, thickness, line_type, shift)
-    return image
+    dists = dist.pdist(angles, angle_diff)
+    linkage_matrix = hier.linkage(dists, metric = angle_diff)
+    cluster = hier.fcluster(linkage_matrix, 5, 'maxclust')
+
+    return clusters
 
 
-def plotCV(Fun, Width, Height, MAX):
-    if len(Fun)>Width:
-        hist_item = Height * (Fun[len(Fun)-Width-1:-1] / MAX)
+def plot_cv(fun, width, height, maximum):
+    if len(fun) > width:
+        hist_item = height * (fun[len(fun)-width-1:-1] / maximum)
     else:
-        hist_item = Height * (Fun / MAX)
-    h = np.zeros((Height, Width, 3))
+        hist_item = height * (fun / maximum)
+    h = np.zeros((height, width, 3))
     hist = np.int32(np.around(hist_item))
 
-    for x,y in enumerate(hist):
-        cv2.line(h,(x,Height),(x,Height-y),(255,0,255))
+    for x, y in enumerate(hist):
+        cv2.line(h, (x, height), (x, height - y), (255, 0, 255))
     return h
 
 def intersect_rectangles(r1, r2):
@@ -138,13 +141,13 @@ def detect_faces(image, cascadeFrontal, cascadeProfile):
     return (facesFrontal)
 
 
-def resizeFrame(frame, targetWidth):
-    (Width, Height) = frame.shape[1], frame.shape[0]
+def resizeFrame(frame, targetwidth):
+    (width, height) = frame.shape[1], frame.shape[0]
 
-    if targetWidth > 0:  # Use FrameWidth = 0 for NO frame resizing
-        ratio = float(Width) / targetWidth
-        newHeight = int(round(float(Height) / ratio))
-        frameFinal = cv2.resize(frame, (targetWidth, newHeight))
+    if targetwidth > 0:  # Use Framewidth = 0 for NO frame resizing
+        ratio = float(width) / targetwidth
+        newheight = int(round(float(height) / ratio))
+        frameFinal = cv2.resize(frame, (targetwidth, newheight))
     else:
         frameFinal = frame
 
@@ -175,11 +178,11 @@ def getHSVHistograms(HSVimage):
 
 
 def getHSHistograms_2D(HSVimage):
-    (Width, Height) = HSVimage.shape[1], HSVimage.shape[0]
+    (width, height) = HSVimage.shape[1], HSVimage.shape[0]
     H, xedges, yedges = np.histogram2d(np.reshape(HSVimage[:,:,0],
-                                                        Width*Height),
+                                                        width*height),
                                           np.reshape(HSVimage[:,:,1],
-                                                        Width*Height),
+                                                        width*height),
                                           bins=(range(-1,180, 30),
                                                 range(-1, 256, 64)))
     H = H / np.sum(H)
@@ -217,9 +220,9 @@ def computeFlowFeatures(Grayscale, GrayscalePrev, p0, lk_params):
         else:
             MEANANGLE = 360.0 - (180.0 * np.arctan2( int(meanDy),
                                                         int(meanDx)) / np.pi)
-        STD = anglesSTD(angles, MEANANGLE)
+        STD = angles_std(angles, MEANANGLE)
 
-        DistHorizontal = min(angleDiff(MEANANGLE, 180), angleDiff(MEANANGLE, 0))
+        DistHorizontal = min(angle_diff(MEANANGLE, 180), angle_diff(MEANANGLE, 0))
         TitlPanConfidence = np.mean(mags) / np.sqrt(STD + 0.000000010)
         TitlPanConfidence = TitlPanConfidence[0]
         # TODO:
@@ -293,11 +296,11 @@ def processMovie(moviePath, processMode, PLOT):
             PROCESS_NOW = True
         if ret:
             count += 1;
-            (Width, Height) = frame.shape[1], frame.shape[0]
+            (width, height) = frame.shape[1], frame.shape[0]
             frame2 = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             RGB = resizeFrame(frame2, new_width)
             Grayscale = cv2.cvtColor(RGB, cv2.COLOR_RGB2GRAY)
-            (Width, Height) = Grayscale.shape[1], Grayscale.shape[0]
+            (width, height) = Grayscale.shape[1], Grayscale.shape[0]
 
             if processMode>1:
                 if (count % 25) == 1:
@@ -369,7 +372,7 @@ def processMovie(moviePath, processMode, PLOT):
                     if len(facesFrontal)>0:
                         tempF = 0.0
                         for f in facesFrontal:
-                            tempF += (f[2] * f[3] / float(Width * Height))                                      # face size ratio (normalzied to the frame dimensions)
+                            tempF += (f[2] * f[3] / float(width * height))                                      # face size ratio (normalzied to the frame dimensions)
                         PFacesFrontal.append(tempF/len(facesFrontal))                                           # average "face ratio"
                     else:
                         PFacesFrontal.append(0.0)
@@ -443,20 +446,17 @@ def processMovie(moviePath, processMode, PLOT):
                         # flow arrows:
                         # draw motion arrows
                         for i,(new,old) in enumerate(zip(good_new,good_old)):
-                            x1, y1 = new.ravel(); x2, y2 = old.ravel()
-                            pt1 = [int(x1), int(y1)]; pt2 = [int(x2), int(y2)]
-                            vis = drawArrow(vis, pt1, pt2, (0, 255, 0))
+                            vis = cv2.arrowedLine(vis, tuple(new), tuple(old), color = (0, 255, 0),  thickness = 1)
 
                         if len(angles)>0:
-                            vis = drawArrow(vis, [int(Width/2),
-                                                  int(Height/2)],
-                                            [int(Width/2)+int(np.mean(dxS)),
-                                             int(Height/2)+int(np.mean(dyS))],
-                                            (0, 0, 255),
-                                            arrowMagnitude = 5,
+                            vis = cv2.arrowedLine(vis, (int(width/2),
+                                                  int(height/2)),
+                                            (int(width/2)+int(np.mean(dxS)),
+                                             int(height/2)+int(np.mean(dyS))),
+                                            color = (0, 0, 255),
                                             thickness=4, line_type=8, shift=0)
-                        cv2.putText(vis,str(int(MEANANGLE)), (int(Width/2),
-                                                              int(Height/2)),
+                        cv2.putText(vis,str(int(MEANANGLE)), (int(width/2),
+                                                              int(height/2)),
                                     cv2.FONT_HERSHEY_COMPLEX_SMALL, 2, 255)
 
                     # Time-related plots:
@@ -488,13 +488,13 @@ def processMovie(moviePath, processMode, PLOT):
                     StringToPlot = '{0:s}/{1:s} {2:5.1f}fps,{3:2.1f}xR {4:s}'.\
                         format(StringTime, StringTimeD, processFPS_winaveg,
                                100.0/float(processT_winaveg),StringTimeRemain)
-                    cv2.rectangle(vis, (0, 0), (Width, 17), (255,255,255), -1)
+                    cv2.rectangle(vis, (0, 0), (width, 17), (255,255,255), -1)
                     cv2.putText(vis, StringToPlot, (20, 11),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0,0,0))
 
                     # Draw color image:
-                    WidthPlot = 150
-                    WidthPlot2 = 150
+                    widthPlot = 150
+                    widthPlot2 = 150
                     cv2.imshow('Color', vis)
                     cv2.imshow('GrayNorm', Vnorm/256.0)
                     cv2.moveWindow('Color', 0, 0)
@@ -502,24 +502,24 @@ def processMovie(moviePath, processMode, PLOT):
 
                     if processMode>0:
                         #histHSplot = (histHS / np.max(histHS))
-                        #cv2.imshow('Hue-Saturation Hist', cv2.resize(histHSplot, (Height, Height), interpolation = cv2.INTER_CUBIC))
-                        #h = plotCV(f_diff, WidthPlot, Height, 0.020);     cv2.imshow('HSV Diff',h)
-                        #h = plotCV(scipy.signal.resample(histRGBratio, 256), WidthPlot2, Height, np.max(histRGBratio)); cv2.imshow('Color Hist', h)
-                        h = plotCV(np.repeat(histRGBratio, WidthPlot2 / histRGBratio.shape[0]), WidthPlot2, Height, np.max(histRGBratio)); cv2.imshow('Color Hist', h)
-                        h = plotCV(np.repeat(histV, WidthPlot2 / histV.shape[0]), WidthPlot2, Height, np.max(histV)); cv2.imshow('Value Hist', h)
-                        h = plotCV(np.repeat(histS, WidthPlot2 / histS.shape[0]), WidthPlot2, Height, np.max(histS)); cv2.imshow('Sat Hist', h)
-                        #cv2.moveWindow('Hue-Saturation Hist',     Width+50, 0)
-                        cv2.moveWindow('Color Hist',   0,                Height + 70)
-                        cv2.moveWindow('Value Hist',   WidthPlot2 ,      Height + 70)
-                        cv2.moveWindow('HSV Diff',     2 * WidthPlot2 ,  Height + 70)
-                        cv2.moveWindow('Sat Hist',     2 * WidthPlot2 ,  Height + 70)
+                        #cv2.imshow('Hue-Saturation Hist', cv2.resize(histHSplot, (height, height), interpolation = cv2.INTER_CUBIC))
+                        #h = plot_cv(f_diff, widthPlot, height, 0.020);     cv2.imshow('HSV Diff',h)
+                        #h = plot_cv(scipy.signal.resample(histRGBratio, 256), widthPlot2, height, np.max(histRGBratio)); cv2.imshow('Color Hist', h)
+                        h = plot_cv(np.repeat(histRGBratio, widthPlot2 / histRGBratio.shape[0]), widthPlot2, height, np.max(histRGBratio)); cv2.imshow('Color Hist', h)
+                        h = plot_cv(np.repeat(histV, widthPlot2 / histV.shape[0]), widthPlot2, height, np.max(histV)); cv2.imshow('Value Hist', h)
+                        h = plot_cv(np.repeat(histS, widthPlot2 / histS.shape[0]), widthPlot2, height, np.max(histS)); cv2.imshow('Sat Hist', h)
+                        #cv2.moveWindow('Hue-Saturation Hist',     width+50, 0)
+                        cv2.moveWindow('Color Hist',   0,                height + 70)
+                        cv2.moveWindow('Value Hist',   widthPlot2 ,      height + 70)
+                        cv2.moveWindow('HSV Diff',     2 * widthPlot2 ,  height + 70)
+                        cv2.moveWindow('Sat Hist',     2 * widthPlot2 ,  height + 70)
                     if processMode>1:
-                        h = plotCV(np.array(NFacesFrontal), WidthPlot, Height, 5);cv2.imshow('NFacesFrontal', h)
-                        h = plotCV(np.array(PFacesFrontal), WidthPlot, Height, 1);cv2.imshow('PFacesFrontal', h)
-                        h = plotCV(np.array(TitlPanConfidences), WidthPlot, Height, 50);     cv2.imshow('TitlPanConfidences', h)
-                        cv2.moveWindow('NFacesFrontal',         0,              2 * Height+70)
-                        cv2.moveWindow('PFacesFrontal',         WidthPlot2,     2 * Height+70)
-                        cv2.moveWindow('TitlPanConfidences',    2 * WidthPlot2, 2 * Height+70)
+                        h = plot_cv(np.array(NFacesFrontal), widthPlot, height, 5);cv2.imshow('NFacesFrontal', h)
+                        h = plot_cv(np.array(PFacesFrontal), widthPlot, height, 1);cv2.imshow('PFacesFrontal', h)
+                        h = plot_cv(np.array(TitlPanConfidences), widthPlot, height, 50);     cv2.imshow('TitlPanConfidences', h)
+                        cv2.moveWindow('NFacesFrontal',         0,              2 * height+70)
+                        cv2.moveWindow('PFacesFrontal',         widthPlot2,     2 * height+70)
+                        cv2.moveWindow('TitlPanConfidences',    2 * widthPlot2, 2 * height+70)
                     ch = cv2.waitKey(1)
                     T0 = T2;
                 PROCESS_NOW = False

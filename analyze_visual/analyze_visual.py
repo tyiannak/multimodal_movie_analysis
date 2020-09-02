@@ -161,106 +161,163 @@ def detect_faces(image, cascade_frontal, cascade_profile):
     return faces_frontal
 
 
-def resizeFrame(frame, targetwidth):
-    (width, height) = frame.shape[1], frame.shape[0]
+def resize_frame(frame, target_width):
+    '''
+    Resizes a frame according to specific width.
 
-    if targetwidth > 0:  # Use Framewidth = 0 for NO frame resizing
-        ratio = float(width) / targetwidth
-        newheight = int(round(float(height) / ratio))
-        frameFinal = cv2.resize(frame, (targetwidth, newheight))
+    Args:
+        frame : frame to resize
+        target_width : width of the final frame
+
+    '''
+    width, height = frame.shape[1], frame.shape[0]
+
+    if target_width > 0:  # Use Framewidth = 0 for NO frame resizing
+        ratio = float(width) / target_width
+        new_height = int(round(float(height) / ratio))
+        frame_final = cv2.resize(frame, (target_width, new_height))
     else:
-        frameFinal = frame
+        frame_final = frame
 
-    return frameFinal
+    return frame_final
 
 
-def getRGBHistograms(RGBimage):
+def get_RGB_histograms(image_RGB):
+    '''Computes Red, Green and Blue histograms of an RGB image.'''
+
     # compute histograms:
-    [histR, _] = np.histogram(RGBimage[:,:,0], bins=range(-1,256,32))
-    [histG, _] = np.histogram(RGBimage[:,:,1], bins=range(-1,256,32))
-    [histB, _] = np.histogram(RGBimage[:,:,2], bins=range(-1,256,32))
-    # normalize histograms:
-    histR = histR.astype(float); histR = histR / np.sum(histR)
-    histG = histG.astype(float); histG = histG / np.sum(histG)
-    histB = histB.astype(float); histB = histB / np.sum(histB)
-    return (histR, histG, histB)
+    [histR, _] = np.histogram(image_RGB[:,:,0], bins=range(-1,256,32))
+    [histG, _] = np.histogram(image_RGB[:,:,1], bins=range(-1,256,32))
+    [histB, _] = np.histogram(image_RGB[:,:,2], bins=range(-1,256,32))
 
-def getHSVHistograms(HSVimage):
+    # normalize histograms:
+    histR = histR.astype(float)
+    histR = histR / np.sum(histR)
+    histG = histG.astype(float)
+    histG = histG / np.sum(histG)
+    histB = histB.astype(float)
+    histB = histB / np.sum(histB)
+
+    return histR, histG, histB
+
+def get_HSV_histograms(image_HSV):
+    '''Computes Hue, Saturation and Value histograms of an HSV image.'''
+
     # compute histograms:
-    [histH, _] = np.histogram(HSVimage[:,:,0], bins=range(180))
-    [histS, _] = np.histogram(HSVimage[:,:,1], bins=range(256))
-    [histV, _] = np.histogram(HSVimage[:,:,2], bins=range(256))
+    [histH, _] = np.histogram(image_HSV[:,:,0], bins=range(180))
+    [histS, _] = np.histogram(image_HSV[:,:,1], bins=range(256))
+    [histV, _] = np.histogram(image_HSV[:,:,2], bins=range(256))
+
     # normalize histograms:
-    histH = histH.astype(float); histH = histH / np.sum(histH)
-    histS = histS.astype(float); histS = histS / np.sum(histS)
-    histV = histV.astype(float); histV = histV / np.sum(histV)
-    return (histH, histS, histV)
+    histH = histH.astype(float)
+    histH = histH / np.sum(histH)
+    histS = histS.astype(float)
+    histS = histS / np.sum(histS)
+    histV = histV.astype(float)
+    histV = histV / np.sum(histV)
+
+    return histH, histS, histV
 
 
-def getHSHistograms_2D(HSVimage):
-    (width, height) = HSVimage.shape[1], HSVimage.shape[0]
-    H, xedges, yedges = np.histogram2d(np.reshape(HSVimage[:,:,0],
-                                                        width*height),
-                                          np.reshape(HSVimage[:,:,1],
-                                                        width*height),
-                                          bins=(range(-1,180, 30),
+def get_HSV_histograms_2D(image_HSV):
+    width, height = image_HSV.shape[1], image_HSV.shape[0]
+    H, xedges, yedges = np.histogram2d(np.reshape(image_HSV[:, :, 0],
+                                                        width * height),
+                                          np.reshape(image_HSV[:, :, 1],
+                                                        width * height),
+                                          bins=(range(-1, 180, 30),
                                                 range(-1, 256, 64)))
     H = H / np.sum(H)
     return (H, xedges, yedges)
 
 
-def computeFlowFeatures(Grayscale, GrayscalePrev, p0, lk_params):
-    p1, st, err = cv2.calcOpticalFlowPyrLK(GrayscalePrev, Grayscale, p0,
+def flow_features(img_gray, img_gray_prev, p0, lk_params):
+    '''
+    Calculates the flow of specific points between two images
+
+    Args:
+        img_gray : current image on gray scale
+        img_gray_prev : previous image on gray scale
+        p0 : vector of 2D points for which the flow needs to be found;
+            point coordinates must be single-precision floating-point numbers
+        lk_params : parameters dictionary for cv2.calcOpticalFlowPyrLK function
+
+    Returns:
+        angles : ndarray of angles for the flow vectors
+        mags : ndarray -?-
+        mu : mean value of the angles
+        std : standard deviation of the angles
+        good_new : a 2D vector of the new position of the input points
+        good_old : the input vector of 2D points
+        dx_S : list of differences between old and new points for the x axis
+        dy_S : list of differences between old and new points for the y axis
+        tilt_pan_confidence : tilt/pan confidence of the camera
+
+    '''
+    #get new position of the input points
+    p1, st, err = cv2.calcOpticalFlowPyrLK(img_gray_prev, img_gray, p0,
                                            None, **lk_params)
-    good_new = p1[st==1]
-    good_old = p0[st==1]
+    good_new = p1[st == 1]
+    good_old = p0[st == 1]
     angles = []
     mags = []
-    dxS = []; dyS = []
-    # draw motion arrows
+    dx_S = []
+    dy_S = []
+
+    # find angles, mags and distances
     for i,(new,old) in enumerate(zip(good_new, good_old)):
-        x1, y1 = new.ravel(); x2, y2 = old.ravel()
-        dx = x2 - x1; dy = y2 - y1
+        x1, y1 = new.ravel()
+        x2, y2 = old.ravel()
+        dx = x2 - x1
+        dy = y2 - y1
+
         if dy < 0:
             angles.append([np.abs(180.0 * np.arctan2( dy, dx) / np.pi)])
         else:
             angles.append([360.0 - 180.0 * np.arctan2( dy, dx) / np.pi])
-        mags.append(np.sqrt(dx*dx + dy*dy) /
-                    np.sqrt(Grayscale.shape[0]*Grayscale.shape[0] +
-                               Grayscale.shape[1]*Grayscale.shape[1]))
-        dxS.append(dx); dyS.append(dy)
+
+        mags.append(np.sqrt(dx**2 + dy**2) /
+                    np.sqrt(img_gray.shape[0]**2 +
+                               img_gray.shape[1]**2))
+        dx_S.append(dx)
+        dy_S.append(dy)
+
     angles = np.array(angles)
     mags = np.array(mags)
-    DistHorizontal = -1
-    if len(angles)>0:
-        meanDx = np.mean(dxS); meanDy = np.mean(dyS);
-        if meanDy < 0:
-            MEANANGLE = -(180.0 * np.arctan2( int(meanDy),
-                                                 int(meanDx)) / np.pi)
-        else:
-            MEANANGLE = 360.0 - (180.0 * np.arctan2( int(meanDy),
-                                                        int(meanDx)) / np.pi)
-        STD = angles_std(angles, MEANANGLE)
+    dist_horizontal = -1
 
-        DistHorizontal = min(angle_diff(MEANANGLE, 180), angle_diff(MEANANGLE, 0))
-        TitlPanConfidence = np.mean(mags) / np.sqrt(STD + 0.000000010)
-        TitlPanConfidence = TitlPanConfidence[0]
+    #find mu, std and tilt_pan_confidence
+    if len(angles)>0:
+        mean_dx = np.mean(dx_S)
+        mean_dy = np.mean(dy_S)
+        if mean_dy < 0:
+            mu = -(180.0 * np.arctan2( int(mean_dy),
+                                                 int(mean_dx)) / np.pi)
+        else:
+            mu = 360.0 - (180.0 * np.arctan2( int(mean_dy),
+                                                        int(mean_dx)) / np.pi)
+        std = angles_std(angles, mu)
+
+        dist_horizontal = min(angle_diff(mu, 180), angle_diff(mu, 0))
+        tilt_pan_confidence = np.mean(mags) / np.sqrt(std + 0.00000001)
+        tilt_pan_confidence = tilt_pan_confidence[0]
         # TODO:
         # CHECK PANCONFIDENCE
         # SAME FOR ZOOM AND OTHER CAMERA EFFECTS
-        if TitlPanConfidence < 1.0:
-            TitlPanConfidence = 0;
-            DistHorizontal = -1;
-    else:
-        mags = [0];
-        angles = [0];
-        dxS = [0];
-        dyS = [0];
-        MEANANGLE = 0
-        STD = 0
-        TitlPanConfidence = 0.0
 
-    return angles, mags, MEANANGLE, STD, good_new, good_old, dxS, dyS, TitlPanConfidence
+        if tilt_pan_confidence < 1.0:
+            tilt_pan_confidence = 0
+            dist_horizontal = -1
+    else:
+        mags = [0]
+        angles = [0]
+        dx_S = [0]
+        dy_S = [0]
+        mu = 0
+        std = 0
+        tilt_pan_confidence = 0.0
+
+    return angles, mags, mu, std, good_new, good_old, dx_S, dy_S, tilt_pan_confidence
 
 
 def processMovie(moviePath, processMode, PLOT):
@@ -284,14 +341,14 @@ def processMovie(moviePath, processMode, PLOT):
     f_diff = np.array([])
     flowAngle = np.array([])
     flowMag   = np.array([])
-    flowStd   = np.array([])
+    flowstd   = np.array([])
     processFPS = np.array([])
     processT   = np.array([])
 
     if processMode > 1:
         NFacesFrontal = collections.deque(maxlen= 200) #number if faces
         PFacesFrontal = collections.deque(maxlen= 200) #average "face ratio"
-        TitlPanConfidences = collections.deque(maxlen= 200)
+        tilt_pan_confidences = collections.deque(maxlen= 200)
     count = 0
     countProcess = 0
 
@@ -318,13 +375,14 @@ def processMovie(moviePath, processMode, PLOT):
             count += 1;
             (width, height) = frame.shape[1], frame.shape[0]
             frame2 = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            RGB = resizeFrame(frame2, new_width)
-            Grayscale = cv2.cvtColor(RGB, cv2.COLOR_RGB2GRAY)
-            (width, height) = Grayscale.shape[1], Grayscale.shape[0]
+            RGB = resize_frame(frame2, new_width)
+            img_gray = cv2.cvtColor(RGB, cv2.COLOR_RGB2GRAY)
+            (width, height) = img_gray.shape[1], img_gray.shape[0]
 
             if processMode>1:
                 if (count % 25) == 1:
-                    p0 = cv2.goodFeaturesToTrack(Grayscale, mask = None,
+                    #Determines strong corners on an image.
+                    p0 = cv2.goodFeaturesToTrack(img_gray, mask = None,
                                                  **feature_params)
                     if (p0 is None):
                         p0 = pOld;
@@ -337,12 +395,10 @@ def processMovie(moviePath, processMode, PLOT):
                 timeStamps = np.append(timeStamps, timeStamp)
 
                 if processMode>0:
-                    #[histH, histS, histV] = getHSVHistograms(HSV)
                     # PROCESS LEVEL 1:
                     HSV = cv2.cvtColor(RGB, cv2.COLOR_RGB2HSV)
-                    #histHS, xedges, yedges = getHSHistograms_2D(HSV)
 
-                    [histR, histG, histB] = getRGBHistograms(RGB)
+                    [histR, histG, histB] = get_RGB_histograms(RGB)
 
                     RGBratio = 100.0* (np.max(RGB, 2) -
                                        np.mean(RGB, 2)) / \
@@ -370,8 +426,7 @@ def processMovie(moviePath, processMode, PLOT):
                     curFV = np.concatenate((curFV, histV), 0)
                     curFV = np.concatenate((curFV, histRGBratio), 0)
                     curFV = np.concatenate((curFV, histS), 0)
-                    #curFV = np.concatenate((curFV, np.reshape(histHS,
-                    # histHS.shape[0]*histHS.shape[1])), 1)
+
                     if countProcess>1:
                         f_diff = np.append(f_diff,
                                            np.mean(np.mean(np.abs(histV -
@@ -397,18 +452,18 @@ def processMovie(moviePath, processMode, PLOT):
                     else:
                         PFacesFrontal.append(0.0)
                     if countProcess>1 and len(p0)>0:
-                        angles, mags, MEANANGLE, STD, good_new, good_old, dxS, dyS, TitlPanConfidence = \
-                            computeFlowFeatures(Grayscale, GrayscalePrev, p0,
+                        angles, mags, mu, std, good_new, good_old, dx_S, dy_S, tilt_pan_confidence = \
+                            flow_features(img_gray, img_gray_prev, p0,
                                                 lk_params)
                         meanMag = np.mean(np.array(mags))
                         stdMag = np.std(np.array(mags))
-                        TitlPanConfidences.append(TitlPanConfidence)
+                        tilt_pan_confidences.append(tilt_pan_confidence)
                     else:
-                        TitlPanConfidences.append(0.0)
+                        tilt_pan_confidences.append(0.0)
                         meanMag = 0
                         stdMag = 0
                     if countProcess > 1:
-                        grayDiff = (GrayscalePrev - Grayscale)
+                        grayDiff = (img_gray_prev - img_gray)
                         grayDiff[grayDiff<50] = 0
                         grayDiff[grayDiff>50] = 1
                         grayDiffT = grayDiff.sum() /\
@@ -437,7 +492,7 @@ def processMovie(moviePath, processMode, PLOT):
                     curFV = np.concatenate((curFV,
                                             np.array([PFacesFrontal[-1]])), 0)
                     curFV = np.concatenate((curFV,
-                                            np.array([TitlPanConfidences[-1]])),
+                                            np.array([tilt_pan_confidences[-1]])),
                                            0)
                     curFV = np.concatenate((curFV,
                                             np.array([meanMag])), 0)
@@ -471,11 +526,11 @@ def processMovie(moviePath, processMode, PLOT):
                         if len(angles)>0:
                             vis = cv2.arrowedLine(vis, (int(width/2),
                                                   int(height/2)),
-                                            (int(width/2)+int(np.mean(dxS)),
-                                             int(height/2)+int(np.mean(dyS))),
+                                            (int(width/2)+int(np.mean(dx_S)),
+                                             int(height/2)+int(np.mean(dy_S))),
                                             color = (0, 0, 255),
                                             thickness=4, line_type=8, shift=0)
-                        cv2.putText(vis,str(int(MEANANGLE)), (int(width/2),
+                        cv2.putText(vis,str(int(mu)), (int(width/2),
                                                               int(height/2)),
                                     cv2.FONT_HERSHEY_COMPLEX_SMALL, 2, 255)
 
@@ -532,14 +587,14 @@ def processMovie(moviePath, processMode, PLOT):
                     if processMode>1:
                         display_histogram(np.array(NFacesFrontal), widthPlot, height, 5, 'NFacesFrontal')
                         display_histogram(np.array(PFacesFrontal), widthPlot, height, 1, 'PFacesFrontal')
-                        display_histogram(np.array(TitlPanConfidences), widthPlot, height, 50, 'TitlPanConfidences')
+                        display_histogram(np.array(tilt_pan_confidences), widthPlot, height, 50, 'tilt_pan_confidences')
                         cv2.moveWindow('NFacesFrontal',         0,              2 * height+70)
                         cv2.moveWindow('PFacesFrontal',         widthPlot2,     2 * height+70)
-                        cv2.moveWindow('TitlPanConfidences',    2 * widthPlot2, 2 * height+70)
+                        cv2.moveWindow('tilt_pan_confidences',    2 * widthPlot2, 2 * height+70)
                     ch = cv2.waitKey(1)
                     T0 = T2;
                 PROCESS_NOW = False
-                GrayscalePrev = Grayscale;
+                img_gray_prev = img_gray;
                 #print FeatureMatrix.shape
 
         else:
@@ -653,9 +708,9 @@ def analyze(fileNameFeatures, fileNameNames, startF = 0, endF = 108, particularF
     gtSim = np.load("ground_sim_np")
 
     # normalize
-    MEAN = np.mean(F, axis = 0); STD  = np.std(F, axis = 0)
+    MEAN = np.mean(F, axis = 0); std  = np.std(F, axis = 0)
     for i in range(F.shape[0]):
-        F[i,:] = (F[i] - MEAN) / STD
+        F[i,:] = (F[i] - MEAN) / std
 
     firstPos = []
     secondPos = []

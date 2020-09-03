@@ -324,6 +324,7 @@ def flow_features(img_gray, img_gray_prev, p0, params):
 
 
 def seconds_to_time(duration_secs):
+    """Converts seconds to hours : minutes : seconds : tenths of seconds"""
 
     hrs = int(duration_secs / 3600)
     mins = int(duration_secs / 60)
@@ -333,7 +334,110 @@ def seconds_to_time(duration_secs):
     return hrs, mins, secs, tenths
 
 
-def process_video(video_path, process_mode, print_flag):
+def color_analysis(feature_vector_old, rgb):
+    hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
+
+    [hist_r, hist_g, hist_b] = get_rgb_histograms(rgb)
+
+    rgb_ratio = 100.0 * (np.max(rgb, 2) -
+                         np.mean(rgb, 2)) / (1.0 + np.mean(rgb, 2))
+    v_norm = (255.0 * hsv[:, :, 2]) / np.max(hsv[:, :, 2] + 1.0)
+    s_norm = (255.0 * hsv[:, :, 1]) / np.max(hsv[:, :, 1] + 1.0)
+
+    rgb_ratio[rgb_ratio > 199.0] = 199.0
+    rgb_ratio[rgb_ratio < 1.0] = 1.0
+    hist_rgb_ratio, _ = np.histogram(rgb_ratio,
+                                     bins=range(-1, 200, 40))
+    hist_rgb_ratio = hist_rgb_ratio.astype(float)
+    hist_rgb_ratio = hist_rgb_ratio / np.sum(hist_rgb_ratio)
+    hist_v, _ = np.histogram(v_norm, bins=range(-1, 256, 32))
+    hist_v = hist_v.astype(float)
+    hist_v = hist_v / np.sum(hist_v)
+    hist_s, _ = np.histogram(s_norm, bins=range(-1, 256, 32))
+    hist_s = hist_s.astype(float)
+    hist_s = hist_s / np.sum(hist_s)
+
+    # update the current feature vector
+    feature_vector_current = np.concatenate(
+        (feature_vector_old, hist_r), 0)
+    feature_vector_current = np.concatenate(
+        (feature_vector_current, hist_g), 0)
+    feature_vector_current = np.concatenate(
+        (feature_vector_current, hist_b), 0)
+    feature_vector_current = np.concatenate(
+        (feature_vector_current, hist_v), 0)
+    feature_vector_current = np.concatenate(
+        (feature_vector_current, hist_rgb_ratio), 0)
+    feature_vector_new = np.concatenate(
+        (feature_vector_current, hist_s), 0)
+
+    return feature_vector_new, hist_rgb_ratio, hist_s, hist_v, v_norm, s_norm
+
+
+def update_faces(area, frontal_faces, frontal_faces_num, frontal_faces_ratio):
+    frontal_faces_num.append(float(len(frontal_faces)))
+    if len(frontal_faces) > 0:
+        f_tmp = 0.0
+        for f in frontal_faces:
+            # normalize face size ratio to the frame dimensions
+            f_tmp += (f[2] * f[3] / float(area))
+        frontal_faces_ratio.append(f_tmp / len(frontal_faces))
+    else:
+        frontal_faces_ratio.append(0.0)
+
+    return frontal_faces_num, frontal_faces_ratio
+
+
+def calc_shot_duration(shot_change_times,
+                       shot_change_process_indices, shot_durations):
+
+    # shot change detection
+    shot_avg = 0
+    if len(shot_change_times) - 1 > 5:
+        for si in range(
+                len(shot_change_times) - 1):
+            shot_avg += (shot_change_times[si + 1] -
+                         shot_change_times[si])
+        print(shot_avg /
+              float(len(shot_change_times) - 1))
+
+    for ccc in range(shot_change_process_indices[-1] -
+                     shot_change_process_indices[-2]):
+        shot_durations.append(
+            shot_change_process_indices[-1] -
+            shot_change_process_indices[-2])
+
+    return shot_durations
+
+
+def process_video(video_path, process_mode, print_flag, save_results):
+    """
+    Extracts features representing color, flow, objects detected
+    and shot duration from video
+
+    Args:
+
+        video_path (str) : Path to video file
+        process_mode (int) : Processing modes:
+            - 0 : No processing
+            - 1 : Color analysis
+            - 2 : Flow analysis and object detection
+        print_flag (bool) : Flag to allow the display of terminal messages.
+        save_results (bool) : Boolean variable to allow save results files.
+
+    Returns:
+
+        features_stats (array_like) : Feature vector with stats on features
+            over time. Stats:
+                - mean value of every feature over time
+                - standard deviation of every feature over time
+                - mean value of standard deviation of every feature over time
+                - mean value of the 10 highest-valued frames for every feature
+        feature matrix (array_like) : Array of the extracted features.
+            Contains one feature vector for every frame.
+    """
+
+    # ---Initializations-------------------------------------------------------
     t_start = time.time()
     t_0 = t_start
     capture = cv2.VideoCapture(video_path)
@@ -344,6 +448,7 @@ def process_video(video_path, process_mode, print_flag):
     duration_str = '{0:02d}:{1:02d}:{2:02d}.{3:02d}'.format(hrs, mins,
                                                             secs, tenths)
     if print_flag:
+        print('Began processing video : ' + video_path)
         print("FPS      = " + str(fps))
         print("Duration = " + str(duration_secs) + " - " + duration_str)
 
@@ -357,12 +462,11 @@ def process_video(video_path, process_mode, print_flag):
         frontal_faces_num = collections.deque(maxlen=200)
         frontal_faces_ratio = collections.deque(maxlen=200)
         tilt_pan_confidences = collections.deque(maxlen=200)
-    count = 0
-    count_process = 0
 
-    if process_mode > 1:
         cascade_frontal, cascade_profile = initialize_face(
             HAAR_CASCADE_PATH_FRONTAL, HAAR_CASCADE_PATH_PROFILE)
+    count = 0
+    count_process = 0
 
     next_process_stamp = 0.0
     process_now = False
@@ -370,6 +474,7 @@ def process_video(video_path, process_mode, print_flag):
     shot_change_process_indices = [0]
     shot_durations = []
 
+    # ---Calculate features for every frame-----------------------------------
     while True:
         # cv.SetCaptureProperty( capture, cv.CV_CAP_PROP_POS_FRAMES,
         # count*frameStep );
@@ -380,6 +485,7 @@ def process_video(video_path, process_mode, print_flag):
         if time_stamp >= next_process_stamp:
             next_process_stamp += process_step
             process_now = True
+        # ---Begin processing-------------------------------------------------
         if ret:
             count += 1
             frame2 = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -402,46 +508,12 @@ def process_video(video_path, process_mode, print_flag):
                 count_process += 1
                 time_stamps = np.append(time_stamps, time_stamp)
 
+                # ---Get features from color analysis-------------------------
                 if process_mode > 0:
                     # PROCESS LEVEL 1:
-                    hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
-
-                    [hist_r, hist_g, hist_b] = get_rgb_histograms(rgb)
-
-                    rgb_ratio = 100.0 * (np.max(rgb, 2) -
-                                         np.mean(rgb, 2)) / \
-                                        (1.0 + np.mean(rgb, 2))
-                    v_norm = (255.0 * hsv[:, :, 2]) \
-                        / np.max(hsv[:, :, 2] + 1.0)
-                    s_norm = (255.0 * hsv[:, :, 1]) \
-                        / np.max(hsv[:, :, 1] + 1.0)
-
-                    rgb_ratio[rgb_ratio > 199.0] = 199.0
-                    rgb_ratio[rgb_ratio < 1.0] = 1.0
-                    hist_rgb_ratio, _ = np.histogram(rgb_ratio,
-                                                     bins=range(-1, 200, 40))
-                    hist_rgb_ratio = hist_rgb_ratio.astype(float)
-                    hist_rgb_ratio = hist_rgb_ratio / np.sum(hist_rgb_ratio)
-                    hist_v, _ = np.histogram(v_norm, bins=range(-1, 256, 32))
-                    hist_v = hist_v.astype(float)
-                    hist_v = hist_v / np.sum(hist_v)
-                    hist_s, _ = np.histogram(s_norm, bins=range(-1, 256, 32))
-                    hist_s = hist_s.astype(float)
-                    hist_s = hist_s / np.sum(hist_s)
-
-                    # update the current feature vector
-                    feature_vector_current = np.concatenate(
-                        (feature_vector_current, hist_r), 0)
-                    feature_vector_current = np.concatenate(
-                        (feature_vector_current, hist_g), 0)
-                    feature_vector_current = np.concatenate(
-                        (feature_vector_current, hist_b), 0)
-                    feature_vector_current = np.concatenate(
-                        (feature_vector_current, hist_v), 0)
-                    feature_vector_current = np.concatenate(
-                        (feature_vector_current, hist_rgb_ratio), 0)
-                    feature_vector_current = np.concatenate(
-                        (feature_vector_current, hist_s), 0)
+                    feature_vector_current,\
+                     hist_rgb_ratio, hist_s, hist_v,\
+                     v_norm, _ = color_analysis(feature_vector_current, rgb)
 
                     if count_process > 1:
                         f_diff = np.append(f_diff,
@@ -453,31 +525,28 @@ def process_video(video_path, process_mode, print_flag):
                         f_diff = np.append(f_diff, 0.0)
 
                     feature_vector_current = np.concatenate(
-                                                (feature_vector_current,
-                                                 np.array([f_diff[-1]])),
-                                                0)
+                        (feature_vector_current,
+                         np.array([f_diff[-1]])),
+                        0)
                     hist_v_prev = hist_v
 
+                # ---Get flow and object relates features---------------------
                 if process_mode > 1:
                     # face detection
                     frontal_faces = detect_faces(rgb, cascade_frontal,
                                                  cascade_profile)
                     # update number of faces
-                    frontal_faces_num.append(float(len(frontal_faces)))
-                    if len(frontal_faces) > 0:
-                        f_tmp = 0.0
-                        for f in frontal_faces:
-                            # normalize face size ratio to the frame dimensions
-                            f_tmp += (f[2] * f[3] / float(
-                                width * height))
-                        frontal_faces_ratio.append(f_tmp / len(frontal_faces))
-                    else:
-                        frontal_faces_ratio.append(0.0)
+                    frontal_faces_num, frontal_faces_ratio = update_faces(
+                        width * height, frontal_faces,
+                        frontal_faces_num, frontal_faces_ratio)
+
+                    # ---Get tilt/pan confidences-----------------------------
                     if count_process > 1 and len(p0) > 0:
-                        angles, mags, mu, std,\
-                         good_new, good_old, dx_all, \
-                         dy_all, tilt_pan_confidence = \
-                         flow_features(img_gray, img_gray_prev, p0, lk_params)
+                        angles, mags, \
+                         mu, std, good_new,\
+                         good_old, dx_all, dy_all, \
+                         tilt_pan_confidence = flow_features(
+                                    img_gray, img_gray_prev, p0, lk_params)
                         mag_mu = np.mean(np.array(mags))
                         mag_std = np.std(np.array(mags))
                         tilt_pan_confidences.append(tilt_pan_confidence)
@@ -485,7 +554,10 @@ def process_video(video_path, process_mode, print_flag):
                         tilt_pan_confidences.append(0.0)
                         mag_mu = 0
                         mag_std = 0
+
+                    # ---Get shot duration------------------------------------
                     if count_process > 1:
+
                         gray_diff = (img_gray_prev - img_gray)
                         gray_diff[gray_diff < 50] = 0
                         gray_diff[gray_diff > 50] = 1
@@ -495,63 +567,39 @@ def process_video(video_path, process_mode, print_flag):
                                 (gray_diff_t > 0.55) and
                                 (f_diff[-1] > 0.002) and
                                 time_stamp - shot_change_times[-1] > 1.1):
-                            # shot change detection
-                            shot_avg = 0
-                            if len(shot_change_times) - 1 > 5:
-                                for si in range(
-                                        len(shot_change_times) - 1):
-                                    shot_avg += (shot_change_times[si + 1] -
-                                                 shot_change_times[si])
-                                print(shot_avg /
-                                      float(len(shot_change_times) - 1))
-
                             shot_change_times.append(time_stamp)
                             shot_change_process_indices.append(count_process)
-                            for ccc in range(shot_change_process_indices[-1] -
-                                             shot_change_process_indices[-2]):
-                                shot_durations.append(
-                                    shot_change_process_indices[-1] -
-                                    shot_change_process_indices[-2])
 
+                            shot_durations = calc_shot_duration(
+                                shot_change_times,
+                                shot_change_process_indices,
+                                shot_durations)
+
+                    # add new features to feature vector
                     feature_vector_current = np.concatenate(
-                                            (feature_vector_current,
-                                             np.array(
-                                                 [frontal_faces_num[-1]])),
-                                            0)
-                    feature_vector_current = np.concatenate(
-                                            (feature_vector_current,
-                                             np.array(
-                                                 [frontal_faces_ratio[-1]])),
-                                            0)
-                    feature_vector_current = np.concatenate(
-                                            (feature_vector_current,
-                                             np.array(
-                                                 [tilt_pan_confidences[-1]])),
-                                            0)
-                    feature_vector_current = np.concatenate(
-                                            (feature_vector_current,
-                                             np.array([mag_mu])),
-                                            0)
-                    feature_vector_current = np.concatenate(
-                                            (feature_vector_current,
-                                             np.array([mag_std])),
-                                            0)
+                        (feature_vector_current,
+                         np.array([frontal_faces_num[-1]]),
+                         np.array([frontal_faces_ratio[-1]]),
+                         np.array([tilt_pan_confidences[-1]]),
+                         np.array([mag_mu]),
+                         np.array([mag_std])),
+                        0)
 
                 if process_mode > 0:
                     if count_process == 1:
                         feature_matrix = np.reshape(
-                                        feature_vector_current,
-                                        (1, len(feature_vector_current)))
+                            feature_vector_current,
+                            (1, len(feature_vector_current)))
                     else:
                         feature_matrix = np.concatenate(
-                                        (feature_matrix,
-                                         np.reshape(
-                                             feature_vector_current,
-                                             (1,
-                                              len(feature_vector_current)))),
-                                        0)
+                            (feature_matrix,
+                             np.reshape(
+                                 feature_vector_current,
+                                 (1,
+                                  len(feature_vector_current)))),
+                            0)
                 print(feature_matrix.shape)
-                if (count_process > 2) and (count_process % plot_step == 0)\
+                if (count_process > 2) and (count_process % plot_step == 0) \
                         and print_flag:
                     # draw RGB image and visualizations
                     vis = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
@@ -562,7 +610,7 @@ def process_video(video_path, process_mode, print_flag):
                             cv2.rectangle(vis, (f[0], f[1]),
                                           (f[0] + f[2], f[1] + f[3]),
                                           (0, 255, 255), 3)
-                        # flow arrows:
+
                         # draw motion arrows
                         for i, (new, old) in enumerate(
                                 zip(good_new, good_old)):
@@ -600,9 +648,9 @@ def process_video(video_path, process_mode, print_flag):
                         t_process_win_avg = np.mean(t_process)
 
                     hrs, mins, secs, _ = seconds_to_time(
-                                    t_process_win_avg *
-                                    float(duration_secs -
-                                          dur_secs) / 100.0)
+                        t_process_win_avg *
+                        float(duration_secs -
+                              dur_secs) / 100.0)
 
                     time_remain_str = '{0:02d}:{1:02d}:{2:02d}'. \
                         format(hrs, mins, secs)
@@ -676,7 +724,7 @@ def process_video(video_path, process_mode, print_flag):
                             plot_width,
                             height,
                             50,
-                            'Tilt Pan COnfidences')
+                            'Tilt Pan Confidences')
 
                         cv2.moveWindow('frontal_faces_num', 0,
                                        2 * height + 70)
@@ -693,9 +741,6 @@ def process_video(video_path, process_mode, print_flag):
         else:
             break
 
-    if process_mode > 0:
-        np.savetxt("features.csv", feature_matrix, delimiter=",")
-
     processing_time = time.time() - t_start
     processing_fps = count_process / float(processing_time)
     processing_rt = 100.0 * float(processing_time) / duration_secs
@@ -703,6 +748,7 @@ def process_video(video_path, process_mode, print_flag):
     hrs, mins, secs, tenths = seconds_to_time(processing_time)
 
     if print_flag:
+        print('Finished processing on video :' + video_path)
         print("processing time: " + '{0:02d}:{1:02d}:{2:02d}.{3:02d}'.
               format(hrs, mins, secs, tenths))
         print("processing ratio      {0:3.1f} fps".format(processing_fps))
@@ -713,14 +759,11 @@ def process_video(video_path, process_mode, print_flag):
 
     shot_durations = np.matrix(shot_durations)
     shot_durations = shot_durations * process_step
-    # print shot_durations
-    # print shot_durations.shape
-    # print shot_change_times
 
     # append shot durations in feature matrix:
     feature_matrix = np.append(feature_matrix, shot_durations.T, axis=1)
 
-    # get movie-level feature statistics:
+    # ---Get movie-level feature statistics-----------------------------------
     # TODO: consider more statistics, OR consider temporal analysis method
     # eg LSTMs or whatever
     f_mu = feature_matrix.mean(axis=0)
@@ -735,9 +778,16 @@ def process_video(video_path, process_mode, print_flag):
                                        :]
     f_mu10top = feature_matrix_sorted_rows_top10.mean(axis=0)
     features_stats = np.concatenate((f_mu, f_std, f_stdmu, f_mu10top), axis=1)
-    print(feature_matrix.shape)
-    # print f_mu.shape, f_std.shape, f_stdmu.shape, f_mu10top.shape
-    print(features_stats.shape)
+
+    if print_flag:
+        print('Shape of feature matrix found: {}'.format(
+            feature_matrix.shape))
+        print('Shape of features\' stats found: {}'.format(
+            features_stats.shape))
+
+    if process_mode > 0 and save_results:
+        np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")
+        np.savetxt("features_stats.csv", features_stats, delimiter=",")
 
     return features_stats, feature_matrix
 
@@ -757,7 +807,8 @@ def dir_process_video(dir_name):
 
     for movieFile in video_files_list:
         print(movieFile)
-        [features_stats, feature_matrix] = process_video(movieFile, 2, True)
+        [features_stats, feature_matrix] = process_video(movieFile, 2,
+                                                         True, False)
         np.save(movieFile + ".npy", feature_matrix)
         if len(features_all) == 0:  # append feature vector
             features_all = features_stats
@@ -799,7 +850,6 @@ def npy_to_csv(filename_features, filename_names):
 
 def analyze(filename_features, filename_names, first_feature=0,
             last_feature=108, specific_features=[]):
-
     features = np.load(filename_features)
     names = np.load(filename_names)
 
@@ -821,9 +871,9 @@ def analyze(filename_features, filename_names, first_feature=0,
 
     for i in range(len(names)):  # for each movie
         name_cur = os.path.basename(
-            os.path.normpath(names[i]))\
-            .replace(".mkv", "")\
-            .replace(".mpg", "")\
+            os.path.normpath(names[i])) \
+            .replace(".mkv", "") \
+            .replace(".mpg", "") \
             .replace(".mp4", "").replace(".avi", "")
         gt_index = gt_names.index(name_cur)
         gt_sim_cur = gt_sim[gt_index, :]
@@ -868,7 +918,7 @@ def analyze(filename_features, filename_names, first_feature=0,
 
     return np.median(np.array(first_pos)), \
         100 * np.sum(np.array(top10)) / len(top10), \
-        np.median(np.array(second_pos)),\
+        np.median(np.array(second_pos)), \
         100 * np.sum(np.array(top10_second)) / len(top10_second)
 
 
@@ -933,12 +983,11 @@ def analyze_script():
 
 def main(argv):
     if len(argv) == 3 and argv[1] == "-f":
-        process_video(argv[2], 2, 1)
+        process_video(argv[2], 2, True, True)
     if argv[1] == "-d":  # directory
         dir_name = argv[2]
         features_all, video_files_list = dir_process_video(dir_name)
         print(features_all.shape, video_files_list)
-        # F = dirs_process_video(dir_names)
     if argv[1] == "evaluate":
         [a, b, a2, b2] = analyze("featuresAll.npy", "namesAll.npy")
         print("First returned result median position {0:.1f}".format(a))

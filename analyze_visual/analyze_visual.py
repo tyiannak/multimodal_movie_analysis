@@ -1,3 +1,27 @@
+"""
+Visual Analysis.
+
+The script extracts and analyzes visual-based features from videos.
+
+Flags:
+    - f: extract features from specific file
+        E.g. python3 analyze_visual.py -f <filename>
+    - d: extract features from all files of a directory
+        E.g. python3 analyze_visual.py -d <directory_name>
+    - evaluate: analyze extracted features
+        E.g. python3 analyze_visual.py -evaluate
+    - debug: debug script
+        E.g. python3 analyze_visual.py -debug
+
+Equivalent functions:
+    - process_video :  extracts features from specific file
+    - dir_process_video : extracts features from all files of a directory
+    - analyze : analyzes extracted features
+    - script_debug : debug script
+
+For farther information read the docstrings.
+"""
+
 import cv2
 import time
 import sys
@@ -879,8 +903,8 @@ def process_video(video_path, process_mode, print_flag, save_results):
 
 
 def dir_process_video(dir_name):
-    """
-    """
+    """Processes all videos from a given directory."""
+
     dir_name_no_path = os.path.basename(os.path.normpath(dir_name))
 
     features_all = np.array([])
@@ -902,10 +926,13 @@ def dir_process_video(dir_name):
             features_all = np.vstack((features_all, features_stats))
     np.save(dir_name_no_path + "_features.npy", features_all)
     np.save(dir_name_no_path + "_video_files_list.npy", video_files_list)
+
     return features_all, video_files_list
 
 
 def dirs_process_video(dir_names):
+    """Processes all videos from all given directories."""
+
     # feature extraction for each class:
     features = []
     class_names = []
@@ -938,6 +965,7 @@ def analyze(filename_features, filename_names, first_feature=0,
             last_feature=108, specific_features=[]):
     features = np.load(filename_features)
     names = np.load(filename_names)
+    """Analyze features."""
 
     text_file = open("ground_names.txt", "r")
     gt_names = text_file.readlines()
@@ -1008,7 +1036,9 @@ def analyze(filename_features, filename_names, first_feature=0,
         100 * np.sum(np.array(top10_second)) / len(top10_second)
 
 
-def analyze_script():
+def script_debug():
+    """Debug script."""
+
     n_exp = 1000
     all_feature_combinations = []
     med_pos = []
@@ -1024,8 +1054,8 @@ def analyze_script():
             features_cur = np.random.permutation(range(108))[0:n_features]
             all_feature_combinations.append(features_cur)
             a1, a2, a3, a4 = analyze(
-                "featuresAll.npy",
-                "namesAll.npy", 0, 0, features_cur)
+                "features_all.npy",
+                "names_all.npy", 0, 0, features_cur)
             med_pos.append(a1)
             top10.append(a2)
             med_pos2.append(a3)
@@ -1074,15 +1104,15 @@ def main(argv):
         dir_name = argv[2]
         features_all, video_files_list = dir_process_video(dir_name)
         print(features_all.shape, video_files_list)
-    if argv[1] == "evaluate":
-        [a, b, a2, b2] = analyze("featuresAll.npy", "namesAll.npy")
+    if argv[1] == "-evaluate":
+        [a, b, a2, b2] = analyze("features_all.npy", "names_all.npy")
         print("First returned result median position {0:.1f}".format(a))
         print("First returned result in top10 {0:.1f} %".format(b))
         print("Second returned result median position {0:.1f}".format(a2))
         print("Second returned result in top10 {0:.1f} %".format(b2))
 
-    if argv[1] == "scriptDebug":
-        analyze_script()
+    if argv[1] == "-debug":
+        script_debug()
 
 
 if __name__ == '__main__':

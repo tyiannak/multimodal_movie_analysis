@@ -335,6 +335,34 @@ def seconds_to_time(duration_secs):
 
 
 def color_analysis(feature_vector_old, rgb):
+    """
+    Extract color related features from rgb image.
+    Features to be extracted:
+        - From RGB image:
+            - Histogram of red
+            - Histogram of green
+            - Histogram of blue
+            - Histogram of ratio of the max difference
+                from the mean value of the image
+        - From HSV image:
+            - Histogram of hue
+            - Histogram of saturation
+            - Histogram of value
+
+    Args:
+        feature_vector_old (array_like) : Old feature vector
+                                            to be concatenated
+        rgb : Image of interest in RGB format.
+
+    Returns:
+        feature_vector_new : Concatenated feature vector
+        hist_rgb_ratio : Histogram of rgb ratio
+        hist_s : Histogram of saturation
+        hist_v : Histogram of value
+        v_norm : Value norm
+        s_norm : Saturation norm
+    """
+
     hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
 
     [hist_r, hist_g, hist_b] = get_rgb_histograms(rgb)
@@ -358,23 +386,20 @@ def color_analysis(feature_vector_old, rgb):
     hist_s = hist_s / np.sum(hist_s)
 
     # update the current feature vector
-    feature_vector_current = np.concatenate(
-        (feature_vector_old, hist_r), 0)
-    feature_vector_current = np.concatenate(
-        (feature_vector_current, hist_g), 0)
-    feature_vector_current = np.concatenate(
-        (feature_vector_current, hist_b), 0)
-    feature_vector_current = np.concatenate(
-        (feature_vector_current, hist_v), 0)
-    feature_vector_current = np.concatenate(
-        (feature_vector_current, hist_rgb_ratio), 0)
     feature_vector_new = np.concatenate(
-        (feature_vector_current, hist_s), 0)
+        (feature_vector_old, hist_r, hist_g,
+         hist_b, hist_v, hist_rgb_ratio, hist_s),
+        0)
 
     return feature_vector_new, hist_rgb_ratio, hist_s, hist_v, v_norm, s_norm
 
 
 def update_faces(area, frontal_faces, frontal_faces_num, frontal_faces_ratio):
+    """
+    Updates frontal faces number and frontal faces ratio
+    for the new frame.
+    """
+
     frontal_faces_num.append(float(len(frontal_faces)))
     if len(frontal_faces) > 0:
         f_tmp = 0.0
@@ -388,18 +413,36 @@ def update_faces(area, frontal_faces, frontal_faces_num, frontal_faces_ratio):
     return frontal_faces_num, frontal_faces_ratio
 
 
+def shot_change(gray_diff, mag_mu, f_diff, current_shot_duration):
+    """
+    Decides if a shot change was happened,
+    by trying to find big changes between frames.
+    """
+
+    gray_diff[gray_diff < 50] = 0
+    gray_diff[gray_diff > 50] = 1
+    gray_diff_t = gray_diff.sum() \
+        / float(gray_diff.shape[0] * gray_diff.shape[1])
+
+    if ((mag_mu > 0.06) and (gray_diff_t > 0.55) and (f_diff[-1] > 0.002) and
+            current_shot_duration > 1.1):
+        return True
+    else:
+        return False
+
+
 def calc_shot_duration(shot_change_times,
                        shot_change_process_indices, shot_durations):
+    """Calculates shot duration."""
 
-    # shot change detection
     shot_avg = 0
     if len(shot_change_times) - 1 > 5:
         for si in range(
                 len(shot_change_times) - 1):
             shot_avg += (shot_change_times[si + 1] -
                          shot_change_times[si])
-        print(shot_avg /
-              float(len(shot_change_times) - 1))
+        print('Average shot duration: {}'.format(
+                shot_avg / float(len(shot_change_times) - 1)))
 
     for ccc in range(shot_change_process_indices[-1] -
                      shot_change_process_indices[-2]):
@@ -410,9 +453,158 @@ def calc_shot_duration(shot_change_times,
     return shot_durations
 
 
+def windows_display(vis, height, process_mode, v_norm, hist_rgb_ratio,
+                    hist_v, hist_s, frontal_faces_num,
+                    frontal_faces_ratio, tilt_pan_confidences):
+    """
+    Displays the processed video and its gray-scaled version.
+    Also shows histograms of:
+        - Frame saturation
+        - Frame value
+        - RGB ratio
+        - Tilt/Pan confidences
+        - Frontal faces number
+        - Frontal faces ratio
+    """
+
+    plot_width = 150
+    plot_width2 = 150
+    cv2.imshow('Color', vis)
+    cv2.imshow('GrayNorm', v_norm / 256.0)
+    cv2.moveWindow('Color', 0, 0)
+    cv2.moveWindow('GrayNorm', new_width, 0)
+
+    if process_mode > 0:
+        display_histogram(
+            np.repeat(hist_rgb_ratio,
+                      plot_width2 / hist_rgb_ratio.shape[0]),
+            plot_width2,
+            height,
+            np.max(hist_rgb_ratio),
+            'Color Hist')
+
+        display_histogram(
+            np.repeat(hist_v,
+                      plot_width2 / hist_v.shape[0]),
+            plot_width2,
+            height,
+            np.max(hist_v),
+            'Value Hist')
+
+        display_histogram(
+            np.repeat(hist_s,
+                      plot_width2 / hist_s.shape[0]),
+            plot_width2,
+            height,
+            np.max(hist_s),
+            'Sat Hist')
+
+        cv2.moveWindow('Color Hist', 0, height + 70)
+        cv2.moveWindow('Value Hist', plot_width2,
+                       height + 70)
+        cv2.moveWindow('hsv Diff', 2 * plot_width2,
+                       height + 70)
+        cv2.moveWindow('Sat Hist', 2 * plot_width2,
+                       height + 70)
+
+    if process_mode > 1:
+        display_histogram(
+            np.array(frontal_faces_num),
+            plot_width,
+            height,
+            5,
+            'Number of Frontal Faces')
+
+        display_histogram(np.array(frontal_faces_ratio),
+                          plot_width,
+                          height,
+                          1,
+                          'Ratio of Frontal Faces')
+
+        display_histogram(
+            np.array(tilt_pan_confidences),
+            plot_width,
+            height,
+            50,
+            'Tilt Pan Confidences')
+
+        cv2.moveWindow('frontal_faces_num', 0,
+                       2 * height + 70)
+        cv2.moveWindow('frontal_faces_ratio', plot_width2,
+                       2 * height + 70)
+        cv2.moveWindow('tilt_pan_confidences',
+                       2 * plot_width2,
+                       2 * height + 70)
+
+        cv2.waitKey(1)
+    return None
+
+
+def get_features_stats(feature_matrix):
+    """
+    Calculates statistics on features over time
+    and puts them to the feature matrix.
+    """
+
+    f_mu = feature_matrix.mean(axis=0)
+    f_std = feature_matrix.std(axis=0)
+    f_stdmu = feature_matrix.std(axis=0) \
+        / (np.median(feature_matrix, axis=0) + 0.0001)
+    feature_matrix_sorted_rows = np.sort(feature_matrix, axis=0)
+    feature_matrix_sorted_rows_top10 = feature_matrix_sorted_rows[
+                                       - int(0.10 *
+                                             feature_matrix_sorted_rows.
+                                             shape[0])::,
+                                       :]
+    f_mu10top = feature_matrix_sorted_rows_top10.mean(axis=0)
+    features_stats = np.concatenate((f_mu, f_std, f_stdmu, f_mu10top), axis=1)
+
+    return features_stats
+
+
+def display_time(dur_secs, fps_process, t_process, t_0,
+                 duration_secs, duration_str, width, vis):
+    """Displays time related strings at the displayed video's window."""
+
+    t_2 = time.time()
+    hrs, mins, secs, tenths = seconds_to_time(dur_secs)
+    time_str = '{0:02d}:{1:02d}:{2:02d}.{3:02d}'. \
+        format(hrs, mins, secs, tenths)
+    fps_process = np.append(
+        fps_process, plot_step / float(t_2 - t_0))
+    t_process = np.append(t_process, 100.0 *
+                          float(t_2 - t_0) /
+                          (process_step * plot_step))
+    if len(fps_process) > 250:
+        fps_process_win_avg = np.mean(fps_process[-250:-1])
+        t_process_win_avg = np.mean(t_process[-250:-1])
+    else:
+        fps_process_win_avg = np.mean(fps_process)
+        t_process_win_avg = np.mean(t_process)
+
+    hrs, mins, secs, _ = seconds_to_time(
+        t_process_win_avg *
+        float(duration_secs -
+              dur_secs) / 100.0)
+
+    time_remain_str = '{0:02d}:{1:02d}:{2:02d}'. \
+        format(hrs, mins, secs)
+    string_to_plot = \
+        '{0:s}/{1:s} {2:5.1f}fps,{3:2.1f}xR {4:s}'.format(
+            time_str, duration_str, fps_process_win_avg,
+            100.0 / float(t_process_win_avg), time_remain_str)
+    cv2.rectangle(vis, (0, 0), (width, 17),
+                  (255, 255, 255), -1)
+    cv2.putText(vis, string_to_plot, (20, 11),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.45,
+                (0, 0, 0))
+
+    return t_2
+
+
 def process_video(video_path, process_mode, print_flag, save_results):
     """
-    Extracts features representing color, flow, objects detected
+    Extracts and displays features representing color, flow, objects detected
     and shot duration from video
 
     Args:
@@ -480,11 +672,13 @@ def process_video(video_path, process_mode, print_flag, save_results):
         # count*frameStep );
         # (THIS IS TOOOOO SLOW (MAKES THE READING PROCESS 2xSLOWER))
 
+        # get frame
         ret, frame = capture.read()
         time_stamp = float(count) / fps
         if time_stamp >= next_process_stamp:
             next_process_stamp += process_step
             process_now = True
+
         # ---Begin processing-------------------------------------------------
         if ret:
             count += 1
@@ -503,10 +697,10 @@ def process_video(video_path, process_mode, print_flag, save_results):
                     p_old = p0
 
             if process_now:
-                feature_vector_current = np.array([])
 
                 count_process += 1
                 time_stamps = np.append(time_stamps, time_stamp)
+                feature_vector_current = np.array([])
 
                 # ---Get features from color analysis-------------------------
                 if process_mode > 0:
@@ -530,7 +724,7 @@ def process_video(video_path, process_mode, print_flag, save_results):
                         0)
                     hist_v_prev = hist_v
 
-                # ---Get flow and object relates features---------------------
+                # ---Get flow and object related features---------------------
                 if process_mode > 1:
                     # face detection
                     frontal_faces = detect_faces(rgb, cascade_frontal,
@@ -549,24 +743,17 @@ def process_video(video_path, process_mode, print_flag, save_results):
                                     img_gray, img_gray_prev, p0, lk_params)
                         mag_mu = np.mean(np.array(mags))
                         mag_std = np.std(np.array(mags))
-                        tilt_pan_confidences.append(tilt_pan_confidence)
                     else:
-                        tilt_pan_confidences.append(0.0)
+                        tilt_pan_confidence = 0.0
                         mag_mu = 0
                         mag_std = 0
+                    tilt_pan_confidences.append(tilt_pan_confidence)
 
                     # ---Get shot duration------------------------------------
                     if count_process > 1:
-
                         gray_diff = (img_gray_prev - img_gray)
-                        gray_diff[gray_diff < 50] = 0
-                        gray_diff[gray_diff > 50] = 1
-                        gray_diff_t = gray_diff.sum() \
-                            / float(gray_diff.shape[0] * gray_diff.shape[1])
-                        if ((mag_mu > 0.06) and
-                                (gray_diff_t > 0.55) and
-                                (f_diff[-1] > 0.002) and
-                                time_stamp - shot_change_times[-1] > 1.1):
+                        if shot_change(gray_diff, mag_mu, f_diff,
+                                       time_stamp - shot_change_times[-1]):
                             shot_change_times.append(time_stamp)
                             shot_change_process_indices.append(count_process)
 
@@ -585,11 +772,12 @@ def process_video(video_path, process_mode, print_flag, save_results):
                          np.array([mag_std])),
                         0)
 
+                # ---Append current feature vector to feature matrix----------
                 if process_mode > 0:
                     if count_process == 1:
                         feature_matrix = np.reshape(
-                            feature_vector_current,
-                            (1, len(feature_vector_current)))
+                                    feature_vector_current,
+                                    (1, len(feature_vector_current)))
                     else:
                         feature_matrix = np.concatenate(
                             (feature_matrix,
@@ -598,7 +786,11 @@ def process_video(video_path, process_mode, print_flag, save_results):
                                  (1,
                                   len(feature_vector_current)))),
                             0)
-                print(feature_matrix.shape)
+
+                print('Shape of feature matrix: {}'.format(
+                                                feature_matrix.shape))
+
+                # ---Display features on windows------------------------------
                 if (count_process > 2) and (count_process % plot_step == 0) \
                         and print_flag:
                     # draw RGB image and visualizations
@@ -630,110 +822,17 @@ def process_video(video_path, process_mode, print_flag, save_results):
                                     cv2.FONT_HERSHEY_COMPLEX_SMALL, 2, 255)
 
                     # Time-related plots:
-                    t_2 = time.time()
                     dur_secs = float(count) / fps
-                    hrs, mins, secs, tenths = seconds_to_time(dur_secs)
-                    time_str = '{0:02d}:{1:02d}:{2:02d}.{3:02d}'. \
-                        format(hrs, mins, secs, tenths)
-                    fps_process = np.append(
-                        fps_process, plot_step / float(t_2 - t_0))
-                    t_process = np.append(t_process, 100.0 *
-                                          float(t_2 - t_0) /
-                                          (process_step * plot_step))
-                    if len(fps_process) > 250:
-                        fps_process_win_avg = np.mean(fps_process[-250:-1])
-                        t_process_win_avg = np.mean(t_process[-250:-1])
-                    else:
-                        fps_process_win_avg = np.mean(fps_process)
-                        t_process_win_avg = np.mean(t_process)
+                    t_2 = display_time(dur_secs, fps_process, t_process,
+                                       t_0, duration_secs, duration_str,
+                                       width, vis)
 
-                    hrs, mins, secs, _ = seconds_to_time(
-                        t_process_win_avg *
-                        float(duration_secs -
-                              dur_secs) / 100.0)
+                    # Display features on windows
+                    windows_display(vis, height, process_mode, v_norm,
+                                    hist_rgb_ratio, hist_v, hist_s,
+                                    frontal_faces_num, frontal_faces_ratio,
+                                    tilt_pan_confidences)
 
-                    time_remain_str = '{0:02d}:{1:02d}:{2:02d}'. \
-                        format(hrs, mins, secs)
-                    string_to_plot = \
-                        '{0:s}/{1:s} {2:5.1f}fps,{3:2.1f}xR {4:s}'.format(
-                            time_str, duration_str, fps_process_win_avg,
-                            100.0 / float(t_process_win_avg), time_remain_str)
-                    cv2.rectangle(vis, (0, 0), (width, 17),
-                                  (255, 255, 255), -1)
-                    cv2.putText(vis, string_to_plot, (20, 11),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.45,
-                                (0, 0, 0))
-
-                    # Draw color image:
-                    plot_width = 150
-                    plot_width2 = 150
-                    cv2.imshow('Color', vis)
-                    cv2.imshow('GrayNorm', v_norm / 256.0)
-                    cv2.moveWindow('Color', 0, 0)
-                    cv2.moveWindow('GrayNorm', new_width, 0)
-
-                    if process_mode > 0:
-                        display_histogram(
-                            np.repeat(hist_rgb_ratio,
-                                      plot_width2 / hist_rgb_ratio.shape[0]),
-                            plot_width2,
-                            height,
-                            np.max(hist_rgb_ratio),
-                            'Color Hist')
-
-                        display_histogram(
-                            np.repeat(hist_v,
-                                      plot_width2 / hist_v.shape[0]),
-                            plot_width2,
-                            height,
-                            np.max(hist_v),
-                            'Value Hist')
-
-                        display_histogram(
-                            np.repeat(hist_s,
-                                      plot_width2 / hist_s.shape[0]),
-                            plot_width2,
-                            height,
-                            np.max(hist_s),
-                            'Sat Hist')
-
-                        cv2.moveWindow('Color Hist', 0, height + 70)
-                        cv2.moveWindow('Value Hist', plot_width2,
-                                       height + 70)
-                        cv2.moveWindow('hsv Diff', 2 * plot_width2,
-                                       height + 70)
-                        cv2.moveWindow('Sat Hist', 2 * plot_width2,
-                                       height + 70)
-
-                    if process_mode > 1:
-                        display_histogram(
-                            np.array(frontal_faces_num),
-                            plot_width,
-                            height,
-                            5,
-                            'Number of Frontal Faces')
-
-                        display_histogram(np.array(frontal_faces_ratio),
-                                          plot_width,
-                                          height,
-                                          1,
-                                          'Ratio of Frontal Faces')
-
-                        display_histogram(
-                            np.array(tilt_pan_confidences),
-                            plot_width,
-                            height,
-                            50,
-                            'Tilt Pan Confidences')
-
-                        cv2.moveWindow('frontal_faces_num', 0,
-                                       2 * height + 70)
-                        cv2.moveWindow('frontal_faces_ratio', plot_width2,
-                                       2 * height + 70)
-                        cv2.moveWindow('tilt_pan_confidences',
-                                       2 * plot_width2,
-                                       2 * height + 70)
-                    cv2.waitKey(1)
                     t_0 = t_2
                 process_now = False
                 img_gray_prev = img_gray
@@ -742,44 +841,31 @@ def process_video(video_path, process_mode, print_flag, save_results):
             break
 
     processing_time = time.time() - t_start
-    processing_fps = count_process / float(processing_time)
-    processing_rt = 100.0 * float(processing_time) / duration_secs
 
-    hrs, mins, secs, tenths = seconds_to_time(processing_time)
-
-    if print_flag:
-        print('Finished processing on video :' + video_path)
-        print("processing time: " + '{0:02d}:{1:02d}:{2:02d}.{3:02d}'.
-              format(hrs, mins, secs, tenths))
-        print("processing ratio      {0:3.1f} fps".format(processing_fps))
-        print("processing ratio time {0:3.0f} %".format(processing_rt))
-
+    # ---Append shot durations in feature matrix------------------------------
     for ccc in range(count_process - shot_change_process_indices[-1]):
         shot_durations.append(count_process - shot_change_process_indices[-1])
 
     shot_durations = np.matrix(shot_durations)
     shot_durations = shot_durations * process_step
-
-    # append shot durations in feature matrix:
     feature_matrix = np.append(feature_matrix, shot_durations.T, axis=1)
 
-    # ---Get movie-level feature statistics-----------------------------------
+    # Get movie-level feature statistics
     # TODO: consider more statistics, OR consider temporal analysis method
     # eg LSTMs or whatever
-    f_mu = feature_matrix.mean(axis=0)
-    f_std = feature_matrix.std(axis=0)
-    f_stdmu = feature_matrix.std(axis=0) \
-        / (np.median(feature_matrix, axis=0) + 0.0001)
-    feature_matrix_sorted_rows = np.sort(feature_matrix, axis=0)
-    feature_matrix_sorted_rows_top10 = feature_matrix_sorted_rows[
-                                       - int(0.10 *
-                                             feature_matrix_sorted_rows.
-                                             shape[0])::,
-                                       :]
-    f_mu10top = feature_matrix_sorted_rows_top10.mean(axis=0)
-    features_stats = np.concatenate((f_mu, f_std, f_stdmu, f_mu10top), axis=1)
+    features_stats = get_features_stats(feature_matrix)
 
+    # ---Print and save the outcomes------------------------------------------
     if print_flag:
+        processing_fps = count_process / float(processing_time)
+        processing_rt = 100.0 * float(processing_time) / duration_secs
+        hrs, mins, secs, tenths = seconds_to_time(processing_time)
+
+        print('Finished processing on video :' + video_path)
+        print("processing time: " + '{0:02d}:{1:02d}:{2:02d}.{3:02d}'.
+              format(hrs, mins, secs, tenths))
+        print("processing ratio      {0:3.1f} fps".format(processing_fps))
+        print("processing ratio time {0:3.0f} %".format(processing_rt))
         print('Shape of feature matrix found: {}'.format(
             feature_matrix.shape))
         print('Shape of features\' stats found: {}'.format(

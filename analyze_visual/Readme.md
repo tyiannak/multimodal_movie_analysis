@@ -9,9 +9,9 @@ Extraction and analysis of visual-based features from videos.
 **Flags:**
 
 * f: extract features from specific file<br/>
-    E.g. python3 analyze_visual.py -f <filename>
+    E.g. python3 analyze_visual.py -f \<filename\>
 * d: extract features from all files of a directory<br/>
-     E.g. python3 analyze_visual.py -d <directory_name>   
+     E.g. python3 analyze_visual.py -d \<directory_name\>   
 * evaluate: analyze extracted features<br/>
      E.g. python3 analyze_visual.py -evaluate   
 * debug: debug script<br/>

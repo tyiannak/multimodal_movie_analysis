@@ -25,5 +25,5 @@ Extraction and analysis of visual-based features from videos.
 * script_debug : debug script
 
 
-For farther information read the docstrings.
+For further information read the docstrings.
 

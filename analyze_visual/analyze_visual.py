@@ -4,6 +4,7 @@ Visual Analysis.
 The script extracts and analyzes visual-based features from videos.
 
 Flags:
+
     - f: extract features from specific file
         E.g. python3 analyze_visual.py -f <filename>
     - d: extract features from all files of a directory
@@ -13,13 +14,14 @@ Flags:
     - debug: debug script
         E.g. python3 analyze_visual.py -debug
 
-Equivalent functions:
+Basic functions:
+
     - process_video :  extracts features from specific file
     - dir_process_video : extracts features from all files of a directory
     - analyze : analyzes extracted features
     - script_debug : debug script
 
-For farther information read the docstrings.
+Read the docstrings for farther information .
 """
 
 import cv2

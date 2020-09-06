@@ -312,7 +312,6 @@ def flow_features(img_gray, img_gray_prev, p0, params):
 
     angles = np.array(angles)
     mags = np.array(mags)
-    dist_horizontal = -1
 
     # find mu, std and tilt_pan_confidence
     if len(angles) > 0:
@@ -326,7 +325,6 @@ def flow_features(img_gray, img_gray_prev, p0, params):
                                              int(mean_dx)) / np.pi)
         std = angles_std(angles, mu)
 
-        dist_horizontal = min(angle_diff(mu, 180), angle_diff(mu, 0))
         tilt_pan_confidence = np.mean(mags) / np.sqrt(std + 0.00000001)
         tilt_pan_confidence = tilt_pan_confidence[0]
         # TODO:
@@ -335,7 +333,6 @@ def flow_features(img_gray, img_gray_prev, p0, params):
 
         if tilt_pan_confidence < 1.0:
             tilt_pan_confidence = 0
-            dist_horizontal = -1
     else:
         mags = [0]
         angles = [0]

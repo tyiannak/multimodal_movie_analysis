@@ -1,7 +1,7 @@
 """
 Visual Analysis.
 
-The script extracts and analyzes visual-based features from videos.
+The script extracts visual-based features from videos.
 
 Flags:
 
@@ -9,19 +9,14 @@ Flags:
         E.g. python3 analyze_visual.py -f <filename>
     - d: extract features from all files of a directory
         E.g. python3 analyze_visual.py -d <directory_name>
-    - evaluate: analyze extracted features
-        E.g. python3 analyze_visual.py -evaluate
-    - debug: debug script
-        E.g. python3 analyze_visual.py -debug
 
 Basic functions:
 
     - process_video :  extracts features from specific file
     - dir_process_video : extracts features from all files of a directory
-    - analyze : analyzes extracted features
-    - script_debug : debug script
+    - dirs_process_video : extracts features from all files of different directories
 
-Read the docstrings for farther information .
+Please read the docstrings for further information.
 """
 
 import cv2
@@ -245,18 +240,6 @@ def get_hsv_histograms(image_hsv):
     hist_v = hist_v / np.sum(hist_v)
 
     return hist_h, hist_s, hist_v
-
-
-def get_hsv_histograms_2d(image_hsv):
-    width, height = image_hsv.shape[1], image_hsv.shape[0]
-    h, x_edges, y_edges = np.histogram2d(np.reshape(image_hsv[:, :, 0],
-                                                    width * height),
-                                         np.reshape(image_hsv[:, :, 1],
-                                                    width * height),
-                                         bins=(range(-1, 180, 30),
-                                               range(-1, 256, 64)))
-    h = h / np.sum(h)
-    return h, x_edges, y_edges
 
 
 def flow_features(img_gray, img_gray_prev, p0, params):
@@ -958,158 +941,23 @@ def npy_to_csv(filename_features, filename_names):
         fp.write("\n")
 
 
-def analyze(filename_features, filename_names, first_feature=0,
-            last_feature=108, specific_features=[]):
-    features = np.load(filename_features)
-    names = np.load(filename_names)
-    """Analyze features."""
-
-    text_file = open("ground_names.txt", "r")
-    gt_names = text_file.readlines()
-    gt_names = [g.replace("\n", "") for g in gt_names]
-    gt_sim = np.load("ground_sim_np")
-
-    # normalize
-    mu = np.mean(features, axis=0)
-    std = np.std(features, axis=0)
-    for i in range(features.shape[0]):
-        features[i, :] = (features[i] - mu) / std
-
-    first_pos = []
-    second_pos = []
-    top10 = []
-    top10_second = []
-
-    for i in range(len(names)):  # for each movie
-        name_cur = os.path.basename(
-            os.path.normpath(names[i])) \
-            .replace(".mkv", "") \
-            .replace(".mpg", "") \
-            .replace(".mp4", "").replace(".avi", "")
-        gt_index = gt_names.index(name_cur)
-        gt_sim_cur = gt_sim[gt_index, :]
-        gt_sim_cur[gt_index] = 0
-        gt_sorted = [x for (y, x) in sorted(zip(gt_sim_cur, gt_names),
-                                            reverse=True)]
-
-        features_to_use = range(first_feature, last_feature)
-        if len(specific_features) > 0:
-            features_to_use = specific_features
-        else:
-            features_to_use = range(first_feature, last_feature)
-
-        # features_to_use = [5, 6, 7, 13, 16, 17, 25, 26, 27, 32, 44, 47]
-        d = dist.cdist(
-            features[i, features_to_use].reshape(1,
-                                                 len(features_to_use)),
-            features[:, features_to_use])
-
-        d[0][i] = 100000000
-        d = d.flatten()
-        # print d.shape, len(N)
-        r_sorted = [
-            os.path.basename(
-                os.path.normpath(x)
-            ).replace(".mkv",
-                      "").replace(".mpg",
-                                  "").replace(".mp4",
-                                              "").replace(".avi", "")
-            for (y, x) in sorted(zip(d.tolist(), names))]
-
-        first_pos.append(gt_sorted.index(r_sorted[0]) + 1)
-        second_pos.append(gt_sorted.index(r_sorted[1]) + 1)
-        if r_sorted[0] in gt_sorted[0:10]:
-            top10.append(1)
-        else:
-            top10.append(0)
-        if r_sorted[1] in gt_sorted[0:10]:
-            top10_second.append(1)
-        else:
-            top10_second.append(0)
-
-    return np.median(np.array(first_pos)), \
-        100 * np.sum(np.array(top10)) / len(top10), \
-        np.median(np.array(second_pos)), \
-        100 * np.sum(np.array(top10_second)) / len(top10_second)
-
-
-def script_debug():
-    """Debug script."""
-
-    n_exp = 1000
-    all_feature_combinations = []
-    med_pos = []
-    top10 = []
-    med_pos2 = []
-    top102 = []
-
-    t_1 = 50
-    t_2 = 20
-    for n_features in [5, 10, 20, 30, 40, 50, 60, 70]:
-        print(n_features)
-        for e in range(n_exp):
-            features_cur = np.random.permutation(range(108))[0:n_features]
-            all_feature_combinations.append(features_cur)
-            a1, a2, a3, a4 = analyze(
-                "features_all.npy",
-                "names_all.npy", 0, 0, features_cur)
-            med_pos.append(a1)
-            top10.append(a2)
-            med_pos2.append(a3)
-            top102.append(a4)
-
-    med_pos = np.array(med_pos)
-    top10 = np.array(top10)
-    med_pos2 = np.array(med_pos2)
-    top102 = np.array(top102)
-
-    i_min_pos = np.argmin(med_pos)
-    i_max_pos = np.argmax(top10)
-    i_min_pos2 = np.argmin(med_pos2)
-    i_max_pos2 = np.argmax(top102)
-
-    for i in range(len(top10)):
-        if (med_pos[i] < t_1) and (top10[i] > t_2) \
-                and (med_pos2[i] < t_1) and (top102[i] > t_2):
-            print("{0:.1f}\t{1:.1f}\t{2:.1f}\t{3:.1f}".format(
-                med_pos[i], top10[i], med_pos2[i], top102[i]))
-            if i == i_min_pos:
-                print("BEST med_pos\t")
-            else:
-                print("-----------\t")
-            if i == i_max_pos:
-                print("BEST top10\t")
-            else:
-                print("----------\t")
-            if i == i_min_pos2:
-                print("BEST med_pos2\t")
-            else:
-                print("------------\t")
-            if i == i_max_pos2:
-                print("BEST top102\t")
-            else:
-                print("-----------\t")
-
-            for f in all_feature_combinations[i]:
-                print("{0:d},".format(f))
-
-
 def main(argv):
-    if len(argv) == 3 and argv[1] == "-f":
-        process_video(argv[2], 2, True, True)
-    if argv[1] == "-d":  # directory
-        dir_name = argv[2]
-        features_all, video_files_list = dir_process_video(dir_name)
-        print(features_all.shape, video_files_list)
-    if argv[1] == "-evaluate":
-        [a, b, a2, b2] = analyze("features_all.npy", "names_all.npy")
-        print("First returned result median position {0:.1f}".format(a))
-        print("First returned result in top10 {0:.1f} %".format(b))
-        print("Second returned result median position {0:.1f}".format(a2))
-        print("Second returned result in top10 {0:.1f} %".format(b2))
-
-    if argv[1] == "-debug":
-        script_debug()
+    if len(argv) == 3:
+        if argv[1] == "-f":
+            process_video(argv[2], 2, True, True)
+        elif argv[1] == "-d":  # directory
+            dir_name = argv[2]
+            features_all, video_files_list = dir_process_video(dir_name)
+            print(features_all.shape, video_files_list)
+        else:
+            print('Error: Unsupported flag.')
+            print('For supported flags please read the modules\' docstring.')
+    elif len(argv) < 3:
+        print('Error: There are 3 required arguments, but less were given.')
+        print('For help please read the modules\' docstring.')
+    else:
+        print('Error: There are 3 required arguments, but more were given.')
+        print('For help please read the modules\' docstring.')
 
 
 if __name__ == '__main__':

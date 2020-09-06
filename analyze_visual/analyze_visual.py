@@ -331,8 +331,6 @@ def flow_features(img_gray, img_gray_prev, p0, params):
         # CHECK PANCONFIDENCE
         # SAME FOR ZOOM AND OTHER CAMERA EFFECTS
 
-        if tilt_pan_confidence < 1.0:
-            tilt_pan_confidence = 0
     else:
         mags = [0]
         angles = [0]

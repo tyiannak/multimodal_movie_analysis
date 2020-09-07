@@ -1,0 +1,56 @@
+random_state: 42
+
+paths:
+  path_to_folder_with_srt_files: ./data/
+  path_to_stopwords: ./data/stopwords.txt
+
+models:
+  tfidf: True
+  nmf: True
+  lda: True
+  lsi: False
+
+  word2vec: False
+  glove: False
+  fasttext: False
+
+
+tfidf:
+  min_df: 2
+  max_df: 0.8
+  max_features: 1000
+  ngram_range: [1,2]
+  stop_words: english
+  binary: False
+  save_model: False
+  path_to_model: ./output/tfidf.pkl
+  path_to_features: ./output/tfidf_features.csv
+
+nmf:
+  n_components: 10
+  max_iter: 100
+  save_model: False
+  path_to_model: ./output/nmf.pkl
+  path_to_features: ./output/nmf_features.csv
+
+lda:
+  n_components: 10
+  learning_method: batch
+  max_iter: 100
+  doc_topic_prior: None
+  topic_word_prior: None
+  n_jobs: -1
+  save_model: False
+  path_to_model: ./output/lda.pkl
+  path_to_features: ./output/lda_features.csv
+
+
+lsi:
+  n_components: 50
+  save_model: False
+  path_to_model: ./output/lsi.pkl
+  path_to_features: ./output/lsi_features.csv
+
+
+
+

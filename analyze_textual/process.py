@@ -41,7 +41,6 @@ def extract_features(movies, subtitles):
                 print(f'Non-implemented feature extraction function for model {model}!')
                 print(e)
                 raise NotImplementedError
-    return features
 
 def save_model(path_to_model_to_be_saved, model):
     """
@@ -67,7 +66,7 @@ def tfidf_model(movies, subtitles):
         - subtitles: list,
         list of strings, containing the cleaned subtitles for each movie
     Output:
-        None, saves and returns
+        np.array, the feature matrix with N x F size (N movies, F features)
     """
     implemented_hyperparams = [
         'min_df',
@@ -100,7 +99,7 @@ def nmf_model(movies, subtitles):
         - subtitles: list,
         list of strings, containing the cleaned subtitles for each movie
     Output:
-        None, saves and returns
+         np.array, the feature matrix with N x F size (N movies, F features)
     """
     implemented_hyperparams = [
         'n_components',
@@ -135,7 +134,7 @@ def lda_model(movies, subtitles):
         - subtitles: list,
         list of strings, containing the cleaned subtitles for each movie
     Output:
-        None, saves and returns
+         np.array, the feature matrix with N x F size (N movies, F features)
     """
     implemented_hyperparams = [
         'n_components',

@@ -9,6 +9,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 def find_similar_movies(names, features, threshold = 0.5):
     """
     Helper function for evaluating similarity.
+    Prints the similar movies, with more than threshold similarity.
+    Input:
+        - names: list,
+        list of strings, containing the movie names
+        - features: np.array,
+        N x F sized feature matrix, where N are the movies and F the features
+    Output:
+        None, just prints the movies for whom the cosine similarity exceeds the threshold
     """
     sim = cosine_similarity(features)
     np.fill_diagonal(sim, 0)
@@ -24,6 +32,16 @@ def find_similar_movies(names, features, threshold = 0.5):
 def find_top_n_similar_pairs(names, features, top_n=10):
     """
     Helper function for evaluating similarity.
+    Prints the top_n similar movie pairs.
+    Input:
+        - names: list,
+        list of strings, containing the movie names
+        - features: np.array,
+        N x F sized feature matrix, where N are the movies and F the features
+        - top_n: int,
+        number of the top-N scoring movie pairs to show
+    Output:
+        None, just prints the movies for whom the cosine similarity exceeds the threshold
     """
     sim = cosine_similarity(features)
     sim = np.tril(sim, k=-1)

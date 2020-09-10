@@ -25,8 +25,9 @@ import sys
 import glob
 import os
 import numpy as np
-import scipy.spatial.distance as dist
 import collections
+
+from object_detection import generic_object_detection
 
 # process and plot related parameters:
 new_width = 500
@@ -47,6 +48,7 @@ feature_params = dict(maxCorners=500,
                       minDistance=3,
                       blockSize=5)
 
+generic_model = generic_object_detection.SsdNvidia()
 
 def angle_diff(angle1, angle2):
     """Returns difference between 2 angles."""
@@ -90,6 +92,8 @@ def display_histogram(data, width, height, maximum, window_name):
     Returns:
         None
     """
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(window_name, (width, height))
 
     if len(data) > width:
         hist_item = height * (data[len(data) - width - 1:-1] / maximum)
@@ -472,44 +476,42 @@ def windows_display(vis, height, process_mode, v_norm, hist_rgb_ratio,
     """
 
     plot_width = 150
-    plot_width2 = 150
-    cv2.imshow('Color', vis)
-    cv2.imshow('GrayNorm', v_norm / 256.0)
-    cv2.moveWindow('Color', 0, 0)
-    cv2.moveWindow('GrayNorm', new_width, 0)
+
+    cv2.imshow('Frame Flow', vis)
+    cv2.moveWindow('Frame Flow', 0, 0)
 
     if process_mode > 0:
         display_histogram(
             np.repeat(hist_rgb_ratio,
-                      plot_width2 / hist_rgb_ratio.shape[0]),
-            plot_width2,
+                      plot_width / hist_rgb_ratio.shape[0]),
+            plot_width,
             height,
             np.max(hist_rgb_ratio),
             'Color Hist')
 
         display_histogram(
             np.repeat(hist_v,
-                      plot_width2 / hist_v.shape[0]),
-            plot_width2,
+                      plot_width / hist_v.shape[0]),
+            plot_width,
             height,
             np.max(hist_v),
             'Value Hist')
 
         display_histogram(
             np.repeat(hist_s,
-                      plot_width2 / hist_s.shape[0]),
-            plot_width2,
+                      plot_width / hist_s.shape[0]),
+            plot_width,
             height,
             np.max(hist_s),
             'Sat Hist')
 
-        cv2.moveWindow('Color Hist', 0, height + 70)
-        cv2.moveWindow('Value Hist', plot_width2,
-                       height + 70)
-        cv2.moveWindow('hsv Diff', 2 * plot_width2,
-                       height + 70)
-        cv2.moveWindow('Sat Hist', 2 * plot_width2,
-                       height + 70)
+        cv2.moveWindow('Color Hist', 0, height + 90)
+        cv2.moveWindow('Value Hist', plot_width,
+                       height + 90)
+        cv2.moveWindow('hsv Diff', 2 * plot_width,
+                       height + 90)
+        cv2.moveWindow('Sat Hist',  3 * plot_width,
+                       height + 90)
 
     if process_mode > 1:
         display_histogram(
@@ -532,15 +534,15 @@ def windows_display(vis, height, process_mode, v_norm, hist_rgb_ratio,
             50,
             'Tilt Pan Confidences')
 
-        cv2.moveWindow('frontal_faces_num', 0,
-                       2 * height + 70)
-        cv2.moveWindow('frontal_faces_ratio', plot_width2,
-                       2 * height + 70)
+        cv2.moveWindow('frontal_faces_num', 4 * plot_width,
+                       height + 90)
+        cv2.moveWindow('frontal_faces_ratio', 5 * plot_width,
+                       height + 90)
         cv2.moveWindow('tilt_pan_confidences',
-                       2 * plot_width2,
-                       2 * height + 70)
+                       6 * plot_width,
+                       height + 90)
 
-        cv2.waitKey(1)
+        #cv2.waitKey(1)
     return None
 
 
@@ -671,7 +673,7 @@ def process_video(video_path, process_mode, print_flag, save_results):
     shot_durations = []
 
     # ---Calculate features for every frame-----------------------------------
-    while True:
+    while capture.isOpened():
         # cv.SetCaptureProperty( capture, cv.CV_CAP_PROP_POS_FRAMES,
         # count*frameStep );
         # (THIS IS TOOOOO SLOW (MAKES THE READING PROCESS 2xSLOWER))
@@ -837,12 +839,25 @@ def process_video(video_path, process_mode, print_flag, save_results):
                                     frontal_faces_num, frontal_faces_ratio,
                                     tilt_pan_confidences)
 
+                    window_name = 'Object Detection'
+                    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+                    cv2.resizeWindow(window_name, (width, height))
+
+                    detected = generic_model.detect(frame, 0.4)
+                    generic_model.display_cv2(frame, detected, window_name)
+                    cv2.moveWindow(window_name,
+                                   5 * width, 0)
+
+                    if cv2.waitKey(25) & 0xFF == ord('q'):
+                        break
+
                     t_0 = t_2
                 process_now = False
                 img_gray_prev = img_gray
 
         else:
-            break
+            capture.release()
+            cv2.destroyAllWindows()
 
     processing_time = time.time() - t_start
 

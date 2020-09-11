@@ -3,6 +3,7 @@
 import os
 import cv2
 import torch
+import numpy as np
 from PIL import Image
 from torchvision import transforms
 from os.path import expanduser
@@ -22,10 +23,13 @@ class SsdNvidia:
 
         self.precision = 'fp32'
 
+        # fix torch hub's code problem with empty frames
+        # if the code gets updated, remove these lines
         home_dir = expanduser("~")
         nvidia_dir = home_dir \
             + '/.cache/torch/hub/NVIDIA_DeepLearningExamples_torchhub'
         a = os.path.exists(nvidia_dir)
+
         if not a:
             self.model = torch.hub.load(
                 'NVIDIA/DeepLearningExamples:torchhub',
@@ -52,6 +56,7 @@ class SsdNvidia:
             self.model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub',
                                         'nvidia_ssd',
                                         model_math=self.precision)
+        # ---end of torch hub's code fixing-----------------------------------
 
         self.utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub',
                                     'nvidia_ssd_processing_utils')
@@ -64,7 +69,14 @@ class SsdNvidia:
         self.model.eval()
 
     def detect(self, image, confidence_threshold):
-
+        """
+        Detects 80 possible objects in an image.
+        Args:
+            image : an image in the BGR format of OpenCV.
+                    No specific dimensions needed.
+            confidence_threshold : the threshold that a labels' confidence
+            must exceed in order to be counted
+        """
         tensor = self.tfms(Image.fromarray(image[:, :, ::-1])).unsqueeze(0).to(self.device)
 
         with torch.no_grad():
@@ -79,7 +91,17 @@ class SsdNvidia:
         return best_results
 
     def display_cv2(self, image, results, window):
-        """input = """
+        """
+        Displays the objects found on a processed image.
+
+        Args:
+             image : an image in the BGR format of OpenCV.
+                    No specific dimensions needed.
+            results : a list of arrays containing the results of
+                    the object detection, in the format
+                    (bboxes, classes, confidences)
+             window : name of the window to display the image
+        """
         width, height = image.shape[1], image.shape[0]
         img = cv2.resize(image, (300, 300))
         bboxes, classes, confidences = results
@@ -110,6 +132,11 @@ class SsdNvidia:
         return None
 
     def camera_demo(self):
+        """
+        Test the ssd model on your camera.
+        Just initialize an SsdNvidia object and call camera_demo function.
+        """
+
         capture = cv2.VideoCapture(0)
         fps = capture.get(cv2.CAP_PROP_FPS)
         window_name = 'Object Detection'
@@ -133,3 +160,47 @@ class SsdNvidia:
                 cv2.destroyAllWindows()
 
         return None
+
+
+def get_object_features(boxes_all, labels_all, confidences_all):
+    """
+    Extracts video features from objects detected.
+
+    Args:
+        - boxes_all (list): list of arrays containing the normalized
+                    coordinates of every box for every frame
+        - labels_all (list): list of arrays containing the labels of
+                    every object detected for every frame
+        - confidences_all (list): list of arrays containing the confidences of
+                    every object detected for every frame
+
+    Returns:
+        - labels_freq (array like): frequency of every label per frame
+                    E.g.: 4 means that this label averages 4 objects per frame
+        - labels_avg_confidence (array like): the average confidence of every
+                    object detected
+        - labels_area_ratio (array like): the average area occupied by the
+                    labels per frame
+                    E.g.: 0.4 means that this label occupies 40% of
+                    the area per frame
+    """
+    frame_area = 300 * 300
+    tmp = np.zeros(80)
+    labels_freq = np.zeros(80)
+    labels_area_ratio = np.zeros(80)
+
+    for i, labels in enumerate(labels_all):
+        for j, label in enumerate(labels):
+            labels_freq[label - 1] += 1
+            tmp[label - 1] += confidences_all[i][j]
+            left, bot, right, top = boxes_all[i][j]
+            x, y, w, h = [int(val * 300)
+                          for val in [left, bot, right - left, top - bot]]
+            labels_area_ratio[label - 1] += (w * h) / float(frame_area)
+
+    labels_avg_confidence = [tmp[idx] / freq if freq > 0 else 0 for idx, freq in enumerate(labels_freq)]
+    labels_avg_confidence = np.asarray(labels_avg_confidence)
+    labels_freq = labels_freq / len(labels_all)
+    labels_area_ratio = labels_area_ratio / len(labels_all)
+
+    return labels_freq, labels_avg_confidence, labels_area_ratio

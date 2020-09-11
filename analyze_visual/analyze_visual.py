@@ -27,7 +27,7 @@ import os
 import numpy as np
 import collections
 
-from object_detection import generic_object_detection
+from object_detection import generic_object_detection as god
 
 # process and plot related parameters:
 new_width = 500
@@ -48,7 +48,7 @@ feature_params = dict(maxCorners=500,
                       minDistance=3,
                       blockSize=5)
 
-generic_model = generic_object_detection.SsdNvidia()
+generic_model = god.SsdNvidia()
 
 def angle_diff(angle1, angle2):
     """Returns difference between 2 angles."""
@@ -657,6 +657,9 @@ def process_video(video_path, process_mode, print_flag, save_results):
     t_process = np.array([])
 
     if process_mode > 1:
+        objects_boxes_all = collections.deque()
+        objects_labels_all = collections.deque()
+        objects_confidences_all = collections.deque()
         frontal_faces_num = collections.deque(maxlen=200)
         frontal_faces_ratio = collections.deque(maxlen=200)
         tilt_pan_confidences = collections.deque(maxlen=200)
@@ -843,8 +846,12 @@ def process_video(video_path, process_mode, print_flag, save_results):
                     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
                     cv2.resizeWindow(window_name, (width, height))
 
-                    detected = generic_model.detect(frame, 0.4)
-                    generic_model.display_cv2(frame, detected, window_name)
+                    objects = generic_model.detect(frame, 0.4)
+                    objects_boxes_all.append(objects[0])
+                    objects_labels_all.append(objects[1])
+                    objects_confidences_all.append(objects[2])
+
+                    generic_model.display_cv2(frame, objects, window_name)
                     cv2.moveWindow(window_name,
                                    5 * width, 0)
 
@@ -893,6 +900,11 @@ def process_video(video_path, process_mode, print_flag, save_results):
     if process_mode > 0 and save_results:
         np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")
         np.savetxt("features_stats.csv", features_stats, delimiter=",")
+
+    object_features = god.get_object_features(
+        objects_boxes_all, objects_labels_all, objects_confidences_all)
+
+    np.savetxt("object_features.csv", object_features, delimiter=",")
 
     return features_stats, feature_matrix
 

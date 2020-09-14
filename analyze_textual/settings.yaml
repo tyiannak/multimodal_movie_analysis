@@ -1,0 +1,81 @@
+# for reproducibility
+random_state: 42
+
+# model which will be used to generate features (and the corresponding model as well)
+# indicate with True or False
+# more than one model can have True and the process will work sequentially through the list
+models:
+  tfidf: True
+  nmf: True
+  lda: True
+  lsi: False
+  word2vec: False
+  glove: False
+  fasttext: False
+
+
+# paths to read different input files from
+paths:
+  # path to folder with srt files
+  path_to_folder_with_srt_files: ./data/
+  # path to stopwords
+  path_to_stopwords: ./data/stopwords.txt
+
+
+
+
+# Tfidf Model
+# Uses: https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.TfidfVectorizer.html
+tfidf:
+  min_df: 2
+  max_df: 0.8
+  max_features: 1000
+  ngram_range: [1,2]
+  stop_words: english
+  binary: False
+  # Path to save the features. The .csv saved has N + 1 columns. N columns corresponding to the number of features generated and one extra with the movie name.
+  path_to_features: ./output/tfidf_features.csv
+  # Whether we will pickle the model or not
+  save_model: False
+  # Path to save the model
+  path_to_model: ./output/tfidf.pkl
+
+# Non-negative matrix factorization model on the tf-idf values of the BoWs.
+# Uses: https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html
+nmf:
+  n_components: 10
+  max_iter: 100
+  # Path to save the features. The .csv saved has N + 1 columns. N columns corresponding to the number of features generated and one extra with the movie name.
+  path_to_features: ./output/nmf_features.csv
+  # Whether we will pickle the model or not
+  save_model: False
+  # Path to save the model
+  path_to_model: ./output/nmf.pkl
+
+# Latend Dirichlet Allocation model on the count values of the BoWs.
+# Uses: https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.LatentDirichletAllocation.html#sklearn.decomposition.LatentDirichletAllocation
+lda:
+  n_components: 10
+  learning_method: batch
+  max_iter: 100
+  doc_topic_prior: None
+  topic_word_prior: None
+  n_jobs: -1
+  # Path to save the features. The .csv saved has N + 1 columns. N columns corresponding to the number of features generated and one extra with the movie name.
+  path_to_features: ./output/lda_features.csv
+  # Whether we will pickle the model or not
+  save_model: False
+  # Path to save the model
+  path_to_model: ./output/lda.pkl
+
+
+# NOT IMPLEMENTED YET!
+lsi:
+  n_components: 50
+  save_model: False
+  path_to_model: ./output/lsi.pkl
+  path_to_features: ./output/lsi_features.csv
+
+
+
+

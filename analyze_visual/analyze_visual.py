@@ -25,6 +25,7 @@ import sys
 import glob
 import os
 import numpy as np
+import pandas as pd
 import collections
 
 from object_detection import generic_object_detection as god
@@ -608,6 +609,55 @@ def display_time(dur_secs, fps_process, t_process, t_0,
     return t_2
 
 
+def save_object_features(object_features, super_object_features,
+                         which_categories):
+    """
+    Saves object features to csv files.
+
+    which_categories int:
+            values:
+                    0: returns features for all 80 categories
+                    1: returns features for 12 super categories
+                    2: returns features for both 80 and 12 categories
+
+    """
+    with open("category_names.txt", encoding="utf-8") as file:
+        category_names = [l.rstrip("\n") for l in file]
+
+    super_category_names = ['person', 'vehicle', 'outdoor', 'animal',
+                            'accessory', 'sports', 'kitchen', 'food',
+                            'furniture', 'electronic', 'appliance',
+                            'indoor']
+
+    if which_categories > 1:
+        pandas_df = pd.DataFrame(data=object_features,
+                                 index=["labels_freq", "labels_avg_confidence",
+                                        "labels_area_ratio"],
+                                 columns=category_names)
+        pandas_df.to_csv("object_features.csv")
+
+        pandas_df = pd.DataFrame(data=super_object_features,
+                                 index=["labels_freq", "labels_avg_confidence",
+                                        "labels_area_ratio"],
+                                 columns=super_category_names)
+        pandas_df.to_csv("object_features_super_categories.csv")
+
+    elif which_categories > 0:
+        pandas_df = pd.DataFrame(data=super_object_features,
+                                 index=["labels_freq", "labels_avg_confidence",
+                                        "labels_area_ratio"],
+                                 columns=super_category_names)
+        pandas_df.to_csv("object_features_super_categories.csv")
+    else:
+        pandas_df = pd.DataFrame(data=object_features,
+                                 index=["labels_freq", "labels_avg_confidence",
+                                        "labels_area_ratio"],
+                                 columns=category_names)
+        pandas_df.to_csv("object_features.csv")
+
+    return None
+
+
 def process_video(video_path, process_mode, print_flag, save_results):
     """
     Extracts and displays features representing color, flow, objects detected
@@ -657,6 +707,16 @@ def process_video(video_path, process_mode, print_flag, save_results):
     t_process = np.array([])
 
     if process_mode > 1:
+        # --------------------------------------------------------------------
+        which_categories = 2  # which object categories to store as features
+        """
+        Takes values:
+            0: returns features for all 80 categories
+            1: returns features for 12 super categories
+            2: returns features for both 80 and 12 categories
+
+        """
+        # --------------------------------------------------------------------
         objects_boxes_all = collections.deque()
         objects_labels_all = collections.deque()
         objects_confidences_all = collections.deque()
@@ -901,10 +961,13 @@ def process_video(video_path, process_mode, print_flag, save_results):
         np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")
         np.savetxt("features_stats.csv", features_stats, delimiter=",")
 
-    object_features = god.get_object_features(
-        objects_boxes_all, objects_labels_all, objects_confidences_all)
+    object_features, super_object_features = god.get_object_features(
+        objects_boxes_all, objects_labels_all,
+        objects_confidences_all, which_categories)
 
-    np.savetxt("object_features.csv", object_features, delimiter=",")
+    if save_results:
+        save_object_features(object_features,
+                             super_object_features, which_categories)
 
     return features_stats, feature_matrix
 

@@ -879,7 +879,7 @@ def process_video(video_path, process_mode, print_flag, save_results):
         np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")
         np.savetxt("features_stats.csv", features_stats, delimiter=",")
 
-    return features_stats, feature_matrix
+    return features_stats, feature_matrix, shot_change_times
 
 
 def dir_process_video(dir_name):
@@ -897,8 +897,8 @@ def dir_process_video(dir_name):
 
     for movieFile in video_files_list:
         print(movieFile)
-        [features_stats, feature_matrix] = process_video(movieFile, 2,
-                                                         True, False)
+        features_stats, feature_matrix, _ = process_video(movieFile, 2,
+                                                          True, False)
         np.save(movieFile + ".npy", feature_matrix)
         if len(features_all) == 0:  # append feature vector
             features_all = features_stats
@@ -944,7 +944,8 @@ def npy_to_csv(filename_features, filename_names):
 def main(argv):
     if len(argv) == 3:
         if argv[1] == "-f":
-            process_video(argv[2], 2, True, True)
+            _, _, shot_change_t = process_video(argv[2], 2, True, True)
+            print(shot_change_t)
         elif argv[1] == "-d":  # directory
             dir_name = argv[2]
             features_all, video_files_list = dir_process_video(dir_name)

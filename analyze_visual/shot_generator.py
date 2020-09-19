@@ -33,7 +33,7 @@ def crop_shots(video_path,shot_change_times):
        
                                                             secs, tenths)
 
-
+    # --Crop video to shots---------------------------------------------
     for index in range(0,len(shot_change_times)):
 
         shot_change_times = [int(i) for i in shot_change_times]

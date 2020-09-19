@@ -457,6 +457,8 @@ def calc_shot_duration(shot_change_times,
     return shot_durations
 
 
+
+
 def windows_display(vis, height, process_mode, v_norm, hist_rgb_ratio,
                     hist_v, hist_s, frontal_faces_num,
                     frontal_faces_ratio, tilt_pan_confidences):
@@ -879,6 +881,8 @@ def process_video(video_path, process_mode, print_flag, save_results):
         np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")
         np.savetxt("features_stats.csv", features_stats, delimiter=",")
 
+    #shot_change_times = [int(i) for i in shot_change_times]
+    
     return features_stats, feature_matrix, shot_change_times
 
 
@@ -929,7 +933,6 @@ def dirs_process_video(dir_names):
                 class_names.append(d.split(os.sep)[-1])
     return features, class_names, filenames
 
-
 def npy_to_csv(filename_features, filename_names):
     features = np.load(filename_features)
     names = np.load(filename_names)
@@ -948,7 +951,8 @@ def main(argv):
             print(shot_change_t)
         elif argv[1] == "-d":  # directory
             dir_name = argv[2]
-            features_all, video_files_list = dir_process_video(dir_name)
+            features_all, video_files_list,shot_change_t = dir_process_video(dir_name)
+            print (shot_change_t)
             print(features_all.shape, video_files_list)
         else:
             print('Error: Unsupported flag.')

@@ -33,7 +33,7 @@ def crop_dir(dir_name):
     video_files_list = sorted(video_files_list)
     for movieFile in video_files_list:
         print(movieFile)
-        _, _, shot_change_times = process_video(movieFile, 2,True, True)
+        _, _, shot_change_times = process_video(movieFile, 2, True, False)
         shot_change_t.append(shot_change_times)
         print(shot_change_t)
         crop_shots(movieFile,shot_change_times)
@@ -43,18 +43,11 @@ def main(argv):
     if len(argv) == 3:
         if argv[1] == "-f":
             _, _, shot_change_t = process_video(argv[2], 2, True, True)
-        
             crop_shots(argv[2],shot_change_t)
             print(shot_change_t)
-
-
         elif argv[1] == "-d":  # directory
             dir_name = argv[2]
-
-            
             crop_dir(dir_name)
-            
-
         else:
             print('Error: Unsupported flag.')
             print('For supported flags please read the modules\' docstring.')

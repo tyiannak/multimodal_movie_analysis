@@ -15,7 +15,7 @@ def crop_shots(video_path, shot_change_times):
         print (shot_change_times[index])
         i = shot_change_times[index]
         if i < shot_change_times[-1]:
-            shot_file_name = f"{video_path}_{shot_change_times[index]}_" \
+            shot_file_name = f"{video_path}_shot_{shot_change_times[index]}_" \
                              f"{shot_change_times[index+1]}.mp4"
             ffmpeg_extract_subclip(video_path, i, shot_change_times[index+1],
                                    targetname=shot_file_name)

@@ -25,12 +25,11 @@ import sys
 import glob
 import os
 import numpy as np
-import scipy.spatial.distance as dist
 import collections
 
 # process and plot related parameters:
 new_width = 500
-process_step = 0.5
+process_step = 0.2
 plot_step = 2
 
 # face detection-related paths:

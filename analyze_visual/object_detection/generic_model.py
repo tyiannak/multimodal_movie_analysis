@@ -1,30 +1,22 @@
-"""CODE UNDER CONSTRUCTION"""
-
 import os
 import cv2
 import torch
-import numpy as np
 from PIL import Image
 from torchvision import transforms
 from os.path import expanduser
 
 
-super_categories = {1: 'person',
-                    2: 'vehicle',
-                    3: 'outdoor',
-                    4: 'animal',
-                    5: 'accessory',
-                    6: 'sports',
-                    7: 'kitchen',
-                    8: 'food',
-                    9: 'furniture',
-                    10: 'electronic',
-                    11: 'appliance',
-                    12: 'indoor'
-                    }
-
-
 class SsdNvidia:
+    """
+    Class that uses NVIDIA's ssd model
+    (https://github.com/NVIDIA/DeepLearningExamples/tree/master/PyTorch/Detection/SSD)
+    ,as it's implemented on NVIDIA's repo torchhub branch,
+    to detect 80 object categories.
+
+    NOTE: The torchhub branch on NVIDIA's repo contains a problem
+    when empty frames are given as input to the model. The below code fixes
+    this issue. If the branch gets updated remove the modification lines.
+    """
 
     def __init__(self):
 
@@ -39,7 +31,7 @@ class SsdNvidia:
         self.precision = 'fp32'
 
         # fix torch hub's code problem with empty frames
-        # if the code gets updated, remove these lines
+        # !!!if the code gets updated, remove these lines!!!
         home_dir = expanduser("~")
         nvidia_dir = home_dir \
             + '/.cache/torch/hub/NVIDIA_DeepLearningExamples_torchhub'
@@ -175,100 +167,3 @@ class SsdNvidia:
                 cv2.destroyAllWindows()
 
         return None
-
-
-def create_label_map():
-    cnt = 1
-    tmp_array = np.array([10, 15, 25, 30, 40, 47, 57, 63, 69, 74, 81])
-    dictionary = dict()
-    dictionary[1] = 1
-    for idx, val in enumerate(tmp_array):
-        for j in range(cnt + 1, val):
-            dictionary[j] = int(idx + 2)
-        cnt = j
-    return dictionary
-
-
-def get_object_features(boxes_all, labels_all, confidences_all, which_categories):
-    """
-    Extracts video features from objects detected.
-
-    Args:
-        - boxes_all (list): list of arrays containing the normalized
-                    coordinates of every box for every frame
-        - labels_all (list): list of arrays containing the labels of
-                    every object detected for every frame
-        - confidences_all (list): list of arrays containing the confidences of
-                    every object detected for every frame
-        - which_categories int: values
-                    0: returns features for all 80 categories
-                    1: returns features for 12 super categories
-                    2: returns features for both 80 and 12 categories
-
-    Returns:
-        - labels_freq (array like): frequency of every label per frame
-                    E.g.: 4 means that this label averages 4 objects per frame
-        - labels_avg_confidence (array like): the average confidence of every
-                    object detected
-        - labels_area_ratio (array like): the average area occupied by the
-                    labels per frame
-                    E.g.: 0.4 means that this label occupies 40% of
-                    the area per frame
-    """
-
-    frame_area = 300 * 300
-    tmp = np.zeros(80)
-    labels_freq = np.zeros(80)
-    labels_area_ratio = np.zeros(80)
-    if which_categories > 0:
-        super_label_map = create_label_map()
-        super_labels_all = []
-        super_tmp = np.zeros(12)
-        super_labels_freq = np.zeros(12)
-        super_labels_area_ratio = np.zeros(12)
-
-        for i, labels in enumerate(labels_all):
-            sup_label = np.zeros(labels.shape[0])
-            for j, label in enumerate(labels):
-                sup_label[j] = super_label_map[label]
-            super_labels_all.append(sup_label)
-
-    for i, labels in enumerate(labels_all):
-        for j, label in enumerate(labels):
-            left, bot, right, top = boxes_all[i][j]
-            x, y, w, h = [int(val * 300)
-                          for val in [left, bot, right - left, top - bot]]
-            labels_freq[label - 1] += 1
-            tmp[label - 1] += confidences_all[i][j]
-            labels_area_ratio[label - 1] += (w * h) / float(frame_area)
-            if which_categories > 0:
-                super_labels_freq[super_label_map[int(label)] - 1] += 1
-                super_tmp[super_label_map[int(label)] - 1] += 1
-                super_labels_area_ratio[super_label_map[int(label)] - 1] +=\
-                    (w * h) / float(frame_area)
-
-    labels_avg_confidence = [tmp[idx] / freq if freq > 0 else 0
-                             for idx, freq in enumerate(labels_freq)]
-    labels_avg_confidence = np.asarray(labels_avg_confidence)
-    labels_freq = labels_freq / len(labels_all)
-    labels_area_ratio = labels_area_ratio / len(labels_all)
-
-    if which_categories > 0:
-        super_labels_avg_confidence = [super_tmp[idx] / freq
-                                       if freq > 0 else 0
-                                       for idx, freq in enumerate(
-                                        super_labels_freq)]
-        super_labels_avg_confidence = np.asarray(super_labels_avg_confidence)
-        super_labels_freq = super_labels_freq / len(super_labels_all)
-        super_labels_area_ratio = super_labels_area_ratio / \
-            len(super_labels_all)
-
-        if which_categories > 1:
-            return (labels_freq, labels_avg_confidence, labels_area_ratio),\
-                   (super_labels_freq, super_labels_avg_confidence,
-                    super_labels_area_ratio)
-        else:
-            return (), (super_labels_freq, super_labels_avg_confidence,
-                        super_labels_area_ratio)
-    else:
-        return (labels_freq, labels_avg_confidence, labels_area_ratio), ()

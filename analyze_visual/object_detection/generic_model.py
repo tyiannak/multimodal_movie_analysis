@@ -1,9 +1,22 @@
+import sys
 import os
+import urllib.request
 import cv2
 import torch
 from PIL import Image
 from torchvision import transforms
 from os.path import expanduser
+
+def _download_checkpoint(checkpoint, force_reload):
+    model_dir = os.path.join(torch.hub._get_torch_home(), 'checkpoints')
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    ckpt_file = os.path.join(model_dir, os.path.basename(checkpoint))
+    if not os.path.exists(ckpt_file) or force_reload:
+        sys.stderr.write('Downloading checkpoint from {}\n'.format(checkpoint))
+        urllib.request.urlretrieve(checkpoint, ckpt_file)
+    return ckpt_file
+
 
 
 class SsdNvidia:
@@ -31,9 +44,9 @@ class SsdNvidia:
         self.precision = 'fp32'
         self.use_cuda = torch.cuda.is_available()
         self.device = torch.device("cuda:0" if self.use_cuda else "cpu")
-        map_location = torch.device(self.device)
-
         print("Using:", self.device)
+        checkpoint_str =\
+            'https://api.ngc.nvidia.com/v2/models/nvidia/ssdpyt_fp32/versions/1/files/nvidia_ssdpyt_fp32_20190225.pt'
 
         # fix torch hub's code problem with empty frames
         # !!!if the code gets updated, remove these lines!!!
@@ -43,10 +56,19 @@ class SsdNvidia:
         a = os.path.exists(nvidia_dir)
 
         if not a:
-            self.model = torch.hub.load(
-                'NVIDIA/DeepLearningExamples:torchhub',
-                'nvidia_ssd', model_math=self.precision,
-                map_location=map_location)
+            if self.use_cuda:
+                self.model = torch.hub.load(
+                    'NVIDIA/DeepLearningExamples:torchhub',
+                    'nvidia_ssd', model_math=self.precision)
+            else:
+                self.model = torch.hub.load(
+                    'NVIDIA/DeepLearningExamples:torchhub',
+                    'nvidia_ssd', model_math=self.precision,
+                    pretrained=False)
+                ckpt_file = _download_checkpoint(checkpoint_str, force_reload=False)
+                ckpt = torch.load(ckpt_file, map_location="cpu")
+                ckpt = ckpt['model']
+                self.model.load_state_dict(ckpt)
 
             utils_file = nvidia_dir + '/PyTorch/Detection/SSD/src/utils.py'
 
@@ -66,10 +88,20 @@ class SsdNvidia:
                     else:
                         f.writelines(line)
         else:
-            self.model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub',
-                                        'nvidia_ssd',
-                                        model_math=self.precision,
-                                        map_location=map_location)
+            if self.use_cuda:
+                self.model = torch.hub.load(
+                    'NVIDIA/DeepLearningExamples:torchhub',
+                    'nvidia_ssd', model_math=self.precision)
+            else:
+                self.model = torch.hub.load(
+                    'NVIDIA/DeepLearningExamples:torchhub',
+                    'nvidia_ssd', model_math=self.precision,
+                    pretrained=False)
+                ckpt_file = _download_checkpoint(checkpoint_str, force_reload=False)
+                ckpt = torch.load(ckpt_file, map_location="cpu")
+                ckpt = ckpt['model']
+                self.model.load_state_dict(ckpt)
+
         # ---end of torch hub's code fixing-----------------------------------
 
         self.utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub',

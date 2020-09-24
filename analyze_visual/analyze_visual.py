@@ -417,7 +417,8 @@ def dirs_process_video(dir_names, process_mode,
     return features, class_names, filenames
 
   
-  def main(argv):
+def main(argv):
+
     process_mode = 2
     online_display = True
     print_flag = True

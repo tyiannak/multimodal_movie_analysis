@@ -29,6 +29,11 @@ class SsdNvidia:
         ])
 
         self.precision = 'fp32'
+        self.use_cuda = torch.cuda.is_available()
+        self.device = torch.device("cuda:0" if self.use_cuda else "cpu")
+        map_location = torch.device(self.device)
+
+        print("Using:", self.device)
 
         # fix torch hub's code problem with empty frames
         # !!!if the code gets updated, remove these lines!!!
@@ -40,7 +45,8 @@ class SsdNvidia:
         if not a:
             self.model = torch.hub.load(
                 'NVIDIA/DeepLearningExamples:torchhub',
-                'nvidia_ssd', model_math=self.precision)
+                'nvidia_ssd', model_math=self.precision,
+                map_location=map_location)
 
             utils_file = nvidia_dir + '/PyTorch/Detection/SSD/src/utils.py'
 
@@ -62,16 +68,14 @@ class SsdNvidia:
         else:
             self.model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub',
                                         'nvidia_ssd',
-                                        model_math=self.precision)
+                                        model_math=self.precision,
+                                        map_location=map_location)
         # ---end of torch hub's code fixing-----------------------------------
 
         self.utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub',
                                     'nvidia_ssd_processing_utils')
 
         self.classes_to_labels = self.utils.get_coco_object_dictionary()
-        self.use_cuda = torch.cuda.is_available()
-        self.device = torch.device("cuda:0" if self.use_cuda else "cpu")
-        print("Using:", self.device)
         self.model.to(self.device)
         self.model.eval()
 

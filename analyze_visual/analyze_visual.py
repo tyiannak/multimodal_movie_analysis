@@ -34,7 +34,6 @@ from utils import *
 
 generic_model = gmodel.SsdNvidia()
 
-
 def process_video(video_path, process_mode, print_flag,
                   online_display,  save_results):
     """
@@ -348,6 +347,7 @@ def process_video(video_path, process_mode, print_flag,
         np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")
         np.savetxt("features_stats.csv", features_stats, delimiter=",")
 
+
     objects = dutils.smooth_object_confidence(objects_labels_all, objects_confidences_all, objects_boxes_all,
                                                                       overlap_threshold, mean_confidence_threshold,
                                                                       max_frames)
@@ -361,7 +361,8 @@ def process_video(video_path, process_mode, print_flag,
             save_object_features(object_features,
                                  super_object_features, which_categories)
 
-    return features_stats, feature_matrix
+
+    return features_stats, feature_matrix, shot_change_times
 
 
 def dir_process_video(dir_name, process_mode, print_flag,
@@ -380,9 +381,9 @@ def dir_process_video(dir_name, process_mode, print_flag,
 
     for movieFile in video_files_list:
         print(movieFile)
-        [features_stats, feature_matrix] = process_video(
-                movieFile, process_mode, print_flag,
-                online_display,  save_results)
+
+        features_stats, feature_matrix, _ = process_video(movieFile, 2,
+                                                          True, False)
         np.save(movieFile + ".npy", feature_matrix)
         if len(features_all) == 0:  # append feature vector
             features_all = features_stats
@@ -415,8 +416,8 @@ def dirs_process_video(dir_names, process_mode,
                 class_names.append(d.split(os.sep)[-1])
     return features, class_names, filenames
 
-
-def main(argv):
+  
+  def main(argv):
     process_mode = 2
     online_display = True
     print_flag = True
@@ -424,12 +425,20 @@ def main(argv):
     save_results = True
     if len(argv) == 3:
         if argv[1] == "-f":
-            process_video(argv[2], process_mode, print_flag, online_display,  save_results)
+
+            _, _, shot_change_t = process_video(argv[2], process_mode, print_flag, online_display,  save_results)
+            print(shot_change_t)
         elif argv[1] == "-d":  # directory
             dir_name = argv[2]
-            features_all, video_files_list = dir_process_video(
+            features_all, video_files_list, shot_change_t = dir_process_video(
                 dir_name, process_mode, print_flag,
                 online_display, save_results)
+            print (shot_change_t)
+        elif argv[1] == "-d":  # directory
+            dir_name = argv[2]
+            features_all, video_files_list,shot_change_t = dir_process_video(dir_name)
+            print (shot_change_t)
+
             print(features_all.shape, video_files_list)
         else:
             print('Error: Unsupported flag.')

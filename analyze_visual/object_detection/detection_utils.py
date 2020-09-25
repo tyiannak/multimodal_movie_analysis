@@ -296,7 +296,7 @@ def smooth_object_confidence(labels_all, confidences_all,
 
     NOTE:
         For input labels across n frames, the output smoothed labels
-        will extend across n-1 frames.
+        will extend across n - max_frame + 1 frames.
     """
 
     out_labels = []

@@ -1,3 +1,15 @@
+"""
+Used to evaluate shot video detection.
+
+File-level example:
+
+
+Dir-level example: (
+ground truth is supposed to be under the same folder with same filename as the
+video file with ".txt" appended at the end)
+python3 shot_evaluation.py -d data
+"""
+
 from analyze_visual import process_video
 import numpy as np
 import os
@@ -42,8 +54,8 @@ def calc(annotated_shots,shot_change_times):
     return precision, recall
 
 
-def single_acc(video_path, txt_path, shot_change_times):
-    annotated_shots = read_gt_file(txt_path)
+def single_acc(video_path, shot_change_times):
+    annotated_shots = read_gt_file(video_path + ".txt")
     for i in range(0, len(shot_change_times)): 
         shot_change_times[i] = float(shot_change_times[i])
     
@@ -74,7 +86,6 @@ def dir_acc(video_path):
             prec_list.append(precision)
             rec_list.append(recall)
             shot_change_times.clear()
-
     print("AVG of Precision: {0:.0f}%".format(np.mean(prec_list)*100))
     print("AVG of Recall: {0:.0f}%".format(np.mean(rec_list)*100))
 
@@ -83,9 +94,13 @@ def main(argv):
     if len(argv) == 3:
         if argv[1] == "-f":
             _, _, shot_change_t = process_video(argv[2], 2, True, True)
-            single_acc(argv[2], argv[3], shot_change_t)
+            single_acc(argv[2], shot_change_t)
         elif argv[1] == "-d":  # directory
             dir_acc(argv[2])
+        else:
+            print("Wrong syntax. Check docstrings")
+    else:
+        print("Wrong syntax. Check docstrings")
 
 
 if __name__ == '__main__':

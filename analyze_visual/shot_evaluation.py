@@ -29,22 +29,23 @@ def read_file(process_mode,file,moviefile,shots):
 
 	return lines
 
+
 def calc(annotated_shots,shot_change_times):
+	tolerance, correct_shot,correct_shot_h = 0.5, 0,0
+
+	correct_recall, correct_precision = 0, 0
+	for t in annotated_shots:
+		if np.abs(t - np.array(shot_change_times)).min() < tolerance:
+			correct_recall += 1
+
+	for t in shot_change_times:
+		if np.abs(t - np.array(annotated_shots)).min() < tolerance:
+			correct_precision += 1
 
 
-	tolerance,correct_shot,correct_shot_h= 1,0,0
 
-	for timestamp_1,timestamp_2 in zip(annotated_shots,shot_change_times):
-		if(np.abs(timestamp_1-timestamp_2).min() <= tolerance):
-			correct_shot+=1
-
-	for timestamp_1,timestamp_2 in zip(shot_change_times,annotated_shots):
-		if(np.abs(timestamp_1-timestamp_2).min() <= tolerance):
-			correct_shot_h+=1
-
-
-	precision= correct_shot/(len(annotated_shots))
-	recall = correct_shot_h/(len(shot_change_times))
+	precision= correct_precision/(len(shot_change_times))
+	recall = correct_recall/(len(annotated_shots))
 
 	
 	print ("Precision: {0:.0f}%".format(precision*100))

@@ -1,5 +1,6 @@
 import copy
 import numpy as np
+import pandas as pd
 from utils import rect_area
 from utils import intersect_rectangles
 
@@ -34,95 +35,6 @@ def create_label_map():
             dictionary[j] = int(idx + 2)
         cnt = j
     return dictionary
-
-
-def get_object_features(labels_all, confidences_all,
-                        boxes_all, which_categories):
-
-    """
-    Extracts video features from objects detected.
-
-    Args:
-        - boxes_all (list): list of arrays containing the normalized
-                    coordinates of every box for every frame
-        - labels_all (list): list of arrays containing the labels of
-                    every object detected for every frame
-        - confidences_all (list): list of arrays containing the confidences of
-                    every object detected for every frame
-        - which_categories int: values
-                    0: returns features for all 80 categories
-                    1: returns features for 12 super categories
-                    2: returns features for both 80 and 12 categories
-
-    Returns:
-        - labels_freq (array like): frequency of every label per frame
-                    E.g.: 4 means that this label averages 4 objects per frame
-        - labels_avg_confidence (array like): the average confidence of every
-                    object detected
-        - labels_area_ratio (array like): the average area occupied by the
-                    labels per frame
-                    E.g.: 0.4 means that this label occupies 40% of
-                    the area per frame
-    """
-
-    if not labels_all:
-        return None
-    frame_area = 300 * 300
-    tmp = np.zeros(80)
-    labels_freq = np.zeros(80)
-    labels_area_ratio = np.zeros(80)
-    if which_categories > 0:
-        super_label_map = create_label_map()
-        super_labels_all = []
-        super_tmp = np.zeros(12)
-        super_labels_freq = np.zeros(12)
-        super_labels_area_ratio = np.zeros(12)
-
-        for i, labels in enumerate(labels_all):
-            sup_label = np.zeros(len(labels))
-            for j, label in enumerate(labels):
-                sup_label[j] = super_label_map[label]
-            super_labels_all.append(sup_label)
-
-    for i, labels in enumerate(labels_all):
-        for j, label in enumerate(labels):
-            left, bot, right, top = boxes_all[i][j]
-            x, y, w, h = [int(val * 300)
-                          for val in [left, bot, right - left, top - bot]]
-            labels_freq[label - 1] += 1
-            tmp[label - 1] += confidences_all[i][j]
-            labels_area_ratio[label - 1] += (w * h) / float(frame_area)
-            if which_categories > 0:
-                super_labels_freq[super_label_map[int(label)] - 1] += 1
-                super_tmp[super_label_map[int(label)] - 1] += confidences_all[i][j]
-                super_labels_area_ratio[super_label_map[int(label)] - 1] +=\
-                    (w * h) / float(frame_area)
-
-    labels_avg_confidence = [tmp[idx] / freq if freq > 0 else 0
-                             for idx, freq in enumerate(labels_freq)]
-    labels_avg_confidence = np.asarray(labels_avg_confidence)
-    labels_freq = labels_freq / len(labels_all)
-    labels_area_ratio = labels_area_ratio / len(labels_all)
-
-    if which_categories > 0:
-        super_labels_avg_confidence = [super_tmp[idx] / freq
-                                       if freq > 0 else 0
-                                       for idx, freq in enumerate(
-                                        super_labels_freq)]
-        super_labels_avg_confidence = np.asarray(super_labels_avg_confidence)
-        super_labels_freq = super_labels_freq / len(super_labels_all)
-        super_labels_area_ratio = super_labels_area_ratio / \
-            len(super_labels_all)
-
-        if which_categories > 1:
-            return (labels_freq, labels_avg_confidence, labels_area_ratio),\
-                   (super_labels_freq, super_labels_avg_confidence,
-                    super_labels_area_ratio)
-        else:
-            return (), (super_labels_freq, super_labels_avg_confidence,
-                        super_labels_area_ratio)
-    else:
-        return (labels_freq, labels_avg_confidence, labels_area_ratio), ()
 
 
 def detect_movement(labels, boxes, confidences,
@@ -167,7 +79,7 @@ def detect_movement(labels, boxes, confidences,
                 if label1 == label2:
                     inter_ratio = intersect_rectangles(
                                 boxes[0][k], boxes[idx][j])
-                    if inter_ratio >= overlap_threshold and inter_ratio <= 1:
+                    if overlap_threshold <= inter_ratio <= 1:
 
                         label_indexes[k][label2][0].append(j)
                         label_indexes[k][label2][1].append(boxes[idx][j])
@@ -184,7 +96,7 @@ def detect_movement(labels, boxes, confidences,
 def find_smaller_box(boxes):
     """
     Takes a list of coordinates for different rectangles
-    and returns the smaller rectangle.
+    and returns the smallest one.
     """
 
     min_area = rect_area(boxes[0])
@@ -251,12 +163,8 @@ def group_frames(labels_all, confidences_all, boxes_all, max_frames):
             frames_labels = labels_all[i:i+max_frames]
             frames_confidences = copy.deepcopy(confidences_all[i:i+max_frames])
             frames_boxes = copy.deepcopy(boxes_all[i:i+max_frames])
-        elif i + 1 == length:
-            break
         else:
-            frames_labels = labels_all[i:-1]
-            frames_confidences = copy.deepcopy(confidences_all[i:-1])
-            frames_boxes = copy.deepcopy(boxes_all[i:-1])
+            break
 
         grouped_frame_labels.append(frames_labels)
         grouped_frame_confidences.append(frames_confidences)
@@ -317,3 +225,211 @@ def smooth_object_confidence(labels_all, confidences_all,
         out_confidences.append(frame_confidences)
 
     return out_labels, out_boxes, out_confidences
+
+
+def get_object_features_per_frame(labels_all, confidences_all, boxes_all, which_object_categories):
+    frame_area = 300 * 300
+    if which_object_categories > 0:
+        super_label_map = create_label_map()
+
+    labels_avg_confidence = []
+    super_labels_avg_confidence = []
+
+    labels_freq = []
+    super_labels_freq = []
+
+    labels_area_ratio = []
+    super_labels_area_ratio = []
+
+    for i, frame_labels in enumerate(labels_all):
+        tmp = np.zeros(80)
+        labels_frame_freq = np.zeros(80)
+        labels_frame_area_ratio = np.zeros(80)
+        if which_object_categories > 0:
+            super_tmp = np.zeros(12)
+            super_labels_frame_freq = np.zeros(12)
+            super_labels_frame_area_ratio = np.zeros(12)
+
+        for j, label in enumerate(frame_labels):
+            left, bot, right, top = boxes_all[i][j]
+            x, y, w, h = [int(val * 300)
+                          for val in [left, bot, right - left, top - bot]]
+            labels_frame_freq[label - 1] += 1
+            tmp[label - 1] += confidences_all[i][j]
+            labels_frame_area_ratio[label - 1] += (w * h) / float(frame_area)
+            if which_object_categories > 0:
+                super_labels_frame_freq[super_label_map[int(label)] - 1] += 1
+                super_tmp[super_label_map[int(label)] - 1] += confidences_all[i][j]
+                super_labels_frame_area_ratio[super_label_map[int(label)] - 1] += \
+                    (w * h) / float(frame_area)
+
+        avg_frame_confidence = [tmp[idx] / freq if freq > 0 else 0
+                                 for idx, freq in enumerate(labels_frame_freq)]
+        avg_frame_confidence = np.asarray(avg_frame_confidence)
+
+        labels_avg_confidence.append(avg_frame_confidence)
+        labels_freq.append(labels_frame_freq)
+        labels_area_ratio.append(labels_frame_area_ratio)
+
+        if which_object_categories > 0:
+            super_avg_frame_confidence = [super_tmp[idx] / freq
+                                           if freq > 0 else 0
+                                           for idx, freq in enumerate(
+                    super_labels_frame_freq)]
+            super_avg_frame_confidence = np.asarray(super_avg_frame_confidence)
+
+            super_labels_avg_confidence.append(super_avg_frame_confidence)
+            super_labels_freq.append(super_labels_frame_freq)
+            super_labels_area_ratio.append(super_labels_frame_area_ratio)
+
+    if which_object_categories > 0:
+        super_labels_freq = np.asarray(super_labels_freq)
+        super_labels_avg_confidence = np.asarray(super_labels_avg_confidence)
+        super_labels_area_ratio = np.asarray(super_labels_area_ratio)
+
+        return super_labels_freq, super_labels_avg_confidence, super_labels_area_ratio
+
+    else:
+        labels_freq = np.asarray(labels_freq)
+        labels_avg_confidence = np.asarray(labels_avg_confidence)
+        labels_area_ratio = np.asarray(labels_area_ratio)
+
+        return labels_freq, labels_avg_confidence, labels_area_ratio
+
+
+def get_object_features(labels_all, confidences_all,
+                        boxes_all, which_object_categories):
+
+    """
+    Extracts video features from objects detected.
+
+    Args:
+        - boxes_all (list): list of arrays containing the normalized
+                    coordinates of every box for every frame
+        - labels_all (list): list of arrays containing the labels of
+                    every object detected for every frame
+        - confidences_all (list): list of arrays containing the confidences of
+                    every object detected for every frame
+        - which_object_categories int: values
+                    0: returns features for all 80 categories
+                    1: returns features for 12 super categories
+                    2: returns features for both 80 and 12 categories
+
+    Returns:
+        - labels_freq (array like): frequency of every label per frame
+                    E.g.: 4 means that this label averages 4 objects per frame
+        - labels_avg_confidence (array like): the average confidence of every
+                    object detected
+        - labels_area_ratio (array like): the average area occupied by the
+                    labels per frame
+                    E.g.: 0.4 means that this label occupies 40% of
+                    the area per frame
+    """
+
+    if not labels_all:
+        return None
+    frame_area = 300 * 300
+    tmp = np.zeros(80)
+    labels_freq = np.zeros(80)
+    labels_area_ratio = np.zeros(80)
+    if which_object_categories > 0:
+        super_label_map = create_label_map()
+        super_labels_all = []
+        super_tmp = np.zeros(12)
+        super_labels_freq = np.zeros(12)
+        super_labels_area_ratio = np.zeros(12)
+
+        for i, labels in enumerate(labels_all):
+            sup_label = np.zeros(len(labels))
+            for j, label in enumerate(labels):
+                sup_label[j] = super_label_map[label]
+            super_labels_all.append(sup_label)
+
+    for i, labels in enumerate(labels_all):
+        for j, label in enumerate(labels):
+            left, bot, right, top = boxes_all[i][j]
+            x, y, w, h = [int(val * 300)
+                          for val in [left, bot, right - left, top - bot]]
+            labels_freq[label - 1] += 1
+            tmp[label - 1] += confidences_all[i][j]
+            labels_area_ratio[label - 1] += (w * h) / float(frame_area)
+            if which_object_categories > 0:
+                super_labels_freq[super_label_map[int(label)] - 1] += 1
+                super_tmp[super_label_map[int(label)] - 1] += confidences_all[i][j]
+                super_labels_area_ratio[super_label_map[int(label)] - 1] +=\
+                    (w * h) / float(frame_area)
+
+    labels_avg_confidence = [tmp[idx] / freq if freq > 0 else 0
+                             for idx, freq in enumerate(labels_freq)]
+    labels_avg_confidence = np.asarray(labels_avg_confidence)
+    labels_freq = labels_freq / len(labels_all)
+    labels_area_ratio = labels_area_ratio / len(labels_all)
+
+    if which_object_categories > 0:
+        super_labels_avg_confidence = [super_tmp[idx] / freq
+                                       if freq > 0 else 0
+                                       for idx, freq in enumerate(
+                                        super_labels_freq)]
+        super_labels_avg_confidence = np.asarray(super_labels_avg_confidence)
+        super_labels_freq = super_labels_freq / len(super_labels_all)
+        super_labels_area_ratio = super_labels_area_ratio / \
+            len(super_labels_all)
+
+        if which_object_categories > 1:
+            return (labels_freq, labels_avg_confidence, labels_area_ratio),\
+                   (super_labels_freq, super_labels_avg_confidence,
+                    super_labels_area_ratio)
+        else:
+            return (), (super_labels_freq, super_labels_avg_confidence,
+                        super_labels_area_ratio)
+    else:
+        return (labels_freq, labels_avg_confidence, labels_area_ratio), ()
+
+
+def save_object_features(object_features, super_object_features,
+                         which_object_categories):
+    """
+    Saves object features to csv files.
+
+    which_object_categories int:
+            values:
+                    0: returns features for all 80 categories
+                    1: returns features for 12 super categories
+                    2: returns features for both 80 and 12 categories
+
+    """
+    with open("category_names.txt", encoding="utf-8") as file:
+        category_names = [l.rstrip("\n") for l in file]
+
+    super_category_names = ['person', 'vehicle', 'outdoor', 'animal',
+                            'accessory', 'sports', 'kitchen', 'food',
+                            'furniture', 'electronic', 'appliance',
+                            'indoor']
+
+    if which_object_categories > 1:
+        pandas_df = pd.DataFrame(data=object_features,
+                                 index=["labels_freq", "labels_avg_confidence",
+                                        "labels_area_ratio"],
+                                 columns=category_names)
+        pandas_df.to_csv("object_features.csv")
+
+        pandas_df = pd.DataFrame(data=super_object_features,
+                                 index=["labels_freq", "labels_avg_confidence",
+                                        "labels_area_ratio"],
+                                 columns=super_category_names)
+        pandas_df.to_csv("object_features_super_categories.csv")
+
+    elif which_object_categories > 0:
+        pandas_df = pd.DataFrame(data=super_object_features,
+                                 index=["labels_freq", "labels_avg_confidence",
+                                        "labels_area_ratio"],
+                                 columns=super_category_names)
+        pandas_df.to_csv("object_features_super_categories.csv")
+    else:
+        pandas_df = pd.DataFrame(data=object_features,
+                                 index=["labels_freq", "labels_avg_confidence",
+                                        "labels_area_ratio"],
+                                 columns=category_names)
+        pandas_df.to_csv("object_features.csv")
+
+    return None

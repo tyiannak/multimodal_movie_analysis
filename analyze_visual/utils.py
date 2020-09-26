@@ -2,7 +2,6 @@
 import cv2
 import time
 import numpy as np
-import pandas as pd
 
 # process and plot related parameters:
 new_width = 500
@@ -526,7 +525,7 @@ def windows_display(vis, height, process_mode, v_norm, hist_rgb_ratio,
 def get_features_stats(feature_matrix):
     """
     Calculates statistics on features over time
-    and puts them to the feature matrix.
+    and puts them to the feature stats vector.
     """
 
     f_mu = feature_matrix.mean(axis=0)
@@ -541,6 +540,7 @@ def get_features_stats(feature_matrix):
                                        :]
     f_mu10top = feature_matrix_sorted_rows_top10.mean(axis=0)
     features_stats = np.concatenate((f_mu, f_std, f_stdmu, f_mu10top), axis=1)
+    features_stats = np.squeeze(np.asarray(features_stats))
 
     return features_stats
 
@@ -585,53 +585,75 @@ def display_time(dur_secs, fps_process, t_process, t_0,
     return t_2
 
 
-def save_object_features(object_features, super_object_features,
-                         which_categories):
-    """
-    Saves object features to csv files.
+def get_features_names(process_mode, which_object_categories):
+    feature_names = []
+    hist_r = 'hist_r'
+    hist_g = 'hist_g'
+    hist_b = 'hist_b'
+    hist_v = 'hist_v'
+    hist_rgb_ratio = 'hist_rgb'
+    hist_s = 'hist_s'
+    for i in range(0, 8):
+        feature_names.append(hist_r + '{}'.format(i))
+    for i in range(0, 8):
+        feature_names.append(hist_g + '{}'.format(i))
+    for i in range(0, 8):
+        feature_names.append(hist_b + '{}'.format(i))
+    for i in range(0, 8):
+        feature_names.append(hist_v + '{}'.format(i))
+    for i in range(0, 5):
+        feature_names.append(hist_rgb_ratio + '{}'.format(i))
+    for i in range(0, 8):
+        feature_names.append(hist_s + '{}'.format(i))
+    frame_value_diff = 'frame_value_diff'
+    feature_names.append(frame_value_diff)
 
-    which_categories int:
-            values:
-                    0: returns features for all 80 categories
-                    1: returns features for 12 super categories
-                    2: returns features for both 80 and 12 categories
 
-    """
-    with open("category_names.txt", encoding="utf-8") as file:
-        category_names = [l.rstrip("\n") for l in file]
+    if process_mode > 1:
+        frontal_faces_num = 'frontal_faces_num'
+        feature_names.append(frontal_faces_num)
+        frontal_faces_ratio = 'fronatl_faces_ratio'
+        feature_names.append(frontal_faces_ratio)
+        tilt_pan_confidences = 'tilt_pan_confidences'
+        feature_names.append(tilt_pan_confidences)
+        mag_mean = 'mag_mean'
+        feature_names.append(mag_mean)
+        mag_std = 'mag_std'
+        feature_names.append(mag_std)
+        shot_durations = 'shot_durations'
+        feature_names.append(shot_durations)
 
-    super_category_names = ['person', 'vehicle', 'outdoor', 'animal',
-                            'accessory', 'sports', 'kitchen', 'food',
-                            'furniture', 'electronic', 'appliance',
-                            'indoor']
+        feature_stats_names = ['mean_' + name for name in feature_names]
+        feature_stats_names += ['std_' + name for name in feature_names]
+        feature_stats_names += ['stdmean_' + name for name in feature_names]
+        feature_stats_names += ['mean10top_' + name for name in feature_names]
 
-    if which_categories > 1:
-        pandas_df = pd.DataFrame(data=object_features,
-                                 index=["labels_freq", "labels_avg_confidence",
-                                        "labels_area_ratio"],
-                                 columns=category_names)
-        pandas_df.to_csv("object_features.csv")
+        if which_object_categories > 0:
+            category_names = ['person', 'vehicle', 'outdoor', 'animal',
+                                    'accessory', 'sports', 'kitchen', 'food',
+                                    'furniture', 'electronic', 'appliance',
+                                    'indoor']
 
-        pandas_df = pd.DataFrame(data=super_object_features,
-                                 index=["labels_freq", "labels_avg_confidence",
-                                        "labels_area_ratio"],
-                                 columns=super_category_names)
-        pandas_df.to_csv("object_features_super_categories.csv")
+        else:
+            with open("category_names.txt", encoding="utf-8") as file:
+                category_names = [l.rstrip("\n") for l in file]
 
-    elif which_categories > 0:
-        pandas_df = pd.DataFrame(data=super_object_features,
-                                 index=["labels_freq", "labels_avg_confidence",
-                                        "labels_area_ratio"],
-                                 columns=super_category_names)
-        pandas_df.to_csv("object_features_super_categories.csv")
+        for category in category_names:
+            feature_names.append(category + '_num')
+            feature_names.append(category + '_confidence')
+            feature_names.append(category + '_area_ratio')
+
+            feature_stats_names.append(category + '_freq')
+            feature_stats_names.append(category + '_mean_confidence')
+            feature_stats_names.append(category + '_mean_area_ratio')
+
     else:
-        pandas_df = pd.DataFrame(data=object_features,
-                                 index=["labels_freq", "labels_avg_confidence",
-                                        "labels_area_ratio"],
-                                 columns=category_names)
-        pandas_df.to_csv("object_features.csv")
+        feature_stats_names = ['mean_' + name for name in feature_names]
+        feature_stats_names += ['std_' + name for name in feature_names]
+        feature_stats_names += ['stdmean_' + name for name in feature_names]
+        feature_stats_names += ['mean10top_' + name for name in feature_names]
 
-    return None
+    return feature_names, feature_stats_names
 
 
 def npy_to_csv(filename_features, filename_names):
@@ -643,3 +665,4 @@ def npy_to_csv(filename_features, filename_names):
         for f in features[i]:
             fp.write("{0:.6f}\t".format(f))
         fp.write("\n")
+

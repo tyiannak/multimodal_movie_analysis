@@ -34,8 +34,9 @@ from utils import *
 
 generic_model = gmodel.SsdNvidia()
 
-def process_video(video_path, process_mode, print_flag,
-                  online_display,  save_results):
+
+def process_video(video_path, process_mode, print_flag=True,
+                  online_display=False,  save_results=True):
     """
     Extracts and displays features representing color, flow, objects detected
     and shot duration from video
@@ -61,6 +62,12 @@ def process_video(video_path, process_mode, print_flag,
                 - mean value of the 10 highest-valued frames for every feature
         feature matrix (array_like) : Array of the extracted features.
             Contains one feature vector for every frame.
+            If object detection is used, the feature matrix contains information
+            for the first n = (number_of_frames - max_frames + 1) frames.
+        feature_names (tuple) : 2D tuple that contains the name
+            of the extracted features.
+            - feature_names[0] (list) : names of the feature_matrix features
+            - feature_names[1] (list) : names of the feature_stats features
     """
 
     # ---Initializations-------------------------------------------------------
@@ -86,7 +93,7 @@ def process_video(video_path, process_mode, print_flag,
 
     if process_mode > 1:
         # --------------------------------------------------------------------
-        which_categories = 2  # which object categories to store as features
+        which_object_categories = 2  # which object categories to store as features
         """
         Takes values:
             0: returns features for all 80 categories
@@ -96,7 +103,7 @@ def process_video(video_path, process_mode, print_flag,
         """
         # --------------------------------------------------------------------
         overlap_threshold = 0.8
-        mean_confidence_threshold = 0.4
+        mean_confidence_threshold = 0.5
         max_frames = 5
         objects_boxes_all = []
         objects_labels_all = []
@@ -172,6 +179,7 @@ def process_video(video_path, process_mode, print_flag,
                         (feature_vector_current,
                          np.array([f_diff[-1]])),
                         0)
+                    print('F diff: {}'.format(np.array([f_diff[-1]]).shape))
                     hist_v_prev = hist_v
 
                 # ---Get flow and object related features---------------------
@@ -338,31 +346,67 @@ def process_video(video_path, process_mode, print_flag,
               format(hrs, mins, secs, tenths))
         print("processing ratio      {0:3.1f} fps".format(processing_fps))
         print("processing ratio time {0:3.0f} %".format(processing_rt))
-        print('Shape of feature matrix found: {}'.format(
+        print('Actual shape of feature matrix without object features: {}'.format(
             feature_matrix.shape))
         print('Shape of features\' stats found: {}'.format(
             features_stats.shape))
+        print('Number of shot changes: {}'.format(shot_change_times[0]))
+    if process_mode > 1:
+        objects = dutils.smooth_object_confidence(
+                    objects_labels_all, objects_confidences_all,
+                    objects_boxes_all, overlap_threshold,
+                    mean_confidence_threshold, max_frames)
 
-    if process_mode > 0 and save_results:
-        np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")
-        np.savetxt("features_stats.csv", features_stats, delimiter=",")
+        if objects:
+            out_labels, out_boxes, out_confidences = objects
+            (object_features_stats,
+             super_object_features_stats) = dutils.get_object_features(
+                out_labels, out_confidences, out_boxes, which_object_categories)
 
+            (labels_freq_per_frame,
+             labels_avg_confidence_per_frame, labels_area_ratio_per_frame) = \
+                dutils.get_object_features_per_frame(
+                    out_labels, out_confidences, out_boxes,
+                    which_object_categories)
+            feature_matrix = np.concatenate((
+                feature_matrix[:(-max_frames + 1)][:],
+                labels_freq_per_frame), axis=1)
+            feature_matrix = np.concatenate((
+                feature_matrix, labels_avg_confidence_per_frame), axis=1)
+            feature_matrix = np.concatenate((
+                feature_matrix, labels_area_ratio_per_frame), axis=1)
 
-    objects = dutils.smooth_object_confidence(objects_labels_all, objects_confidences_all, objects_boxes_all,
-                                                                      overlap_threshold, mean_confidence_threshold,
-                                                                      max_frames)
+            if which_object_categories > 0:
+                overall_labels_freq = np.asarray(super_object_features_stats[0])
+                overall_labels_avg_confidence = np.asarray(super_object_features_stats[1])
+                overall_labels_area_ratio = np.asarray(super_object_features_stats[2])
+                features_stats = np.concatenate((
+                    features_stats, overall_labels_freq,
+                    overall_labels_avg_confidence, overall_labels_area_ratio))
 
-    if objects:
-        out_labels, out_boxes, out_confidences = objects
-        object_features, super_object_features = dutils.get_object_features(
-            out_labels, out_confidences, out_boxes, which_categories)
+            else:
+                overall_labels_freq = np.asarray(object_features_stats[0])
+                overall_labels_avg_confidence = np.asarray(object_features_stats[1])
+                overall_labels_area_ratio = np.asarray(object_features_stats[2])
+                features_stats = np.concatenate((
+                    features_stats, overall_labels_freq,
+                    overall_labels_avg_confidence, overall_labels_area_ratio))
+
+            if print_flag:
+                print('Shape of feature matrix including '
+                      'object features (after smoothing'
+                      ' object confidences): {}'.format(feature_matrix.shape))
+                print('Shape of feature stats vector including'
+                      ' object features (after smoothing'
+                      ' object confidences): {}'.format(feature_matrix.shape))
 
         if save_results:
-            save_object_features(object_features,
-                                 super_object_features, which_categories)
+            np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")
+            np.savetxt("features_stats.csv", features_stats, delimiter=",")
 
+    feature_names = get_features_names(process_mode, which_object_categories)
 
-    return features_stats, feature_matrix, shot_change_times
+    return features_stats, feature_matrix, shot_change_times[0], feature_names
 
 
 def dir_process_video(dir_name, process_mode, print_flag,
@@ -382,8 +426,8 @@ def dir_process_video(dir_name, process_mode, print_flag,
     for movieFile in video_files_list:
         print(movieFile)
 
-        features_stats, feature_matrix, _ = process_video(movieFile, 2,
-                                                          True, False)
+        features_stats, feature_matrix, shot_change_t, feature_names = process_video(
+            movieFile, process_mode, print_flag, online_display, save_results)
         np.save(movieFile + ".npy", feature_matrix)
         if len(features_all) == 0:  # append feature vector
             features_all = features_stats
@@ -392,7 +436,7 @@ def dir_process_video(dir_name, process_mode, print_flag,
     np.save(dir_name_no_path + "_features.npy", features_all)
     np.save(dir_name_no_path + "_video_files_list.npy", video_files_list)
 
-    return features_all, video_files_list
+    return features_all, video_files_list, shot_change_t, feature_names
 
 
 def dirs_process_video(dir_names, process_mode,
@@ -420,25 +464,28 @@ def dirs_process_video(dir_names, process_mode,
 def main(argv):
 
     process_mode = 2
-    online_display = True
     print_flag = True
     online_display = False
     save_results = True
     if len(argv) == 3:
         if argv[1] == "-f":
 
-            _, _, shot_change_t = process_video(argv[2], process_mode, print_flag, online_display,  save_results)
-            print(shot_change_t)
+            _, _, _, _ = process_video(
+                argv[2], process_mode, print_flag,
+                online_display, save_results)
         elif argv[1] == "-d":  # directory
             dir_name = argv[2]
             features_all, video_files_list, shot_change_t = dir_process_video(
                 dir_name, process_mode, print_flag,
                 online_display, save_results)
-            print (shot_change_t)
+            print('Number of shot changes: {}'.format(shot_change_t))
         elif argv[1] == "-d":  # directory
             dir_name = argv[2]
-            features_all, video_files_list,shot_change_t = dir_process_video(dir_name)
-            print (shot_change_t)
+            features_all, video_files_list, shot_change_t, feature_names =\
+                dir_process_video(
+                    dir_name, process_mode, print_flag,
+                    online_display, save_results)
+            print('Number of shot changes: {}'.format(shot_change_t))
 
             print(features_all.shape, video_files_list)
         else:

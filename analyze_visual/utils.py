@@ -5,7 +5,7 @@ import numpy as np
 
 # process and plot related parameters:
 new_width = 500
-process_step = 0.5
+process_step = 0.2
 plot_step = 2
 
 # face detection-related paths:
@@ -80,6 +80,7 @@ def display_histogram(data, width, height, maximum, window_name):
 
     cv2.imshow(window_name, img)
     return
+
 
 def rect_area(rect):
     return rect[0] * rect[1] * rect[2] * rect[3]
@@ -424,8 +425,6 @@ def calc_shot_duration(shot_change_times,
                 len(shot_change_times) - 1):
             shot_avg += (shot_change_times[si + 1] -
                          shot_change_times[si])
-        print('Average shot duration: {}'.format(
-                shot_avg / float(len(shot_change_times) - 1)))
 
     for ccc in range(shot_change_process_indices[-1] -
                      shot_change_process_indices[-2]):

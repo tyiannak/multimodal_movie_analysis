@@ -102,9 +102,9 @@ def process_video(video_path, process_mode, print_flag=True,
 
         """
         # --------------------------------------------------------------------
-        overlap_threshold = 0.8
+        overlap_threshold = 0.
         mean_confidence_threshold = 0.5
-        max_frames = 5
+        max_frames = 3
         objects_boxes_all = []
         objects_labels_all = []
         objects_confidences_all = []
@@ -356,6 +356,9 @@ def process_video(video_path, process_mode, print_flag=True,
              super_object_features_stats) = dutils.get_object_features(
                 out_labels, out_confidences, out_boxes, which_object_categories)
 
+            #dutils.save_object_features(object_features_stats, super_object_features_stats,
+            #                     2)
+
             (labels_freq_per_frame,
              labels_avg_confidence_per_frame, labels_area_ratio_per_frame) = \
                 dutils.get_object_features_per_frame(
@@ -397,9 +400,11 @@ def process_video(video_path, process_mode, print_flag=True,
             np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")
             np.savetxt("features_stats.csv", features_stats, delimiter=",")
 
-    feature_names = get_features_names(process_mode, which_object_categories)
+    f_names, f_names_stats = get_features_names(process_mode,
+                                                which_object_categories)
 
-    return features_stats, feature_matrix, shot_change_times[0], feature_names
+    return features_stats,  f_names_stats,  feature_matrix, f_names, \
+           shot_change_times[0]
 
 
 def dir_process_video(dir_name, process_mode, print_flag,
@@ -408,9 +413,9 @@ def dir_process_video(dir_name, process_mode, print_flag,
 
     dir_name_no_path = os.path.basename(os.path.normpath(dir_name))
 
-    features_all = np.array([])
+    features_all = []
 
-    types = ('*.avi', '*.mpeg', '*.mpg', '*.mp4', '*.mkv')
+    types = ('*.avi', '*.mpeg', '*.mpg', '*.mp4', '*.mkv', '*.webm')
     video_files_list = []
     for files in types:
         video_files_list.extend(glob.glob(os.path.join(dir_name, files)))
@@ -418,40 +423,20 @@ def dir_process_video(dir_name, process_mode, print_flag,
 
     for movieFile in video_files_list:
         print(movieFile)
-
-        features_stats, feature_matrix, shot_change_t, feature_names = process_video(
-            movieFile, process_mode, print_flag, online_display, save_results)
+        features_stats, f_names_stats, feature_matrix, f_names, shot_change_t = \
+            process_video( movieFile, process_mode, print_flag, online_display,
+                           save_results)
         np.save(movieFile + ".npy", feature_matrix)
-        if len(features_all) == 0:  # append feature vector
-            features_all = features_stats
-        else:
-            features_all = np.vstack((features_all, features_stats))
+        print('vehicle_freq')
+        print(features_stats[f_names_stats.index('vehicle_freq')])
+        # 'vehicle_mean_confidence', 'vehicle_mean_area_ratio'
+
+        features_all.append(features_stats)
     np.save(dir_name_no_path + "_features.npy", features_all)
     np.save(dir_name_no_path + "_video_files_list.npy", video_files_list)
+    features_all = np.array(features_all)
 
-    return features_all, video_files_list, shot_change_t, feature_names
-
-
-def dirs_process_video(dir_names, process_mode,
-                       print_flag, online_display,  save_results):
-    """Processes all videos from all given directories."""
-
-    # feature extraction for each class:
-    features = []
-    class_names = []
-    filenames = []
-    for i, d in enumerate(dir_names):
-        [f, fn] = dir_process_video(d, process_mode,
-                                    print_flag, online_display, save_results)
-        # if at least one audio file has been found in the provided folder:
-        if f.shape[0] > 0:
-            features.append(f)
-            filenames.append(fn)
-            if d[-1] == "/":
-                class_names.append(d.split(os.sep)[-2])
-            else:
-                class_names.append(d.split(os.sep)[-1])
-    return features, class_names, filenames
+    return features_all, video_files_list
 
   
 def main(argv):
@@ -462,29 +447,20 @@ def main(argv):
     save_results = True
     if len(argv) == 3:
         if argv[1] == "-f":
-            f, f_all, shot_change_times, feat_n = process_video(argv[2],
-                                                                process_mode,
-                                                                print_flag,
-                                                                online_display,
-                                                                save_results)
-            print(feat_n)
-            print(len(feat_n))
-            print(f.shape)
+            f_stat, f_stat_n, f, f_n, shots = process_video(argv[2],
+                                                            process_mode,
+                                                            print_flag,
+                                                            online_display,
+                                                            save_results)
         elif argv[1] == "-d":  # directory
             dir_name = argv[2]
-            features_all, video_files_list, shot_change_t = dir_process_video(
-                dir_name, process_mode, print_flag,
-                online_display, save_results)
-            print('Number of shot changes: {}'.format(shot_change_t))
-        elif argv[1] == "-d":  # directory
-            dir_name = argv[2]
-            features_all, video_files_list, shot_change_t, feature_names =\
-                dir_process_video(
-                    dir_name, process_mode, print_flag,
-                    online_display, save_results)
-            print('Number of shot changes: {}'.format(shot_change_t))
-
-            print(features_all.shape, video_files_list)
+            features_all, video_files_list = dir_process_video(dir_name,
+                                                               process_mode,
+                                                               print_flag,
+                                                               online_display,
+                                                               save_results)
+            print(features_all.shape)
+            print(video_files_list)
         else:
             print('Error: Unsupported flag.')
             print('For supported flags please read the modules\' docstring.')

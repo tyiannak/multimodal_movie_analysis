@@ -179,7 +179,6 @@ def process_video(video_path, process_mode, print_flag=True,
                         (feature_vector_current,
                          np.array([f_diff[-1]])),
                         0)
-                    print('F diff: {}'.format(np.array([f_diff[-1]]).shape))
                     hist_v_prev = hist_v
 
                 # ---Get flow and object related features---------------------
@@ -244,9 +243,6 @@ def process_video(video_path, process_mode, print_flag=True,
                                  (1,
                                   len(feature_vector_current)))),
                             0)
-
-                print('Shape of feature matrix: {}'.format(
-                                                feature_matrix.shape))
 
                 # ---Display features on windows------------------------------
 

@@ -157,7 +157,6 @@ def detect_faces(image, cascade_frontal, cascade_profile):
 
     faces_frontal = []
     detected_frontal = cascade_frontal.detectMultiScale(image, 1.3, 5)
-    print(detected_frontal)
     if len(detected_frontal) > 0:
         for (x, y, w, h) in detected_frontal:
             faces_frontal.append((x, y, w, h))

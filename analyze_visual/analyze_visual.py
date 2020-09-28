@@ -102,7 +102,7 @@ def process_video(video_path, process_mode, print_flag=True,
 
         """
         # --------------------------------------------------------------------
-        overlap_threshold = 0.5
+        overlap_threshold = 0.8
         mean_confidence_threshold = 0.5
         max_frames = 3
         objects_boxes_all = []

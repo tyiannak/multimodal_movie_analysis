@@ -78,14 +78,15 @@ def dir_acc(video_path):
         shot_file = movie_file + ".txt"
         print(shot_file)
         if os.path.isfile(shot_file):
-            _, _, shot_change_times = process_video(movie_file, 2, True, False)
+            features_stats, f_names_stats, feature_matrix, f_names, \
+            shot_change_t = process_video(movie_file, 2, True, False)
             annotated_shots = read_gt_file(shot_file)
-            print("Timestamps for predicted shots: \n", shot_change_times)
+            print("Timestamps for predicted shots: \n", shot_change_t)
             print("Timestamps for actual shots: \n", annotated_shots)
-            precision, recall = calc(annotated_shots, shot_change_times)
+            precision, recall = calc(annotated_shots, shot_change_t)
             prec_list.append(precision)
             rec_list.append(recall)
-            shot_change_times.clear()
+            shot_change_t.clear()
     print("AVG of Precision: {0:.0f}%".format(np.mean(prec_list)*100))
     print("AVG of Recall: {0:.0f}%".format(np.mean(rec_list)*100))
 

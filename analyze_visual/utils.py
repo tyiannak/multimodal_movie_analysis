@@ -636,11 +636,14 @@ def get_features_names(process_mode, which_object_categories):
 
         for category in category_names:
             feature_names.append(category + '_num')
-            feature_names.append(category + '_confidence')
-            feature_names.append(category + '_area_ratio')
-
             feature_stats_names.append(category + '_freq')
+
+        for category in category_names:
+            feature_names.append(category + '_confidence')
             feature_stats_names.append(category + '_mean_confidence')
+
+        for category in category_names:
+            feature_names.append(category + '_area_ratio')
             feature_stats_names.append(category + '_mean_area_ratio')
 
     else:

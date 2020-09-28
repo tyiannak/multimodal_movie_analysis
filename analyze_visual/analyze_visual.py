@@ -404,7 +404,7 @@ def process_video(video_path, process_mode, print_flag=True,
                                                 which_object_categories)
 
     return features_stats,  f_names_stats,  feature_matrix, f_names, \
-           shot_change_times[0]
+           shot_change_times
 
 
 def dir_process_video(dir_name, process_mode, print_flag,

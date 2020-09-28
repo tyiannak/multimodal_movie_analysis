@@ -78,8 +78,8 @@ def dir_acc(video_path):
         shot_file = movie_file + ".txt"
         print(shot_file)
         if os.path.isfile(shot_file):
-            features_stats, f_names_stats, feature_matrix, f_names, \
-            shot_change_t = process_video(movie_file, 2, True, False)
+            _, _, _, _, shot_change_t = process_video(movie_file, 2, True,
+                                                      False)
             annotated_shots = read_gt_file(shot_file)
             print("Timestamps for predicted shots: \n", shot_change_t)
             print("Timestamps for actual shots: \n", annotated_shots)
@@ -94,7 +94,7 @@ def dir_acc(video_path):
 def main(argv):
     if len(argv) == 3:
         if argv[1] == "-f":
-            _, _, shot_change_t = process_video(argv[2], 2, True, True)
+            _, _, _, _, shot_change_t = process_video(argv[2], 2, True, True)
             single_acc(argv[2], shot_change_t)
         elif argv[1] == "-d":  # directory
             dir_acc(argv[2])

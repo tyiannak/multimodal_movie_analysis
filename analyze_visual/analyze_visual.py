@@ -295,12 +295,9 @@ def process_video(video_path, process_mode, print_flag=True,
                     objects = generic_model.detect(frame, 0.4)
 
                     generic_model.display_cv2(frame, objects, window_name)
-                    cv2.moveWindow(window_name,
-                                   5 * width, 0)
-
+                    cv2.moveWindow(window_name, width, 0)
                     if cv2.waitKey(25) & 0xFF == ord('q'):
                         break
-
                     t_0 = t_2
 
                 objects = generic_model.detect(frame, 0.1)
@@ -461,14 +458,18 @@ def main(argv):
 
     process_mode = 2
     print_flag = True
-    online_display = False
+    online_display = True
     save_results = True
     if len(argv) == 3:
         if argv[1] == "-f":
-
-            _, _, _, _ = process_video(
-                argv[2], process_mode, print_flag,
-                online_display, save_results)
+            f, f_all, shot_change_times, feat_n = process_video(argv[2],
+                                                                process_mode,
+                                                                print_flag,
+                                                                online_display,
+                                                                save_results)
+            print(feat_n)
+            print(len(feat_n))
+            print(f.shape)
         elif argv[1] == "-d":  # directory
             dir_name = argv[2]
             features_all, video_files_list, shot_change_t = dir_process_video(

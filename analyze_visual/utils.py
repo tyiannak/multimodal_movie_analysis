@@ -506,7 +506,7 @@ def windows_display(vis, height, process_mode, v_norm, hist_rgb_ratio,
             np.array(tilt_pan_confidences),
             plot_width,
             height,
-            50,
+            1,
             'Tilt Pan Confidences')
 
         cv2.moveWindow('frontal_faces_num', 4 * plot_width,
@@ -516,8 +516,6 @@ def windows_display(vis, height, process_mode, v_norm, hist_rgb_ratio,
         cv2.moveWindow('tilt_pan_confidences',
                        6 * plot_width,
                        height + 90)
-
-        #cv2.waitKey(1)
     return None
 
 

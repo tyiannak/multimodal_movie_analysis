@@ -34,7 +34,7 @@ def read_gt_file(file):
 
 
 def calc(annotated_shots,shot_change_times):
-    tolerance, correct_shot, correct_shot_h = 0.5, 0, 0
+    tolerance, correct_shot, correct_shot_h = 0.8, 0, 0
 
     correct_recall, correct_precision = 0, 0
     for t in annotated_shots:
@@ -55,13 +55,17 @@ def calc(annotated_shots,shot_change_times):
 
 
 def single_acc(video_path, shot_change_times):
-    annotated_shots = read_gt_file(video_path + ".txt")
-    for i in range(0, len(shot_change_times)): 
-        shot_change_times[i] = float(shot_change_times[i])
-    
-    print("Timestamps for predicted shots: \n", shot_change_times)
-    print("Timestamps for actual shots: \n", annotated_shots)
-    calc(annotated_shots, shot_change_times)
+    ground_truth_file = video_path + ".txt"
+    if os.path.isfile(ground_truth_file):
+        annotated_shots = read_gt_file(ground_truth_file)
+        for i in range(0, len(shot_change_times)):
+            shot_change_times[i] = float(shot_change_times[i])
+
+        print("Timestamps for predicted shots: \n", shot_change_times)
+        print("Timestamps for actual shots: \n", annotated_shots)
+        calc(annotated_shots, shot_change_times)
+    else:
+        print(f"Ground-truth file {ground_truth_file} does not exist!")
 
 
 def dir_acc(video_path):

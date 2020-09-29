@@ -42,6 +42,7 @@ class SsdNvidia:
         ])
 
         self.precision = 'fp32'
+
         self.use_cuda = torch.cuda.is_available()
         self.device = torch.device("cuda:0" if self.use_cuda else "cpu")
         print("Using:", self.device)
@@ -61,7 +62,11 @@ class SsdNvidia:
                 'nvidia_ssd', model_math=self.precision,
                 pretrained=False)
             ckpt_file = _download_checkpoint(checkpoint_str, force_reload=False)
-            ckpt = torch.load(ckpt_file, map_location="self.device")
+            if self.use_cuda:
+                ckpt = torch.load(ckpt_file)
+            else:
+                ckpt = torch.load(ckpt_file, map_location=lambda storage, loc: storage)
+
             ckpt = ckpt['model']
             self.model.load_state_dict(ckpt)
 
@@ -82,13 +87,18 @@ class SsdNvidia:
                         f.writelines("\n")
                     else:
                         f.writelines(line)
+
         else:
             self.model = torch.hub.load(
                 'NVIDIA/DeepLearningExamples:torchhub',
                 'nvidia_ssd', model_math=self.precision,
                 pretrained=False)
             ckpt_file = _download_checkpoint(checkpoint_str, force_reload=False)
-            ckpt = torch.load(ckpt_file, map_location="cpu")
+            if self.use_cuda:
+                ckpt = torch.load(ckpt_file)
+            else:
+                ckpt = torch.load(ckpt_file, map_location=lambda storage, loc: storage)
+
             ckpt = ckpt['model']
             self.model.load_state_dict(ckpt)
 

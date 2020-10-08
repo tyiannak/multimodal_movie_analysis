@@ -34,7 +34,7 @@ def read_gt_file(file):
 
 
 def calc(annotated_shots,shot_change_times):
-    tolerance, correct_shot, correct_shot_h = 0.8, 0, 0
+    tolerance, correct_shot, correct_shot_h = 1.5, 0, 0
 
     correct_recall, correct_precision = 0, 0
     for t in annotated_shots:

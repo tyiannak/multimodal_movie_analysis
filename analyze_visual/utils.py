@@ -408,7 +408,7 @@ def shot_change(gray_diff, mag_mu, f_diff, current_shot_duration):
     gray_diff_t = gray_diff.sum() \
         / float(gray_diff.shape[0] * gray_diff.shape[1])
 
-    if ((mag_mu > 0.06) and (gray_diff_t > 0.55) and (f_diff[-1] > 0.002) and
+    if ((mag_mu > 0.06) and (gray_diff_t > 0.22) and (f_diff[-1] > 0.05) and
             current_shot_duration > 1.1):
         return True
     else:

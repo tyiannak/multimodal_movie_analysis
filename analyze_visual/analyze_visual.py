@@ -343,7 +343,7 @@ def process_video(video_path, process_mode, print_flag=True,
             feature_matrix.shape))
         print('Shape of features\' stats found: {}'.format(
             features_stats.shape))
-        print('Number of shot changes: {}'.format(shot_change_times[0]))
+        print('Number of shot changes: {}'.format(len(shot_change_times)))
     if process_mode > 1:
         objects = dutils.smooth_object_confidence(
                     objects_labels_all, objects_confidences_all,

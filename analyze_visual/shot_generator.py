@@ -33,7 +33,7 @@ def crop_dir(dir_name):
     video_files_list = sorted(video_files_list)
     for movieFile in video_files_list:
         print(movieFile)
-        _, _, shot_change_times = process_video(movieFile, 2, True, False)
+        _, _, _, _, shot_change_times = process_video(movieFile, 2, True, False)
         shot_change_t.append(shot_change_times)
         print(shot_change_t)
         crop_shots(movieFile,shot_change_times)

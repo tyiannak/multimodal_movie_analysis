@@ -20,7 +20,8 @@ def crop_shots(video_path, shot_change_times):
 #            ffmpeg_extract_subclip(video_path, i, shot_change_times[index+1],
 #                                   targetname=shot_file_name)
 
-            os.system(f"ffmpeg -i {video_path} -ss {i} -to {shot_change_times[index+1]} {shot_file_name}")
+            os.system(f"ffmpeg -i \"{video_path}\" -ss {i} -to "
+                      f"{shot_change_times[index+1]} \"{shot_file_name}\"")
 
 def crop_dir(dir_name):
     """

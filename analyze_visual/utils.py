@@ -409,11 +409,11 @@ def shot_change(gray_diff, mag_mu, f_diff, current_shot_duration):
         / float(gray_diff.shape[0] * gray_diff.shape[1])
 
     count = 0
-    if ((mag_mu > 0.06)):
+    if ((mag_mu > 0.08)):
         count += 1
-    if (gray_diff_t > 0.22):
+    if (gray_diff_t > 0.65):
         count += 1
-    if (f_diff[-1] > 0.002):
+    if (f_diff[-1] > 0.02):
         count += 1
 
     if (count>=2) and (current_shot_duration > 1.1):

@@ -5,6 +5,7 @@ TODO
 from analyze_visual import *
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 import os
+import os.path
 
 def crop_shots(video_path, shot_change_times):
     """
@@ -14,14 +15,20 @@ def crop_shots(video_path, shot_change_times):
         shot_change_times = [int(i) for i in shot_change_times]
         print (shot_change_times[index])
         i = shot_change_times[index]
+        extension = os.path.splitext(video_path)[1]
         if i < shot_change_times[-1]:
             shot_file_name = f"{video_path}_shot_{shot_change_times[index]}_" \
-                             f"{shot_change_times[index+1]}.mp4"
+                             f"{shot_change_times[index+1]}.{extension}"
 #            ffmpeg_extract_subclip(video_path, i, shot_change_times[index+1],
 #                                   targetname=shot_file_name)
 
-            os.system(f"ffmpeg -i \"{video_path}\" -ss {i} -to "
-                      f"{shot_change_times[index+1]} \"{shot_file_name}\"")
+            ffmpeg_command = f"ffmpeg -i \"{video_path}\" " \
+                             f"-ss {i} -to {shot_change_times[index+1]} " \
+                             f"-c copy " \
+                             f"\"{shot_file_name}\""
+            print(ffmpeg_command)
+            os.system(ffmpeg_command)
+
 
 def crop_dir(dir_name):
     """

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+sed -i 's/Clockwork Orange,/Clockwork Orange/g' annotations_database.txt
+sed -i 's/400 Blows,/400 Blows/g' annotations_database.txt
+sed -i 's/Godfather Part II,/Godfather Part II/g' annotations_database.txt
+sed -i 's/Timespamp, Username, Sample_name, Class/Timespamp,Username,Sample_name,Class/g' annotations_database.txt

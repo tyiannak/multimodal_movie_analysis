@@ -42,15 +42,15 @@ def aggregate_annotations(file):
     return df
 
 
-def save_to_csv(file):   
+def save_to_csv(df):   
 
-    df = aggregate_annotations(file)
     df.to_csv('aggregate_annotations.csv', index=False)
 
 def report_annotations(file):
 
     data = pd.read_csv(file)
     df = aggregate_annotations(file)
+    save_to_csv(df)
 
     #Total annotations
     print("\nTotal annotations:",df['Number_annotations'].sum())
@@ -73,10 +73,9 @@ def report_annotations(file):
     plt.tight_layout()
     plt.savefig('classs_distr.png')
 
-    #Number of annotations per file
-    print("Number of annotations per movie: " ,df[['Sample_Name','Number_annotations']])
-
-    
+    #Number of annotations per file (save to csv)
+    per_movie = df[['Sample_Name','Number_annotations']]
+    per_movie.to_csv("anot_per_movie.csv",index=False)
 
 
 report_annotations('annotations_database.txt')

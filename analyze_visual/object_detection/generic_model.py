@@ -46,8 +46,8 @@ class SsdNvidia:
         self.use_cuda = torch.cuda.is_available()
         self.device = torch.device("cuda:0" if self.use_cuda else "cpu")
         print("Using:", self.device)
-        checkpoint_str =\
-            'https://api.ngc.nvidia.com/v2/models/nvidia/ssdpyt_fp32/versions/1/files/nvidia_ssdpyt_fp32_20190225.pt'
+        checkpoint_str = \
+            'https://api.ngc.nvidia.com/v2/models/nvidia/ssd_pyt_ckpt_amp/versions/19.09.0/files/nvidia_ssdpyt_fp16_190826.pt'
 
         # fix torch hub's code problem with empty frames
         # !!!if the code gets updated, remove these lines!!!

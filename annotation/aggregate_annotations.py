@@ -1,8 +1,10 @@
 import csv
-import pandas as pd
+import shutil
 import sys
-import matplotlib.pyplot as plt
 import os
+import pandas as pd
+import matplotlib.pyplot as plt
+
 
 def aggregate_annotations(file):
 
@@ -56,12 +58,15 @@ def report_annotations(file):
     #Total annotations
     print("\nTotal annotations:",df['Number_annotations'].sum())
 
-    #os.mkdir('plots')
+    if os.path.exists('plots'):
+        shutil.rmtree('plots')
+
+    os.mkdir('plots')
     #Number of annotation that every user did + plot
     print("\nAnnotations of every user:\n",data['Username'].value_counts())
     user = data['Username'].value_counts()
     plot = user.plot(kind='pie', subplots=True, shadow = True,startangle=90,figsize=(15,10), autopct='%1.1f%%')
-    #plt.savefig("plots/pie.png")  
+    plt.savefig("plots/pie.png")  
     plt.close()
 
     #Class distribution + plot
@@ -72,7 +77,7 @@ def report_annotations(file):
     plt.ylabel('Number')
     plt.title('Class distribution')
     plt.tight_layout()
-    #plt.savefig('plots/classs_distr.png')
+    plt.savefig('plots/classs_distr.png')
 
     # Average agreement (confidence): average of all confidences with >=2 annotations
  

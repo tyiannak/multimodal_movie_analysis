@@ -56,12 +56,12 @@ def report_annotations(file):
     #Total annotations
     print("\nTotal annotations:",df['Number_annotations'].sum())
 
-    os.mkdir('plots')
+    #os.mkdir('plots')
     #Number of annotation that every user did + plot
     print("\nAnnotations of every user:\n",data['Username'].value_counts())
     user = data['Username'].value_counts()
     plot = user.plot(kind='pie', subplots=True, shadow = True,startangle=90,figsize=(15,10), autopct='%1.1f%%')
-    plt.savefig("plots/pie.png")  
+    #plt.savefig("plots/pie.png")  
     plt.close()
 
     #Class distribution + plot
@@ -72,7 +72,14 @@ def report_annotations(file):
     plt.ylabel('Number')
     plt.title('Class distribution')
     plt.tight_layout()
-    plt.savefig('plots/classs_distr.png')
+    #plt.savefig('plots/classs_distr.png')
+
+    # Average agreement (confidence): average of all confidences with >=2 annotations
+ 
+    cond = df[df['Number_annotations']>=2]
+
+    print("Average agreement : ",cond['Confidence'].mean())
+
 
     #Number of annotations per file (save to csv)
     #per_movie = df[['Sample_Name','Number_annotations']]

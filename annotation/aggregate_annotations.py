@@ -75,8 +75,8 @@ def report_annotations(file):
     plt.savefig('plots/classs_distr.png')
 
     #Number of annotations per file (save to csv)
-    per_movie = df[['Sample_Name','Number_annotations']]
-    per_movie.to_csv("anot_per_movie.csv",index=False)
+    #per_movie = df[['Sample_Name','Number_annotations']]
+    #per_movie.to_csv("anot_per_movie.csv",index=False)
 
 
 report_annotations('annotations_database.txt')

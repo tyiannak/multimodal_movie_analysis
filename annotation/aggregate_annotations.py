@@ -1,6 +1,4 @@
-import csv
 import shutil
-import sys
 import os
 import numpy
 import pandas as pd
@@ -11,28 +9,30 @@ def aggregate_annotations(file):
 
     data = pd.read_csv(file)
 
-    #Create Dataframe
-    aggregation = {'Sample Name':[],
-                    'Winner_annotation':[],
-                    'Confidence':[],
-                    'Number_annotations':[]
-                    }
+    # Create Dataframe
+    aggregation = {'Sample Name': [],
+                   'Winner_annotation': [],
+                   'Confidence': [],
+                   'Number_annotations': []}
     
-    df = pd.DataFrame(aggregation,columns = ['Sample_Name','Winner_annotation','Confidence','Number_annotations'])
+    df = pd.DataFrame(aggregation,columns = ['Sample_Name',
+                                             'Winner_annotation',
+                                             'Confidence',
+                                             'Number_annotations'])
 
-    #Number_annotations
+    # Number_annotations
     num_anot = (pd.crosstab(data.Sample_name,data.Class))
     num_anot['sum'] = num_anot.sum(axis=1)
     num_anot = num_anot.reset_index()
 
     df['Number_annotations'] = num_anot['sum']
        
-    #Confidence
+    # Confidence
     conf = (pd.crosstab(data.Sample_name,data.Class))
     res = conf.div(conf.sum(axis=1), axis=0)*100
     res = res.reset_index()
     
-    #Values to Dataframe
+    # Values to Dataframe
     df['Sample_Name'] = res['Sample_name']
     sav=res['Sample_name']
     res=res.drop(['Sample_name'],axis=1)
@@ -50,6 +50,7 @@ def save_to_csv(df):
 
     df.to_csv('aggregate_annotations.csv', index=False)
 
+
 def report_annotations(file):
 
     data = pd.read_csv(file)
@@ -63,10 +64,11 @@ def report_annotations(file):
 
     sample_num = set(data['Sample_name'])
     #Total files annotated
-    print("\nNum of files annotated: ",len(list(set(vidfiles) & sample_num)))
+    print("\nNum of files annotated: ", len(list(set(vidfiles) & sample_num)))
 
     #Num of files NOT annotated 
-    print("\nNum of files not annotated: ",len(list(set(vidfiles) - sample_num)))
+    print("\nNum of files not annotated: ",
+          len(list(set(vidfiles) - sample_num)))
 
     #Total annotations
     print("\nTotal annotations:",df['Number_annotations'].sum())
@@ -79,7 +81,10 @@ def report_annotations(file):
     #Number of annotation that every user did + plot
     print("\nAnnotations per user:\n",data['Username'].value_counts())
     user = data['Username'].value_counts()
-    plot = user.plot(kind='pie', subplots=True, shadow = True,startangle=90,figsize=(15,10), autopct='%1.1f%%')
+    plot = user.plot(kind='pie', subplots=True, shadow=True,
+                     startangle=90,
+                     figsize=(15,10),
+                     autopct='%1.1f%%')
     plt.savefig("plots/pie.png")  
     plt.close()
 
@@ -89,10 +94,15 @@ def report_annotations(file):
     count = count.to_frame()
     per = count.div(count.sum(axis=0))*100
     count['Percentage'] = per['Class']
-    count['Percentage'] = pd.Series([round(val, 2) for val in count['Percentage']], index = count.index)
-    count['Percentage'] = pd.Series(["{0:.2f}%".format(val) for val in count['Percentage']], index = count.index)
+    count['Percentage'] = pd.Series([round(val, 2)
+                                     for val in count['Percentage']],
+                                    index=count.index)
+    count['Percentage'] = pd.Series(["{0:.2f}%".format(val)
+                                     for val in count['Percentage']],
+                                    index=count.index)
 
-    print("\nInitial Class Distribution (before majority): \nTotal: %s \n%s"% (data['Class'].shape[0],count))
+    print("\nInitial Class Distribution (before majority): "
+          "\nTotal: %s \n%s" % (data['Class'].shape[0], count))
 
     conf = data['Class'].value_counts()
     conf.plot.bar()
@@ -107,10 +117,15 @@ def report_annotations(file):
     count = count.to_frame()
     per = count.div(count.sum(axis=0))*100
     count['Percentage'] = per['Winner_annotation']
-    count['Percentage'] = pd.Series([round(val, 2) for val in count['Percentage']], index = count.index)
-    count['Percentage'] = pd.Series(["{0:.2f}%".format(val) for val in count['Percentage']], index = count.index)
+    count['Percentage'] = pd.Series([round(val, 2)
+                                     for val in count['Percentage']],
+                                     index=count.index)
+    count['Percentage'] = pd.Series(["{0:.2f}%".format(val)
+                                     for val in count['Percentage']],
+                                    index=count.index)
 
-    print("\nAggregated Class Distribution (after majority): \nTotal: %s \n%s"% (df['Winner_annotation'].shape[0],count))
+    print("\nAggregated Class Distribution (after majority): "
+          "\nTotal: %s \n%s"% (df['Winner_annotation'].shape[0], count))
 
     conf = df['Winner_annotation'].value_counts()
     conf.plot.bar()
@@ -120,24 +135,36 @@ def report_annotations(file):
     plt.tight_layout()
     plt.savefig('plots/classs_distr_after.png')
 
-    # Average agreement (confidence): average of all confidences with >=2 annotations
+    # Average agreement (confidence): average of all
+    # confidences with >=2 annotations
 
-    ann_gr_1 = df[df['Number_annotations']>=1]
+    ann_gr_1 = df[df['Number_annotations'] >= 1]
     count = ann_gr_1['Number_annotations'].count()
-    print('\n1 annotations:%s %.2f%%'%(count,numpy.divide(count,df['Number_annotations'].sum())*100))
+    print('\n1 annotations:%s %.2f%%' % (count,
+                                         numpy.divide(count,
+                                                      df['Number_annotations'].
+                                                      sum())*100))
 
-    ann_gr_2 = df[df['Number_annotations']>=2]
+    ann_gr_2 = df[df['Number_annotations'] >= 2]
     count = ann_gr_2['Number_annotations'].count()
-    print('2 annotations:%s %.2f%%'%(count,numpy.divide(count,df['Number_annotations'].sum())*100))
+    print('2 annotations:%s %.2f%%' % (count,
+                                       numpy.divide(count,
+                                                    df['Number_annotations'].
+                                                    sum())*100))
 
-    ann_gr_3 = df[df['Number_annotations']>=3]
+    ann_gr_3 = df[df['Number_annotations'] >= 3]
     count = ann_gr_3['Number_annotations'].count()
-    print('3 annotations:%s %.2f%%'%(count,numpy.divide(count,df['Number_annotations'].sum())*100))
+    print('3 annotations:%s %.2f%%'%(count,
+                                     numpy.divide(count,
+                                                  df['Number_annotations'].
+                                                  sum())*100))
 
-    ann_gr_4 = df[df['Number_annotations']>=4]
+    ann_gr_4 = df[df['Number_annotations'] >= 4]
     count = ann_gr_4['Number_annotations'].count()
-    print('4 annotations:%s %.2f%%'%(count,numpy.divide(count,df['Number_annotations'].sum())*100))
-
+    print('4 annotations:%s %.2f%%'%(count,
+                                     numpy.divide(count,
+                                                  df['Number_annotations'].
+                                                  sum())*100))
 
     ann_gr_2.to_csv('conf.csv', index=False)
     print("\nAverage agreement : %.2f%%" %ann_gr_2['Confidence'].mean())

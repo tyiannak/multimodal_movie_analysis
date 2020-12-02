@@ -394,7 +394,7 @@ def process_video(video_path, process_mode, print_flag=True,
                       ' object confidences): {}'.format(feature_matrix.shape))
                 print('Shape of feature stats vector including'
                       ' object features (after smoothing'
-                      ' object confidences): {}'.format(feature_matrix.shape))
+                      ' object confidences): {}'.format(features_stats.shape))
 
         if save_results:
             np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")

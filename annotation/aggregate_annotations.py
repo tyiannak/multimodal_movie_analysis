@@ -138,28 +138,28 @@ def report_annotations(file):
     # Average agreement (confidence): average of all
     # confidences with >=2 annotations
 
-    ann_gr_1 = df[df['Number_annotations'] >= 1]
+    ann_gr_1 = df[df['Number_annotations'] == 1]
     count = ann_gr_1['Number_annotations'].count()
     print('\n1 annotations:%s %.2f%%' % (count,
                                          numpy.divide(count,
                                                       df['Number_annotations'].
                                                       sum())*100))
 
-    ann_gr_2 = df[df['Number_annotations'] >= 2]
+    ann_gr_2 = df[df['Number_annotations'] == 2]
     count = ann_gr_2['Number_annotations'].count()
     print('2 annotations:%s %.2f%%' % (count,
                                        numpy.divide(count,
                                                     df['Number_annotations'].
                                                     sum())*100))
 
-    ann_gr_3 = df[df['Number_annotations'] >= 3]
+    ann_gr_3 = df[df['Number_annotations'] == 3]
     count = ann_gr_3['Number_annotations'].count()
     print('3 annotations:%s %.2f%%'%(count,
                                      numpy.divide(count,
                                                   df['Number_annotations'].
                                                   sum())*100))
 
-    ann_gr_4 = df[df['Number_annotations'] >= 4]
+    ann_gr_4 = df[df['Number_annotations'] == 4]
     count = ann_gr_4['Number_annotations'].count()
     print('4 annotations:%s %.2f%%'%(count,
                                      numpy.divide(count,

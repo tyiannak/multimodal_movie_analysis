@@ -1,0 +1,398 @@
+Sample_Name,Winner_annotation,Confidence,Number_annotations
+12 Angry Men (1957).mp4_shot_3125_3145..mp4.mp4,Travelling_in,50.0,2
+12 Angry Men (1957).mp4_shot_4073_4108..mp4.mp4,Static,50.0,2
+2001 A Space Odyssey (1968).mp4_shot_4782_4789..mp4.mp4,Static,100.0,2
+24 Hour Party People (2002).avi_shot_1972_1981..avi.mp4,Handled,100.0,2
+24 Hour Party People (2002).avi_shot_2737_2743..avi.mp4,Handled,100.0,2
+24 Hour Party People (2002).avi_shot_283_285..avi.mp4,None,50.0,2
+24 Hour Party People (2002).avi_shot_3603_3613..avi.mp4,Handled,100.0,2
+24 Hour Party People (2002).avi_shot_687_689..avi.mp4,None,50.0,2
+24 Hour Party People (2002).avi_shot_873_879..avi.mp4,Panoramic,100.0,2
+24 Hour Party People (2002).avi_shot_912_927..avi.mp4,Handled,50.0,2
+400 Blows The (Les quatre cents coups) (1959).mkv_shot_3797_3810..mkv.mp4,Vertical_movement,100.0,2
+400 Blows The (Les quatre cents coups) (1959).mkv_shot_3904_3909..mkv.mp4,Static,100.0,2
+400 Blows The (Les quatre cents coups) (1959).mkv_shot_956_967..mkv.mp4,Static,50.0,2
+8 Mile (2002).avi_shot_1887_1891..avi.mp4,Vertical_movement,100.0,2
+8 Mile (2002).avi_shot_2043_2052..avi.mp4,Handled,100.0,2
+8 Mile (2002).avi_shot_3475_3478..avi.mp4,Handled,100.0,2
+8 Mile (2002).avi_shot_4002_4013..avi.mp4,Handled,100.0,2
+8 Mile (2002).avi_shot_4134_4140..avi.mp4,Car_side_mirror,100.0,2
+8 Mile (2002).avi_shot_5697_5705..avi.mp4,Handled,100.0,2
+8 Mile (2002).avi_shot_973_981..avi.mp4,Handled,50.0,2
+A Perfect World cd1.avi_shot_1600_1602..avi.mp4,None,50.0,2
+A Perfect World cd1.avi_shot_2392_2396..avi.mp4,Car_side_mirror,50.0,2
+A Perfect World cd1.avi_shot_2825_2829..avi.mp4,Car_side_mirror,50.0,2
+A Perfect World cd1.avi_shot_3063_3067..avi.mp4,Panoramic,50.0,2
+A Perfect World cd1.avi_shot_3182_3187..avi.mp4,Panoramic,100.0,2
+A Perfect World cd1.avi_shot_3255_3259..avi.mp4,Static,100.0,2
+A Perfect World cd1.avi_shot_3506_3509..avi.mp4,Panoramic,50.0,2
+A Perfect World cd1.avi_shot_3549_3551..avi.mp4,Car_front_windshield,50.0,2
+A Perfect World cd1.avi_shot_725_729..avi.mp4,Static,100.0,2
+A Perfect World cd1.avi_shot_81_89..avi.mp4,None,100.0,2
+A Perfect World cd1.avi_shot_951_956..avi.mp4,Panoramic,100.0,2
+A Perfect World cd2.avi_shot_2392_2397..avi.mp4,Panoramic_lateral,100.0,2
+A Perfect World cd2.avi_shot_2419_2421..avi.mp4,Handled,100.0,2
+A Perfect World cd2.avi_shot_2440_2444..avi.mp4,Panoramic,100.0,2
+A Perfect World cd2.avi_shot_2929_2934..avi.mp4,Panoramic,100.0,2
+A Perfect World cd2.avi_shot_3063_3067..avi.mp4,Static,100.0,2
+A Perfect World cd2.avi_shot_3084_3087..avi.mp4,Static,100.0,2
+A Perfect World cd2.avi_shot_3565_3581..avi.mp4,None,100.0,2
+A Perfect World cd2.avi_shot_809_813..avi.mp4,Panoramic,50.0,2
+Absolute Power cd1.avi_shot_1084_1088..avi.mp4,None,100.0,2
+Absolute Power cd1.avi_shot_1250_1255..avi.mp4,Handled,50.0,2
+Absolute Power cd1.avi_shot_1822_1826..avi.mp4,Handled,50.0,2
+Absolute Power cd1.avi_shot_1993_2000..avi.mp4,Panoramic,100.0,2
+Absolute Power cd1.avi_shot_2365_2371..avi.mp4,None,100.0,2
+Absolute Power cd1.avi_shot_2878_2889..avi.mp4,None,50.0,2
+Absolute Power cd1.avi_shot_3082_3089..avi.mp4,None,100.0,2
+Absolute Power cd1.avi_shot_3091_3101..avi.mp4,None,50.0,2
+Absolute Power cd1.avi_shot_3163_3168..avi.mp4,None,100.0,2
+Absolute Power cd1.avi_shot_3346_3354..avi.mp4,None,100.0,2
+Absolute Power cd1.avi_shot_528_540..avi.mp4,None,100.0,2
+Absolute Power cd1.avi_shot_608_613..avi.mp4,Panoramic_360,50.0,2
+Absolute Power cd2.avi_shot_1529_1532..avi.mp4,Panoramic,50.0,2
+Absolute Power cd2.avi_shot_1900_1906..avi.mp4,Static,100.0,2
+Absolute Power cd2.avi_shot_2254_2256..avi.mp4,Panoramic,100.0,2
+Absolute Power cd2.avi_shot_2273_2284..avi.mp4,Aerial,100.0,2
+Absolute Power cd2.avi_shot_232_243..avi.mp4,Zoom_in,100.0,2
+Absolute Power cd2.avi_shot_2625_2632..avi.mp4,Static,50.0,2
+Absolute Power cd2.avi_shot_3241_3245..avi.mp4,Static,100.0,2
+Absolute Power cd2.avi_shot_439_442..avi.mp4,Static,100.0,2
+Absolute Power cd2.avi_shot_750_765..avi.mp4,Static,100.0,2
+Absolute Power cd2.avi_shot_994_1001..avi.mp4,Panoramic_360,50.0,2
+Alice in Wonderland.mp4_shot_1051_1057..mp4.mp4,Tilt,50.0,2
+Alice in Wonderland.mp4_shot_1406_1409..mp4.mp4,None,50.0,2
+Alice in Wonderland.mp4_shot_1567_1571..mp4.mp4,None,50.0,2
+Alice in Wonderland.mp4_shot_2033_2036..mp4.mp4,Panoramic,50.0,2
+Alice in Wonderland.mp4_shot_2061_2063..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_2169_2172..mp4.mp4,Panoramic,50.0,2
+Alice in Wonderland.mp4_shot_2366_2368..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_2505_2507..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_2801_2803..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_2859_2863..mp4.mp4,Tilt,50.0,2
+Alice in Wonderland.mp4_shot_2916_2919..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_3057_3060..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_3219_3223..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_3389_3394..mp4.mp4,None,50.0,2
+Alice in Wonderland.mp4_shot_3417_3420..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_344_347..mp4.mp4,None,100.0,2
+Alice in Wonderland.mp4_shot_3874_3876..mp4.mp4,None,100.0,2
+Alice in Wonderland.mp4_shot_3881_3883..mp4.mp4,None,100.0,2
+Alice in Wonderland.mp4_shot_4338_4345..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_4454_4456..mp4.mp4,None,100.0,2
+Alice in Wonderland.mp4_shot_4758_4761..mp4.mp4,Static,50.0,2
+Alice in Wonderland.mp4_shot_4793_4796..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_4818_4821..mp4.mp4,Panoramic,100.0,2
+Alice in Wonderland.mp4_shot_4821_4826..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_4967_4969..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_4969_4971..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_4983_4985..mp4.mp4,Panoramic,100.0,2
+Alice in Wonderland.mp4_shot_5002_5008..mp4.mp4,Aerial,50.0,2
+Alice in Wonderland.mp4_shot_5180_5184..mp4.mp4,None,50.0,2
+Alice in Wonderland.mp4_shot_5184_5189..mp4.mp4,Travelling_out,100.0,2
+Alice in Wonderland.mp4_shot_5212_5215..mp4.mp4,Panoramic_360,50.0,2
+Alice in Wonderland.mp4_shot_5219_5222..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_5359_5361..mp4.mp4,None,50.0,2
+Alice in Wonderland.mp4_shot_5949_5954..mp4.mp4,Static,100.0,2
+Alice in Wonderland.mp4_shot_603_605..mp4.mp4,Tilt,100.0,2
+Alice in Wonderland.mp4_shot_605_611..mp4.mp4,Static,50.0,2
+Alice in Wonderland.mp4_shot_617_620..mp4.mp4,Static,50.0,2
+Alien (1979).mp4_shot_1020_1035..mp4.mp4,Handled,50.0,2
+Alien (1979).mp4_shot_1562_1573..mp4.mp4,None,50.0,2
+Alien (1979).mp4_shot_2354_2362..mp4.mp4,Panoramic,50.0,2
+Alien (1979).mp4_shot_2745_2758..mp4.mp4,Static,100.0,2
+Alien (1979).mp4_shot_2927_2933..mp4.mp4,Tilt,100.0,2
+Alien (1979).mp4_shot_3995_4012..mp4.mp4,None,50.0,2
+Alien (1979).mp4_shot_6724_6761..mp4.mp4,Zoom_in,100.0,2
+Aliens (1986).mp4_shot_1909_1919..mp4.mp4,Static,100.0,2
+Aliens (1986).mp4_shot_2029_2037..mp4.mp4,Static,100.0,2
+Aliens (1986).mp4_shot_2385_2390..mp4.mp4,Travelling_out,100.0,2
+Aliens (1986).mp4_shot_3015_3021..mp4.mp4,Handled,100.0,2
+Aliens (1986).mp4_shot_3103_3110..mp4.mp4,Static,50.0,2
+Aliens (1986).mp4_shot_5452_5463..mp4.mp4,Static,100.0,2
+Aliens (1986).mp4_shot_6313_6326..mp4.mp4,None,100.0,2
+Aliens (1986).mp4_shot_6813_6822..mp4.mp4,Panoramic_360,50.0,2
+Amadeus (1984).mp4_shot_10060_10069..mp4.mp4,Tilt,50.0,2
+Amadeus (1984).mp4_shot_2493_2502..mp4.mp4,Static,100.0,2
+Amadeus (1984).mp4_shot_2692_2698..mp4.mp4,Static,100.0,2
+Amadeus (1984).mp4_shot_2754_2759..mp4.mp4,Static,100.0,2
+Amadeus (1984).mp4_shot_6085_6093..mp4.mp4,Static,50.0,2
+Amadeus (1984).mp4_shot_6462_6469..mp4.mp4,Static,100.0,2
+Amadeus (1984).mp4_shot_655_666..mp4.mp4,Static,100.0,2
+Amadeus (1984).mp4_shot_6723_6730..mp4.mp4,Static,100.0,2
+Amadeus (1984).mp4_shot_7774_7777..mp4.mp4,Panoramic,100.0,2
+Amadeus (1984).mp4_shot_9070_9078..mp4.mp4,Panoramic_lateral,100.0,2
+Amadeus (1984).mp4_shot_9435_9442..mp4.mp4,Static,100.0,2
+American Beauty (1999).mp4_shot_1036_1040..mp4.mp4,Static,100.0,2
+American Beauty (1999).mp4_shot_1157_1172..mp4.mp4,Static,100.0,2
+American Beauty (1999).mp4_shot_1502_1506..mp4.mp4,Static,100.0,2
+American Beauty (1999).mp4_shot_1644_1647..mp4.mp4,Static,100.0,2
+American Beauty (1999).mp4_shot_4453_4460..mp4.mp4,Car_side_mirror,100.0,2
+American Beauty (1999).mp4_shot_4553_4586..mp4.mp4,Static,100.0,2
+American Beauty (1999).mp4_shot_5974_5982..mp4.mp4,Static,100.0,2
+American History X (1998).avi_shot_1352_1354..avi.mp4,Handled,50.0,2
+American History X (1998).avi_shot_1790_1796..avi.mp4,Static,100.0,2
+American History X (1998).avi_shot_1814_1821..avi.mp4,Handled,100.0,2
+American History X (1998).avi_shot_1862_1869..avi.mp4,Static,100.0,2
+American History X (1998).avi_shot_2578_2586..avi.mp4,Static,100.0,2
+American History X (1998).avi_shot_3518_3528..avi.mp4,Static,100.0,2
+American History X (1998).avi_shot_4147_4150..avi.mp4,Static,100.0,2
+American History X (1998).avi_shot_4204_4210..avi.mp4,Handled,50.0,2
+American History X (1998).avi_shot_4318_4326..avi.mp4,Static,100.0,2
+American History X (1998).avi_shot_433_440..avi.mp4,Static,100.0,2
+American History X (1998).avi_shot_4447_4451..avi.mp4,None,100.0,2
+American History X (1998).avi_shot_5074_5078..avi.mp4,Zoom_in,100.0,2
+American History X (1998).avi_shot_872_895..avi.mp4,Handled,50.0,2
+Casablanca (1942).avi_shot_1147_1167..avi.mp4,Panoramic,100.0,2
+Casablanca (1942).avi_shot_157_175..avi.mp4,None,50.0,2
+Casablanca (1942).avi_shot_339_346..avi.mp4,Static,100.0,2
+Casablanca (1942).avi_shot_428_439..avi.mp4,Panoramic_lateral,100.0,2
+Casablanca (1942).avi_shot_5056_5079..avi.mp4,None,100.0,2
+Casablanca (1942).avi_shot_5656_5660..avi.mp4,Travelling_in,50.0,2
+Casablanca (1942).avi_shot_946_952..avi.mp4,Travelling_out,100.0,2
+Casino (1995).mp4_shot_1203_1209..mp4.mp4,Aerial,50.0,2
+Casino (1995).mp4_shot_2005_2013..mp4.mp4,Static,100.0,2
+Casino (1995).mp4_shot_4732_4741..mp4.mp4,Panoramic_360,100.0,2
+Casino (1995).mp4_shot_5575_5589..mp4.mp4,Panoramic,50.0,2
+Casino (1995).mp4_shot_5763_5769..mp4.mp4,Static,100.0,2
+Casino (1995).mp4_shot_5803_5809..mp4.mp4,Static,100.0,2
+Casino (1995).mp4_shot_6423_6429..mp4.mp4,Static,100.0,2
+Casino (1995).mp4_shot_6870_6878..mp4.mp4,Static,100.0,2
+Casino (1995).mp4_shot_9794_9804..mp4.mp4,Travelling_in,50.0,2
+Cassandra_s Dream.avi_shot_1335_1362..avi.mp4,Zoom_in,100.0,2
+Cassandra_s Dream.avi_shot_3579_3587..avi.mp4,Panoramic_lateral,100.0,2
+Cassandra_s Dream.avi_shot_612_621..avi.mp4,Panoramic,100.0,2
+Cassandra_s Dream.avi_shot_767_771..avi.mp4,Static,100.0,2
+Cassandra_s Dream.avi_shot_805_853..avi.mp4,Panoramic,50.0,2
+Celebrity.avi_shot_112_115..avi.mp4,Handled,50.0,2
+Celebrity.avi_shot_3465_3468..avi.mp4,Travelling_out,100.0,2
+Celebrity.avi_shot_3521_3555..avi.mp4,None,100.0,2
+Celebrity.avi_shot_4165_4170..avi.mp4,Static,100.0,2
+Chinatown (1974).mp4_shot_1127_1151..mp4.mp4,Static,100.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_2170_2180..mp4.mp4,Panoramic,100.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_2228_2233..mp4.mp4,Static,50.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_2577_2585..mp4.mp4,Static,50.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_2742_2747..mp4.mp4,Aerial,50.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_3246_3250..mp4.mp4,Static,100.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_3970_3975..mp4.mp4,Static,100.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_4249_4257..mp4.mp4,Static,100.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_5156_5170..mp4.mp4,None,100.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_5385_5390..mp4.mp4,Static,100.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_5820_5825..mp4.mp4,Panoramic_lateral,50.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_6844_6851..mp4.mp4,Static,100.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_7474_7477..mp4.mp4,Panoramic,50.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_7524_7542..mp4.mp4,Static,100.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_7605_7621..mp4.mp4,None,50.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_7962_8010..mp4.mp4,Static,100.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_8221_8230..mp4.mp4,Static,100.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_8518_8523..mp4.mp4,Static,100.0,2
+Cinema Paradiso (Nuovo cinema Paradiso) (1989).mp4_shot_8564_8573..mp4.mp4,Static,100.0,2
+Citizen Kane (1941).mp4_shot_519_522..mp4.mp4,Static,100.0,2
+Citizen Kane (1941).mp4_shot_5725_5778..mp4.mp4,Static,100.0,2
+Citizen Kane (1941).mp4_shot_6547_6554..mp4.mp4,Panoramic,100.0,2
+City of God (Cidade de Deus) (2002).avi_shot_1850_1857..avi.mp4,Static,100.0,2
+City of God (Cidade de Deus) (2002).avi_shot_1922_1929..avi.mp4,Car_front_windshield,100.0,2
+City of God (Cidade de Deus) (2002).avi_shot_2591_2603..avi.mp4,Handled,50.0,2
+City of God (Cidade de Deus) (2002).avi_shot_3399_3418..avi.mp4,None,50.0,2
+City of God (Cidade de Deus) (2002).avi_shot_3645_3652..avi.mp4,Handled,50.0,2
+City of God (Cidade de Deus) (2002).avi_shot_4380_4394..avi.mp4,Panoramic,100.0,2
+City of God (Cidade de Deus) (2002).avi_shot_6228_6241..avi.mp4,Handled,100.0,2
+City of God (Cidade de Deus) (2002).avi_shot_6479_6508..avi.mp4,None,100.0,2
+Clockwork Orange A (1971).avi_shot_168_185..avi.mp4,Static,100.0,2
+Clockwork Orange A (1971).avi_shot_1854_1863..avi.mp4,Static,100.0,2
+Clockwork Orange A (1971).avi_shot_258_295..avi.mp4,Travelling_out,50.0,2
+Clockwork Orange A (1971).avi_shot_2748_2792..avi.mp4,None,50.0,2
+Clockwork Orange A (1971).avi_shot_4650_4681..avi.mp4,Static,100.0,2
+Clockwork Orange A (1971).avi_shot_5460_5469..avi.mp4,Static,100.0,2
+Clockwork Orange A (1971).avi_shot_6548_6558..avi.mp4,Panoramic,50.0,2
+Clockwork Orange A (1971).avi_shot_7415_7438..avi.mp4,Static,100.0,2
+Clockwork Orange A (1971).avi_shot_845_860..avi.mp4,Static,100.0,2
+Control (2007).avi_shot_1048_1072..avi.mp4,Static,100.0,2
+Control (2007).avi_shot_1390_1409..avi.mp4,None,50.0,2
+Control (2007).avi_shot_2415_2449..avi.mp4,Static,100.0,2
+Control (2007).avi_shot_367_380..avi.mp4,Static,100.0,2
+Control (2007).avi_shot_3954_4007..avi.mp4,Static,50.0,2
+Control (2007).avi_shot_5136_5147..avi.mp4,None,100.0,2
+Control (2007).avi_shot_6446_6462..avi.mp4,None,100.0,2
+Cool Hand Luke (1967).mp4_shot_1431_1435..mp4.mp4,Static,100.0,2
+Cool Hand Luke (1967).mp4_shot_187_194..mp4.mp4,Static,100.0,2
+Cool Hand Luke (1967).mp4_shot_276_286..mp4.mp4,Panoramic,100.0,2
+Cool Hand Luke (1967).mp4_shot_3447_3453..mp4.mp4,Panoramic,100.0,2
+Cool Hand Luke (1967).mp4_shot_3481_3491..mp4.mp4,Static,100.0,2
+Cool Hand Luke (1967).mp4_shot_3824_3831..mp4.mp4,Static,100.0,2
+Cool Hand Luke (1967).mp4_shot_3939_3953..mp4.mp4,Static,100.0,2
+Cool Hand Luke (1967).mp4_shot_5183_5187..mp4.mp4,Static,100.0,2
+Cool Hand Luke (1967).mp4_shot_5223_5228..mp4.mp4,Static,100.0,2
+Cool Hand Luke (1967).mp4_shot_5817_5829..mp4.mp4,Static,100.0,2
+Cool Hand Luke (1967).mp4_shot_7373_7379..mp4.mp4,Static,100.0,2
+Corpse Bride.mp4_shot_1094_1098..mp4.mp4,Travelling_in,100.0,2
+Corpse Bride.mp4_shot_167_171..mp4.mp4,Static,50.0,2
+Corpse Bride.mp4_shot_177_180..mp4.mp4,Static,100.0,2
+Corpse Bride.mp4_shot_1946_1950..mp4.mp4,Static,100.0,2
+Corpse Bride.mp4_shot_2162_2167..mp4.mp4,Static,100.0,2
+Corpse Bride.mp4_shot_2308_2313..mp4.mp4,Static,100.0,2
+Corpse Bride.mp4_shot_2960_2967..mp4.mp4,Static,100.0,2
+Corpse Bride.mp4_shot_3057_3063..mp4.mp4,Static,100.0,2
+Corpse Bride.mp4_shot_3163_3169..mp4.mp4,Static,100.0,2
+Corpse Bride.mp4_shot_3268_3280..mp4.mp4,Zoom_in,100.0,2
+Corpse Bride.mp4_shot_438_441..mp4.mp4,None,50.0,2
+Corpse Bride.mp4_shot_727_735..mp4.mp4,None,50.0,2
+Corpse Bride.mp4_shot_818_820..mp4.mp4,Tilt,50.0,2
+Corpse Bride.mp4_shot_989_993..mp4.mp4,Static,100.0,2
+Crimes and Misdemeanors.avi_shot_464_468..avi.mp4,Static,100.0,2
+Crimes and Misdemeanors.avi_shot_5404_5414..avi.mp4,Static,100.0,2
+Cul de Sac.avi_shot_1396_1495..avi.mp4,Static,100.0,2
+Cul de Sac.avi_shot_3281_3325..avi.mp4,Static,100.0,2
+Cul de Sac.avi_shot_5482_5495..avi.mp4,Static,100.0,2
+Family Plot.mp4_shot_1705_1715..mp4.mp4,None,100.0,2
+Family Plot.mp4_shot_5909_5934..mp4.mp4,Static,100.0,2
+Family Plot.mp4_shot_6675_6687..mp4.mp4,Panoramic,50.0,2
+Fargo.avi_shot_2755_2760..avi.mp4,Travelling_in,50.0,2
+Fargo.avi_shot_4239_4244..avi.mp4,Car_side_mirror,100.0,2
+Fargo.avi_shot_497_503..avi.mp4,Car_side_mirror,100.0,2
+Fargo.avi_shot_5217_5233..avi.mp4,Car_front_windshield,50.0,2
+Fight Club (1999).mp4_shot_1553_1564..mp4.mp4,Handled,50.0,2
+Fight Club (1999).mp4_shot_1888_1940..mp4.mp4,None,50.0,2
+Fight Club (1999).mp4_shot_2678_2692..mp4.mp4,None,100.0,2
+Fight Club (1999).mp4_shot_2964_2970..mp4.mp4,Static,100.0,2
+Fight Club (1999).mp4_shot_3083_3091..mp4.mp4,None,50.0,2
+Fight Club (1999).mp4_shot_3418_3423..mp4.mp4,Static,100.0,2
+Fight Club (1999).mp4_shot_476_486..mp4.mp4,Static,100.0,2
+Fight Club (1999).mp4_shot_5652_5654..mp4.mp4,Static,100.0,2
+Finding Nemo (2003).mp4_shot_2284_2288..mp4.mp4,Static,100.0,2
+Finding Nemo (2003).mp4_shot_2501_2512..mp4.mp4,Static,100.0,2
+Finding Nemo (2003).mp4_shot_4074_4076..mp4.mp4,Static,100.0,2
+Finding Nemo (2003).mp4_shot_5496_5501..mp4.mp4,Static,100.0,2
+For a Few Dollars More (Per qualche dollaro in più) (1965).avi_shot_1078_1096..avi.mp4,Panoramic,100.0,2
+For a Few Dollars More (Per qualche dollaro in più) (1965).avi_shot_4749_4755..avi.mp4,Tilt,50.0,2
+For a Few Dollars More (Per qualche dollaro in più) (1965).avi_shot_5120_5127..avi.mp4,Static,100.0,2
+For a Few Dollars More (Per qualche dollaro in più) (1965).avi_shot_5941_5955..avi.mp4,Static,50.0,2
+For a Few Dollars More (Per qualche dollaro in più) (1965).avi_shot_6671_6678..avi.mp4,Static,100.0,2
+Foreign Correspondent.mp4_shot_1241_1251..mp4.mp4,Static,100.0,2
+Foreign Correspondent.mp4_shot_1287_1297..mp4.mp4,Static,100.0,2
+Foreign Correspondent.mp4_shot_1497_1511..mp4.mp4,None,100.0,2
+Foreign Correspondent.mp4_shot_189_207..mp4.mp4,None,50.0,2
+Foreign Correspondent.mp4_shot_3034_3086..mp4.mp4,Static,100.0,2
+Foreign Correspondent.mp4_shot_3648_3658..mp4.mp4,Static,100.0,2
+Foreign Correspondent.mp4_shot_5408_5414..mp4.mp4,Travelling_in,50.0,2
+Forrest Gump (1994).avi_shot_1136_1153..avi.mp4,Aerial,100.0,2
+Forrest Gump (1994).avi_shot_3465_3481..avi.mp4,Static,50.0,2
+Forrest Gump (1994).avi_shot_3689_3718..avi.mp4,Travelling_in,50.0,2
+Forrest Gump (1994).avi_shot_5202_5213..avi.mp4,Panoramic_lateral,50.0,2
+Forrest Gump (1994).avi_shot_5258_5265..avi.mp4,Vertical_movement,100.0,2
+Forrest Gump (1994).avi_shot_5290_5307..avi.mp4,Aerial,50.0,2
+Forrest Gump (1994).avi_shot_6368_6378..avi.mp4,Static,100.0,2
+Forrest Gump (1994).avi_shot_6875_6881..avi.mp4,Travelling_out,100.0,2
+Forrest Gump (1994).avi_shot_6965_6983..avi.mp4,None,50.0,2
+Frankenweenie.mp4_shot_1064_1081..mp4.mp4,Zoom_out,100.0,2
+Frankenweenie.mp4_shot_1717_1721..mp4.mp4,Static,100.0,2
+Frankenweenie.mp4_shot_1730_1736..mp4.mp4,Static,100.0,2
+Frankenweenie.mp4_shot_1752_1759..mp4.mp4,None,50.0,2
+Frankenweenie.mp4_shot_2171_2174..mp4.mp4,Tilt,50.0,2
+Frankenweenie.mp4_shot_2283_2290..mp4.mp4,Panoramic,100.0,2
+Frankenweenie.mp4_shot_2675_2684..mp4.mp4,Zoom_in,100.0,2
+Frankenweenie.mp4_shot_2953_2956..mp4.mp4,Static,100.0,2
+Frankenweenie.mp4_shot_3362_3367..mp4.mp4,Static,100.0,2
+Frankenweenie.mp4_shot_3469_3473..mp4.mp4,None,50.0,2
+Frankenweenie.mp4_shot_3681_3683..mp4.mp4,Static,100.0,2
+Frankenweenie.mp4_shot_3753_3760..mp4.mp4,Static,100.0,2
+Frankenweenie.mp4_shot_3853_3860..mp4.mp4,None,100.0,2
+Frankenweenie.mp4_shot_3974_3982..mp4.mp4,None,50.0,2
+Frankenweenie.mp4_shot_4195_4198..mp4.mp4,Static,100.0,2
+Frankenweenie.mp4_shot_4205_4207..mp4.mp4,Zoom_in,100.0,2
+Frankenweenie.mp4_shot_4251_4254..mp4.mp4,Static,100.0,2
+Frankenweenie.mp4_shot_4392_4396..mp4.mp4,Vertical_movement,50.0,2
+Frankenweenie.mp4_shot_4709_4719..mp4.mp4,Static,100.0,2
+Frankenweenie.mp4_shot_643_646..mp4.mp4,Static,50.0,2
+Frankenweenie.mp4_shot_834_838..mp4.mp4,Static,100.0,2
+Frankenweenie.mp4_shot_881_883..mp4.mp4,Vertical_movement,100.0,2
+Frankenweenie.mp4_shot_909_912..mp4.mp4,None,100.0,2
+Frenzy.mp4_shot_3342_3382..mp4.mp4,Static,100.0,2
+Frenzy.mp4_shot_438_466..mp4.mp4,Aerial,50.0,2
+Frenzy.mp4_shot_5188_5196..mp4.mp4,Static,100.0,2
+Frenzy.mp4_shot_5564_5572..mp4.mp4,None,50.0,2
+Frenzy.mp4_shot_5600_5616..mp4.mp4,None,50.0,2
+Frenzy.mp4_shot_6093_6100..mp4.mp4,Static,50.0,2
+Gladiator (2000).mp4_shot_1464_1474..mp4.mp4,Handled,50.0,2
+Gladiator (2000).mp4_shot_2557_2561..mp4.mp4,Static,100.0,2
+Gladiator (2000).mp4_shot_2903_2921..mp4.mp4,Aerial,50.0,2
+Gladiator (2000).mp4_shot_3385_3388..mp4.mp4,Panoramic_360,50.0,2
+Gladiator (2000).mp4_shot_4664_4669..mp4.mp4,Aerial,50.0,2
+Gladiator (2000).mp4_shot_5027_5043..mp4.mp4,None,50.0,2
+Gladiator (2000).mp4_shot_5399_5404..mp4.mp4,Travelling_in,100.0,2
+Gladiator (2000).mp4_shot_5436_5439..mp4.mp4,Handled,50.0,2
+Gladiator (2000).mp4_shot_6247_6258..mp4.mp4,Panoramic,100.0,2
+Gladiator (2000).mp4_shot_7053_7056..mp4.mp4,Travelling_in,50.0,2
+Gladiator (2000).mp4_shot_7388_7391..mp4.mp4,Panoramic,100.0,2
+Gladiator (2000).mp4_shot_7482_7489..mp4.mp4,Panoramic,100.0,2
+Gladiator (2000).mp4_shot_7733_7745..mp4.mp4,None,100.0,2
+Gladiator (2000).mp4_shot_8547_8558..mp4.mp4,Static,100.0,2
+Gladiator (2000).mp4_shot_8583_8592..mp4.mp4,Travelling_in,50.0,2
+Gladiator (2000).mp4_shot_9335_9339..mp4.mp4,Panoramic,100.0,2
+Godfather Part II The (1974).mp4_shot_10184_10186..mp4.mp4,None,100.0,2
+Godfather Part II The (1974).mp4_shot_10265_10275..mp4.mp4,Static,100.0,2
+Godfather Part II The (1974).mp4_shot_10754_10769..mp4.mp4,None,50.0,2
+Godfather Part II The (1974).mp4_shot_2225_2230..mp4.mp4,Static,100.0,2
+Godfather Part II The (1974).mp4_shot_235_239..mp4.mp4,Static,100.0,2
+Godfather Part II The (1974).mp4_shot_3302_3323..mp4.mp4,Travelling_out,100.0,2
+Godfather Part II The (1974).mp4_shot_3933_3936..mp4.mp4,Static,100.0,2
+Godfather Part II The (1974).mp4_shot_5069_5087..mp4.mp4,Static,100.0,2
+Godfather Part II The (1974).mp4_shot_5820_5830..mp4.mp4,Static,100.0,2
+Godfather Part II The (1974).mp4_shot_8607_8614..mp4.mp4,Static,100.0,2
+Godfather Part II The (1974).mp4_shot_864_871..mp4.mp4,Static,100.0,2
+I Am Legend (2007).avi_shot_1277_1284..avi.mp4,Static,100.0,2
+I Am Legend (2007).avi_shot_1457_1461..avi.mp4,Panoramic,100.0,2
+I Am Legend (2007).avi_shot_2593_2604..avi.mp4,Handled,50.0,2
+I Am Legend (2007).avi_shot_4814_4831..avi.mp4,None,100.0,2
+I Confess.mkv_shot_114_118..mkv.mp4,Static,100.0,2
+I Confess.mkv_shot_1229_1233..mkv.mp4,Static,100.0,2
+I Confess.mkv_shot_4461_4465..mkv.mp4,Static,100.0,2
+I Confess.mkv_shot_4610_4614..mkv.mp4,Static,100.0,2
+I Confess.mkv_shot_5348_5351..mkv.mp4,Panoramic,100.0,2
+I Confess.mkv_shot_5480_5484..mkv.mp4,Static,100.0,2
+I_m Not There (2007).avi_shot_2908_2912..avi.mp4,Panoramic_lateral,100.0,2
+I_m Not There (2007).avi_shot_4017_4023..avi.mp4,Car_side_mirror,50.0,2
+I_m Not There (2007).avi_shot_4389_4406..avi.mp4,None,100.0,2
+I_m Not There (2007).avi_shot_5234_5240..avi.mp4,Static,100.0,2
+I_m Not There (2007).avi_shot_5454_5460..avi.mp4,Static,100.0,2
+I_m Not There (2007).avi_shot_579_604..avi.mp4,Static,100.0,2
+I_m Not There (2007).avi_shot_6179_6188..avi.mp4,None,100.0,2
+I_m Not There (2007).avi_shot_6489_6497..avi.mp4,Static,100.0,2
+I_m Not There (2007).avi_shot_915_921..avi.mp4,Handled,50.0,2
+I_m Still Here (2010).avi_shot_2164_2181..avi.mp4,Handled,100.0,2
+I_m Still Here (2010).avi_shot_4087_4091..avi.mp4,Car_front_windshield,50.0,2
+I_m Still Here (2010).avi_shot_4819_4828..avi.mp4,Handled,100.0,2
+I_m Still Here (2010).avi_shot_5954_5958..avi.mp4,Handled,100.0,2
+I_m Still Here (2010).avi_shot_6055_6151..avi.mp4,Handled,50.0,2
+In the Mood For Love (Fa yeung nin wa) (2000).mkv_shot_1539_1556..mkv.mp4,Static,100.0,2
+In the Mood For Love (Fa yeung nin wa) (2000).mkv_shot_4791_4803..mkv.mp4,Static,100.0,2
+Inception (2010).avi_shot_1689_1692..avi.mp4,Static,100.0,2
+Inception (2010).avi_shot_1755_1775..avi.mp4,Handled,100.0,2
+Inception (2010).avi_shot_1840_1843..avi.mp4,Aerial,50.0,2
+Inception (2010).avi_shot_2006_2019..avi.mp4,Handled,100.0,2
+Inception (2010).avi_shot_2424_2446..avi.mp4,Travelling_out,100.0,2
+Inception (2010).avi_shot_2795_2803..avi.mp4,Tilt,50.0,2
+Inception (2010).avi_shot_3190_3202..avi.mp4,None,100.0,2
+Inception (2010).avi_shot_4186_4194..avi.mp4,Handled,100.0,2
+Inception (2010).avi_shot_4336_4348..avi.mp4,Static,50.0,2
+Inception (2010).avi_shot_7137_7152..avi.mp4,None,50.0,2
+Inception (2010).avi_shot_819_831..avi.mp4,Static,100.0,2
+Indiana Jones and the Last Crusade (1989).mp4_shot_1719_1739..mp4.mp4,None,50.0,2
+Indiana Jones and the Last Crusade (1989).mp4_shot_4843_4846..mp4.mp4,Static,100.0,2
+Indiana Jones and the Last Crusade (1989).mp4_shot_564_582..mp4.mp4,None,100.0,2
+Indiana Jones and the Last Crusade (1989).mp4_shot_590_599..mp4.mp4,Travelling_in,50.0,2
+Indiana Jones and the Last Crusade (1989).mp4_shot_6596_6606..mp4.mp4,Static,100.0,2
+Indiana Jones and the Last Crusade (1989).mp4_shot_7224_7598..mp4.mp4,None,50.0,2
+Inglourious Basterds (2009).mp4_shot_5045_5104..mp4.mp4,None,100.0,2
+Inglourious Basterds (2009).mp4_shot_7332_7342..mp4.mp4,Static,50.0,2
+Inglourious Basterds (2009).mp4_shot_7574_7595..mp4.mp4,Static,100.0,2
+Inglourious Basterds (2009).mp4_shot_8006_8018..mp4.mp4,None,100.0,2
+Inglourious Basterds.mp4_shot_288_298..mp4.mp4,None,100.0,2
+Inglourious Basterds.mp4_shot_3129_3136..mp4.mp4,Static,100.0,2
+Inglourious Basterds.mp4_shot_3442_3446..mp4.mp4,Static,100.0,2
+Inglourious Basterds.mp4_shot_3530_3537..mp4.mp4,Static,100.0,2
+Inglourious Basterds.mp4_shot_4202_4206..mp4.mp4,Static,100.0,2
+Inglourious Basterds.mp4_shot_5240_5260..mp4.mp4,Static,100.0,2
+Inglourious Basterds.mp4_shot_6251_6254..mp4.mp4,Static,100.0,2
+Inglourious Basterds.mp4_shot_6472_6476..mp4.mp4,Static,100.0,2
+Inglourious Basterds.mp4_shot_8605_8609..mp4.mp4,Static,100.0,2

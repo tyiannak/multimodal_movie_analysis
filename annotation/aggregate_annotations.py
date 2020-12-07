@@ -46,16 +46,16 @@ def aggregate_annotations(file):
     return df
 
 
-def save_to_csv(df):   
+def save_to_csv(df,name):   
 
-    df.to_csv('aggregate_annotations.csv', index=False)
+    df.to_csv(name, index=False)
 
 
 def report_annotations(file):
 
     data = pd.read_csv(file)
     df = aggregate_annotations(file)
-    save_to_csv(df)
+    save_to_csv(df,'aggregate_annotations.csv')
 
     with open('videofiles.txt') as f:
         vidfiles = f.read().splitlines()
@@ -151,6 +151,8 @@ def report_annotations(file):
                                        numpy.divide(count,
                                                     df['Number_annotations'].
                                                     sum())*100))
+    
+    save_to_csv(ann_gr_2,'find_statics.csv')
 
     ann_gr_3 = df[df['Number_annotations'] == 3]
     count = ann_gr_3['Number_annotations'].count()

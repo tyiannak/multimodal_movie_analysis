@@ -33,11 +33,13 @@ def create_dataset(df, path_of_shots, final_path):
 
     owd = os.getcwd()
 
+    print('Creating folders..')
     for _class_ in classes:
         os.mkdir(os.path.join('dataset', _class_))
 
     os.chdir(path_of_shots)
 
+    print('Moving shots to folders..')
     #Move shots to class folder
     for _class_ in classes:
 
@@ -53,9 +55,9 @@ def create_dataset(df, path_of_shots, final_path):
                     shutil.copy2(filename,os.path.join(final_path,_class_))
                 except:
                     print('File not found')
-        
 
     os.chdir(owd)
+    print('End of process!')
 
 
 if __name__ == "__main__":   

@@ -1,104 +1,65 @@
+from aggregate_annotations import aggregate_annotations,save_to_csv
 import os.path
-from os import path
+import shutil
+from shutil import copyfile
 import numpy
 import pandas as pd
 
 
-def aggregate_annotations(file):
-
-    data = pd.read_csv(file)
-
-    # Create Dataframe
-    aggregation = {'Sample Name': [],
-                   'Winner_annotation': [],
-                   'Confidence': [],
-                   'Number_annotations': []}
-    
-    df = pd.DataFrame(aggregation,columns = ['Sample_Name',
-                                             'Winner_annotation',
-                                             'Confidence',
-                                             'Number_annotations'])
-
-    # Number_annotations
-    num_anot = (pd.crosstab(data.Sample_name,data.Class))
-    num_anot['sum'] = num_anot.sum(axis=1)
-    num_anot = num_anot.reset_index()
-
-    df['Number_annotations'] = num_anot['sum']
-       
-    # Confidence
-    conf = (pd.crosstab(data.Sample_name,data.Class))
-    res = conf.div(conf.sum(axis=1), axis=0)*100
-    res = res.reset_index()
-    
-    # Values to Dataframe
-    df['Sample_Name'] = res['Sample_name']
-    sav=res['Sample_name']
-    res=res.drop(['Sample_name'],axis=1)
-    res['Max'] = res.idxmax(axis=1)
-    res['max_value'] = res.max(axis=1)
-
-    df['Winner_annotation'] = res["Max"]
-
-    df['Confidence'] = res["max_value"]
-
-    return df
-
-def save_to_csv(df,name):   
-
-    df.to_csv(name, index=False)
-
-def find_statics(file):
+def create_file(file):
 
     df = aggregate_annotations(file)
 
     ann_gr_2 = df[(df['Number_annotations'] >= 2)
-                    & (df['Confidence'] == 100)
-                    & (df['Winner_annotation'] == 'Static') ]
+                    & (df['Confidence'] == 100)]
 
     save_to_csv(ann_gr_2,'find_statics.csv')
 
     return ann_gr_2
 
-def find_non_statics(file):
 
-    df = aggregate_annotations(file)
+def create_dataset(df, path_of_shots, final_path):
 
-    ann_gr_2 = df[(df['Number_annotations'] >= 2)
-                    & (df['Confidence'] == 100)
-                    & (df['Winner_annotation'] != 'Static')
-                     ]
-
-    save_to_csv(ann_gr_2,'find_non_statics.csv')
-
-    return ann_gr_2
-
-
-def del_files(df,dir):
-
-    names = df['Sample_Name']
-    names = names.values.tolist()
-    names = set(names) 
+    classes = ['Static','Vertical_movement','Titl','Panoramic',
+                'Panoramic_lateral','Panoramic_360','Travelling_in',
+                'Travelling_out','Zoom_in','Zoom_out','Vertigo',
+                'Aerial','Handheld','Car_front_windshield','Car_side_mirror'
+                'None']
     
+    #Create folders of classes
+    if os.path.exists('dataset'):
+        shutil.rmtree('dataset')
+    os.mkdir('dataset')
+
     owd = os.getcwd()
-    os.chdir(dir)
-    dele = 0
 
-    for filename in os.listdir('.'):
-        if filename not in names:
-           try: 
-               os.remove(filename)
-               dele+=1
-           except:
-               print('File not found')
+    for _class_ in classes:
+        os.mkdir(os.path.join('dataset', _class_))
 
-    print('Number of deleted files: ',dele)
-    print('Number of files:', len([name for name in os.listdir('.') if os.path.isfile(name)]))        
+    os.chdir(path_of_shots)
+
+    #Move shots to class folder
+    for _class_ in classes:
+
+        df2 = df[(df['Winner_annotation'] == _class_)]    
+
+        names = df2['Sample_Name']
+        names = names.values.tolist()
+        names = set(names) 
     
+        for filename in os.listdir('.'):
+            if filename in names:
+                try: 
+                    shutil.copy2(filename,os.path.join(final_path,_class_))
+                except:
+                    print('File not found')
+        
+
     os.chdir(owd)
 
-file = 'annotations_database.txt'
-df = find_statics(file)
-df2 = find_non_statics(file)
-del_files(df,'static')
-del_files(df2,'non_static')
+
+if __name__ == "__main__":   
+    
+    file = 'annotations_database.txt'
+    aggr_file = create_file(file)
+    create_dataset(aggr_file,'shots','D:/Master/Thesis/dataset')

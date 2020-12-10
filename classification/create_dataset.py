@@ -1,11 +1,8 @@
 import sys
-sys.path.insert(1, 'D:/Master/Thesis/git/multimodal_movie_analysis/annotation')
-from aggregate_annotations import aggregate_annotations,save_to_csv
+sys.path.append('../')
+from annotation.aggregate_annotations import aggregate_annotations,save_to_csv
 import os.path
 import shutil
-from shutil import copyfile
-import numpy
-import pandas as pd
 
 
 def create_file(file):
@@ -50,7 +47,7 @@ def create_dataset(df, path_of_shots, final_path):
         names = df2['Sample_Name']
         names = names.values.tolist()
         names = set(names) 
-    
+        print(final_path, _class_)
         for filename in os.listdir('.'):
             if filename in names:
                 try: 
@@ -64,6 +61,6 @@ def create_dataset(df, path_of_shots, final_path):
 
 if __name__ == "__main__":   
     
-    file = 'annotations_database.txt'
+    file = '../annotation/annotations_database.txt'
     aggr_file = create_file(file)
-    create_dataset(aggr_file,'shots','D:/Master/Thesis/git/multimodal_movie_analysis/classification/dataset')
+    create_dataset(aggr_file,'/Users/tyiannak/Downloads/shots_final_selected_fixed','dataset')

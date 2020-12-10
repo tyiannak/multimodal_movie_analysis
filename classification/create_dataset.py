@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(1, 'D:/Master/Thesis/git/multimodal_movie_analysis/annotation')
 from aggregate_annotations import aggregate_annotations,save_to_csv
 import os.path
 import shutil
@@ -13,7 +15,7 @@ def create_file(file):
     ann_gr_2 = df[(df['Number_annotations'] >= 2)
                     & (df['Confidence'] == 100)]
 
-    save_to_csv(ann_gr_2,'find_statics.csv')
+    save_to_csv(ann_gr_2,'annot_with_conf.csv')
 
     return ann_gr_2
 
@@ -64,4 +66,4 @@ if __name__ == "__main__":
     
     file = 'annotations_database.txt'
     aggr_file = create_file(file)
-    create_dataset(aggr_file,'shots','D:/Master/Thesis/dataset')
+    create_dataset(aggr_file,'shots','D:/Master/Thesis/git/multimodal_movie_analysis/classification/dataset')

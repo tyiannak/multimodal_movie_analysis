@@ -8,7 +8,7 @@ import shutil
 def create_file(file):
 
     df = aggregate_annotations(file)
-
+    
     ann_gr_2 = df[(df['Number_annotations'] >= 2)
                     & (df['Confidence'] == 100)]
 
@@ -22,7 +22,7 @@ def create_dataset(df, path_of_shots, final_path):
     classes = ['Static','Vertical_movement','Titl','Panoramic',
                 'Panoramic_lateral','Panoramic_360','Travelling_in',
                 'Travelling_out','Zoom_in','Zoom_out','Vertigo',
-                'Aerial','Handheld','Car_front_windshield','Car_side_mirror'
+                'Aerial','Handheld','Car_front_windshield','Car_side_mirror',
                 'None']
     
     #Create folders of classes
@@ -30,13 +30,10 @@ def create_dataset(df, path_of_shots, final_path):
         shutil.rmtree('dataset')
     os.mkdir('dataset')
 
-    owd = os.getcwd()
-
     print('Creating folders..')
     for _class_ in classes:
         os.mkdir(os.path.join('dataset', _class_))
 
-    os.chdir(path_of_shots)
 
     print('Moving shots to folders..')
     #Move shots to class folder
@@ -46,16 +43,15 @@ def create_dataset(df, path_of_shots, final_path):
 
         names = df2['Sample_Name']
         names = names.values.tolist()
-        names = set(names) 
-        print(final_path, _class_)
-        for filename in os.listdir('.'):
-            if filename in names:
+        names = set(names)
+
+        for filename in os.listdir(path_of_shots):
+            if filename in names:        
                 try: 
-                    shutil.copy2(filename,os.path.join(final_path,_class_))
+                    shutil.copy2(os.path.join(path_of_shots,filename),
+                                    os.path.join(final_path,_class_))
                 except:
                     print('File not found')
-
-    os.chdir(owd)
     print('End of process!')
 
 
@@ -63,4 +59,10 @@ if __name__ == "__main__":
     
     file = '../annotation/annotations_database.txt'
     aggr_file = create_file(file)
-    create_dataset(aggr_file,'/Users/tyiannak/Downloads/shots_final_selected_fixed','dataset')
+
+    #Ask user to enter the path
+    user_input = input("Enter the path of video shots: ")
+    assert os.path.exists(user_input), "Path doesn't exist, "+str(user_input)
+    
+    create_dataset(aggr_file,user_input,'dataset')
+

@@ -20,6 +20,12 @@ def parse_arguments():
 
 
 def read_annotation_data_and_aggregate(file_path):
+    """
+    Reads aggregated annotation data (using annotation.aggregate_annotations()
+    function)
+    :param file_path: initial annotation database
+    :return: pandas dataframe of aggregated annotations
+    """
     df = aggregate_annotations(file_path)
     ann_gr_2 = df[(df['Number_annotations'] >= 3)
                   & (df['Confidence'] > 50)]
@@ -28,15 +34,24 @@ def read_annotation_data_and_aggregate(file_path):
     return ann_gr_2
 
 
-def create_dataset(df, path_of_shots, final_path):
+def create_dataset(df, path_of_shots, output_path):
+    """
+    Takes a pandas data frame of aggregated annotations, and it copies each 
+    file to a class-folder. 
+    :param df: pandas dataframe of aggregated annotations. To compute it, run
+    read_annotation_data_and_aggregate()
+    :param path_of_shots: path to the actual video files of the dataset
+    :param output_path: output path
+    :return: 
+    """
 
     # get list of all possible classes:
     classes = (df['Winner_annotation'].unique())
 
     # Create folders of classes
-    if os.path.exists('dataset'):
-        shutil.rmtree('dataset')
-    os.mkdir('dataset')
+    if os.path.exists(output_path):
+        shutil.rmtree(output_path)
+    os.mkdir(output_path)
 
     print('Creating folders..')
     for _class_ in classes:
@@ -61,7 +76,7 @@ def create_dataset(df, path_of_shots, final_path):
             if f in list_of_videos_in_folder:
                 try: 
                     shutil.copy2(os.path.join(path_of_shots, f),
-                                 os.path.join(final_path, _class_))
+                                 os.path.join(output_path, _class_))
                     count_moved_class += 1
                     count_moved += 1
                 except:

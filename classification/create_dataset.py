@@ -1,9 +1,20 @@
+"""
+Usage example:
+
+python3 create_dataset.py -a ../annotation/annotations_database.txt
+-v shots_final_selected_fixed/ -o annotated
+"""
+
 import sys
 import argparse
 import os.path
 import shutil
 sys.path.append('../')
 from annotation.aggregate_annotations import aggregate_annotations, save_to_csv
+
+# Increase these two parameters to get more "confident" aggregated annotations:
+MIN_ANNOTATIONS_PER_FILE = 2
+MIN_ANNOTATION_CONFIDENCE = 0.6
 
 
 def parse_arguments():
@@ -29,11 +40,11 @@ def read_annotation_data_and_aggregate(file_path):
     :return: pandas dataframe of aggregated annotations
     """
     df = aggregate_annotations(file_path)
-    ann_gr_2 = df[(df['Number_annotations'] >= 3)
-                  & (df['Confidence'] > 50)]
-    save_to_csv(ann_gr_2, 'temp.csv')
+    agg_annotations = df[(df['Number_annotations'] >= MIN_ANNOTATIONS_PER_FILE)
+                         & (df['Confidence'] > MIN_ANNOTATION_CONFIDENCE)]
+    save_to_csv(agg_annotations, 'temp.csv')
 
-    return ann_gr_2
+    return agg_annotations
 
 
 def create_dataset(df, path_of_shots, output_path):

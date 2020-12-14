@@ -15,6 +15,8 @@ def parse_arguments():
                         help="Annotation database file")
     parser.add_argument("-v", "--videos_path", required=True, nargs=None,
                         help="Videos folder path")
+    parser.add_argument("-o", "--output_path", required=True, nargs=None,
+                        help="Output folder path")
 
     return parser.parse_args()
 
@@ -55,7 +57,7 @@ def create_dataset(df, path_of_shots, output_path):
 
     print('Creating folders..')
     for _class_ in classes:
-        os.mkdir(os.path.join('dataset', _class_))
+        os.mkdir(os.path.join(output_path, _class_))
 
     print('Copying shots to folders..')
     count = 0
@@ -94,11 +96,12 @@ if __name__ == "__main__":
     args = parse_arguments()
     data_base_file_name = args.annotation_file
     videos_path = args.videos_path
+    out_path = args.output_path
 
     aggr_file = read_annotation_data_and_aggregate(data_base_file_name)
 
     assert os.path.exists(videos_path), "Video Path doesn't exist, " + \
                                         str(videos_path)
     
-    create_dataset(aggr_file, videos_path, 'dataset')
+    create_dataset(aggr_file, videos_path, out_path)
 

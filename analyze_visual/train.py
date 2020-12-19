@@ -9,6 +9,7 @@ Available algorithms for traning: SVM, Decision_Trees, KNN
 import argparse
 import os
 import numpy as np
+import sys
 from numpy import mean, std
 from scipy import stats
 from pathlib import Path

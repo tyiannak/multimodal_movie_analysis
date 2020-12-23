@@ -1,8 +1,13 @@
 import copy
 import numpy as np
 import pandas as pd
-from utils import rect_area
-from utils import intersect_rectangles
+import sys
+import os.path
+sys.path.insert(0, os.path.join(os.path.dirname(
+    os.path.realpath(__file__)), "../"))
+
+from analyze_visual.utils import rect_area
+from analyze_visual.utils import intersect_rectangles
 
 super_categories = {1: 'person',
                     2: 'vehicle',

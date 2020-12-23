@@ -21,15 +21,18 @@ Please read the docstrings for further information.
 
 import cv2
 import time
-import sys
 import glob
 import os
 import numpy as np
 import collections
+import sys
+import os.path
+sys.path.insert(0, os.path.join(os.path.dirname(
+    os.path.realpath(__file__)), "../"))
 
-from object_detection import detection_utils as dutils
-from object_detection import generic_model as gmodel
-from utils import *
+from analyze_visual.object_detection import detection_utils as dutils
+from analyze_visual.object_detection import generic_model as gmodel
+from analyze_visual.utils import *
 
 
 generic_model = gmodel.SsdNvidia()

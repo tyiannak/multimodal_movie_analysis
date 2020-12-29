@@ -10,6 +10,7 @@ import argparse
 import os
 import numpy as np
 import sys
+import fnmatch
 from numpy import mean, std
 from scipy import stats
 from pathlib import Path
@@ -48,16 +49,17 @@ def feature_extraction(videos_path):
     name_of_files={}
 
     for folder in videos_path:
-        
-        if os.path.exists(os.path.join(folder,folder[8:]+'_features.npy')) and os.path.exists(os.path.join(folder,folder[8:]+'_video_files_list.npy')):
-            
-            x["x_{0}".format(folder[8:])] = np.load(folder[8:]+'_features.npy')
-            name_of_files["paths_{0}".format(folder[8:])] = np.load(folder[8:]+'_video_files_list.npy')
-    
-        else:
 
-            x["x_{0}".format(folder[8:])],name_of_files["paths_{0}".format(folder[8:])] =dir_process_video(folder, 2, True, True,True)
-        
+        for file in fnmatch.filter(os.listdir(folder), '*_features.npy'):
+            
+            if os.path.isfile(os.path.join(folder,file)):
+                
+                x["x_{0}".format(folder)] = np.load(file)
+
+            else:
+
+                x["x_{0}".format(folder)],name_of_files["paths_{0}".format(folder)] =dir_process_video(folder, 2, True, True,True)  
+    
     return x, name_of_files
 
 def data_preparation(x):
@@ -76,17 +78,15 @@ def data_preparation(x):
         for i in range(value.shape[0]):
             y.append(str(key))
     
-    print('Before standarization: \n',x_all)
     #Standarization
     scaler = StandardScaler()
     # fit and transform the data
     x_all = scaler.fit_transform(x_all)
 
-
-    print('AFTER: \n',x_all)
     #Encode target labels with value between 0 and n_classes-1
     lb = preprocessing.LabelEncoder()
     y = lb.fit_transform(y)
+    
     return x_all,y
 
 
@@ -118,9 +118,9 @@ def train_models(x,training_algorithms):
 
     
     scoring = {'accuracy' : make_scorer(accuracy_score), 
-           'precision' : make_scorer(precision_score),
-           'recall' : make_scorer(recall_score), 
-           'f1_score' : make_scorer(f1_score)}
+           'precision' : make_scorer(precision_score, average = 'macro'),
+           'recall' : make_scorer(recall_score, average = 'macro'), 
+           'f1_score' : make_scorer(f1_score, average = 'macro')}
 
     results=[]
     names = []

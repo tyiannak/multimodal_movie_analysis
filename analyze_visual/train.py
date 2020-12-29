@@ -45,20 +45,25 @@ def feature_extraction(videos_path):
     :param videos_path: directory of videos
     :return: extracted features and names of extracted files
     """
-    x={}
-    name_of_files={}
+    x = {}
+    name_of_files = {}
 
     for folder in videos_path:
+        # for each class-folder
 
-        for file in fnmatch.filter(os.listdir(folder), '*_features.npy'):
-            
-            if os.path.isfile(os.path.join(folder,file)):
-                
-                x["x_{0}".format(folder)] = np.load(file)
-
-            else:
-
-                x["x_{0}".format(folder)],name_of_files["paths_{0}".format(folder)] =dir_process_video(folder, 2, True, True,True)  
+        # get list of np files in that folder (where features can have
+        # been saved):
+        np_feature_files = fnmatch.filter(os.listdir(folder), '*_features.npy')
+        # if feature npy files exist:
+        if len(np_feature_files) > 0:
+            for file in np_feature_files:
+                if os.path.isfile(os.path.join(folder,file)):
+                    x["x_{0}".format(folder)] = np.load(file)
+        else:
+            # calculate features for current folder:
+            x["x_{0}".format(folder)],\
+            name_of_files["paths_{0}".format(folder)] = \
+                dir_process_video(folder, 2, True, True, True)
     
     return x, name_of_files
 

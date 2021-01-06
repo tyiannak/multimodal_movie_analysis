@@ -3,22 +3,29 @@ Usage example:
 
 python3 train.py -v dataset/Aerial dataset/None -a SVM Decision_Trees
 
-Available algorithms for traning: SVM, Decision_Trees, KNN
+Available algorithms for traning: SVM, Decision_Trees, KNN, Adaboost, Extratrees, RandomForest
 
 """
+import warnings
 import argparse
 import os
 import numpy as np
 import sys
 import fnmatch
+import itertools
 from sklearn import model_selection, preprocessing
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier, RandomForestClassifier
 from analyze_visual import dir_process_video
 from sklearn.metrics import make_scorer, accuracy_score, precision_score, \
-    recall_score, f1_score
+    recall_score, f1_score, plot_confusion_matrix, confusion_matrix
+from sklearn.model_selection import cross_val_predict
+import matplotlib.pyplot as plt
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import cross_val_score
 
 
 def parse_arguments():
@@ -61,8 +68,8 @@ def feature_extraction(videos_path):
             # calculate features for current folder:
             x["x_{0}".format(folder)],\
             name_of_files["paths_{0}".format(folder)] = \
-                dir_process_video(folder, 2, True, True, True)
-    
+                dir_process_video(folder, 2, True, True, True)   
+
     return x, name_of_files
 
 
@@ -88,64 +95,174 @@ def data_preparation(x):
     # Encode target labels with value between 0 and n_classes-1
     lb = preprocessing.LabelEncoder()
     y = lb.fit_transform(y)
-    
+
     return x_all,y
 
+def plot_confusion_matrix(name, cm, classes):
+    """
+    Plot confusion matrix
+    :name: name of classifier
+    :cm: estimates of confusion matrix
+    :classes: all the classes
+    """
+    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title('Confusion matrix')
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    fmt = 'd'
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.savefig("Conf_Mat_"+str(name)+".jpg")
+
+
+def Grid_Search_Process(classifier, grid_param, metrics, x_all, y):
+    """
+    Hyperparameter tuning process and fit the model
+    :classifier: classifier for train
+    :grid_param: different parameters of classifier to test
+    :metrics: list of different metrics(e.g. accuracy,recall..)
+    :x_all: features
+    :y: labels
+    """
+
+    results={}
+
+    for metric in metrics:
+
+        gd_sr = GridSearchCV(estimator=classifier,
+                        param_grid=grid_param,
+                        scoring=metric,
+                        cv=10,
+                        n_jobs=-1)
+
+
+        gd_sr.fit(x_all, y)
+        
+        results[str(metric)] = gd_sr.best_score_
+
+    #Plot confusion matrix process
+    y_pred = gd_sr.best_estimator_.predict(x_all)
+    conf_mat = confusion_matrix(y, y_pred) 
+
+    np.set_printoptions(precision=2)
+
+    plt.figure()
+    plot_confusion_matrix(str(classifier), conf_mat, classes= set(y)) 
+   
+
+    return results    
+
+def save_results(algorithm,results):
+    """
+    Print the results to file named results.txt  
+    :param algorithm: name of the train algorithm
+    :results: dictionary with results
+    """
+  
+    for key,values in results.items():
+        msg = "%s: %s, %f" % (algorithm, key, values)
+        print(msg,file = open('results.txt','a'))
+
+    print('--------------',file = open('results.txt','a'))
+    
 
 def train_models(x, training_algorithms):
     """
-    Train the given algorithms and print accuracy,precision,recall
+    Check the name of given algorithm and train the proper model
+    using Grid_Search_Process() then save results.
     :param x: features
     :training_algorithms: algorithm/s for training
     """
 
+    try:
+        os.remove('results.txt')
+    except OSError:
+        pass
+
     x_all, y = data_preparation(x)
 
-    scoring = ['precision_macro', 'recall_macro', 'accuracy']
-    models = []
+    metrics = ['accuracy','precision_macro','recall_macro','f1_macro']
 
     for algorithm in training_algorithms:
+        
         if algorithm == 'SVM':
-            models.append(('SVM', SVC()))
+            classifier = SVC()
+            grid_param = {
+              'C': [0.1, 1, 10, 100, 1000],  
+              'gamma': [1, 0.1, 0.01, 0.001, 0.0001], 
+              'kernel': ['rbf']}
+            
+            results = Grid_Search_Process(classifier, grid_param, metrics, x_all, y)
+            
+            save_results(algorithm, results)
             
         elif algorithm == 'Decision_Trees':
-            models.append(('CART', DecisionTreeClassifier()))
+            classifier = DecisionTreeClassifier()
+            grid_param = {
+                'criterion': ['gini', 'entropy'],
+                'max_depth':range(1,10)}
+            results = Grid_Search_Process(classifier, grid_param, metrics, x_all, y)
             
+            save_results(algorithm, results)
+           
+        elif algorithm == 'KNN':
+            classifier = KNeighborsClassifier()
+            grid_param = {
+                'n_neighbors': [3,5,7],
+                'weights':['uniform','distance']}
+            
+            results = Grid_Search_Process(classifier, grid_param, metrics, x_all, y)
+            
+            save_results(algorithm, results)
+        
+        elif algorithm == 'Adaboost':
+            classifier = AdaBoostClassifier()
+            grid_param = {
+                 'n_estimators': np.arange(100,250,50),
+                 'learning_rate': [0.01, 0.05, 0.1, 1]}
+            results = Grid_Search_Process(classifier, grid_param, metrics, x_all, y)
+            
+            save_results(algorithm, results)
+        
+
+        elif algorithm == 'Extratrees':
+            classifier = ExtraTreesClassifier()
+            grid_param = {
+                'n_estimators': range(50,126,25),
+                'max_features': range(50,401,50)}
+            results = Grid_Search_Process(classifier, grid_param, metrics, x_all, y)
+            
+            save_results(algorithm, results)
+        
+
         else:
-            models.append(('KNN', KNeighborsClassifier()))
-
-    scoring = {'accuracy': make_scorer(accuracy_score),
-               'precision': make_scorer(precision_score, average='macro'),
-               'recall': make_scorer(recall_score, average='macro'),
-               'f1_score': make_scorer(f1_score, average='macro')}
-
-    results = []
-    names = []
-
-    for name,model in models:
-
-        #Slit data to train/test
-        kfold = model_selection.KFold(n_splits=10, random_state=1, shuffle=True)
-    
-        scores = model_selection.cross_validate(model, X=x_all, y=y.ravel(),
-                                                scoring=scoring,
-                                                cv=kfold, n_jobs=-1)
-
-        results.append(scores)
-        names.append(name)
-        print('---------') 
-        for key,values in scores.items():
-            msg = "%s: %s, %f (%f)" % (name, key, values.mean(), values.std())
-            print(msg)
-        print('---------')            
+            classifier = RandomForestClassifier()
+            grid_param = {
+            'n_estimators': [100, 300],
+            'criterion': ['gini', 'entropy']}
+            results = Grid_Search_Process(classifier, grid_param, metrics, x_all, y)
+            
+            save_results(algorithm, results)
 
 
 if __name__ == "__main__":
+    warnings.filterwarnings('ignore')
 
     args = parse_arguments()
     videos_path = args.videos_path
     training_algorithms = args.training_algorithms
 
+    
     # Convert list of lists to a single list
     videos_path = [item for sublist in videos_path for item in sublist]
     training_algorithms = [item for sublist in training_algorithms
@@ -155,7 +272,7 @@ if __name__ == "__main__":
         assert os.path.exists(paths), "Video Path doesn't exist, " + \
                                     str(paths)
 
-    available_algorithms = ['SVM', 'Decision_Trees', 'KNN']
+    available_algorithms = ['SVM', 'Decision_Trees', 'KNN', 'Adaboost', 'Extratrees', 'RandomForest']
 
     for algorithm in training_algorithms:
         if algorithm not in available_algorithms:
@@ -167,4 +284,4 @@ if __name__ == "__main__":
 
     #Train the models
     train_models(x, training_algorithms)
-
+    

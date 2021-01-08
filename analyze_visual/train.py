@@ -135,47 +135,46 @@ def Grid_Search_Process(classifier, grid_param, metrics, x_all, y):
     :y: labels
     """
 
-    results={}
-
     X_train, X_test, y_train, y_test = train_test_split(x_all, y, test_size=0.33)
 
-    for metric in metrics:
+    
+    gd_sr = GridSearchCV(estimator=classifier,
+                    param_grid=grid_param,
+                    scoring='f1_macro',
+                    cv=5,
+                    n_jobs=-1)
 
-        gd_sr = GridSearchCV(estimator=classifier,
-                        param_grid=grid_param,
-                        scoring=metric,
-                        cv=5,
-                        n_jobs=-1)
 
-
-        gd_sr.fit(X_train, y_train)
-        
-        results[str(metric)] = gd_sr.best_score_
+    gd_sr.fit(X_train, y_train)
    
     #Plot confusion matrix process
     y_pred = gd_sr.best_estimator_.predict(X_test)
     conf_mat = confusion_matrix(y_test, y_pred) 
-    print('Accuracy Score : ' + str(accuracy_score(y_test,y_pred)))
-    print(gd_sr.best_score_)
-    print(conf_mat)
    
     np.set_printoptions(precision=2)
 
     plt.figure()
     plot_confusion_matrix(str(classifier), conf_mat, classes=set(y))
  
-    return results    
+    return y_test, y_pred   
     
 
-def save_results(algorithm,results):
+def save_results(algorithm, y_test, y_pred):
     """
     Print the results to files based on classifier  
     :param algorithm: name of the train algorithm
-    :results: dictionary with results
+    :y_test: values for test
+    :y_pred: predicted values
     """
-  
+    results = {}
+
+    results['accuracy']= str(accuracy_score(y_test,y_pred))
+    results['precision'] = str(precision_score(y_test,y_pred))
+    results['recall'] = str(recall_score(y_test,y_pred))
+    results['f1'] = str(f1_score(y_test,y_pred))
+
     for key,values in results.items():
-        msg = "%s: %s---> %f" % (algorithm, key, values)
+        msg = "%s: %s---> %s" % (algorithm, key, values)
         print(msg,file = open(str(algorithm)+'_results.txt','a'))
     
 
@@ -193,7 +192,7 @@ def train_models(x, training_algorithms):
 
     x_all, y = data_preparation(x)
 
-    metrics = ['accuracy','precision_macro','recall_macro','f1_macro']
+    metrics = ['accuracy','precision','recall','f1']
 
     for algorithm in training_algorithms:
         
@@ -204,19 +203,19 @@ def train_models(x, training_algorithms):
               'gamma': [1, 0.1, 0.01, 0.001, 0.0001], 
               'kernel': ['rbf']}
             
-            results = Grid_Search_Process(classifier, grid_param, metrics, x_all, y)
+            y_test,y_pred = Grid_Search_Process(classifier, grid_param, metrics, x_all, y)
             
-            save_results(algorithm, results)
+            save_results(algorithm, y_test, y_pred)
             
         elif algorithm == 'Decision_Trees':
             classifier = DecisionTreeClassifier()
             grid_param = {
                 'criterion': ['gini', 'entropy'],
                 'max_depth':range(1, 10)}
-            results = Grid_Search_Process(classifier, grid_param, metrics,
+            y_test,y_pred = Grid_Search_Process(classifier, grid_param, metrics,
                                           x_all, y)
             
-            save_results(algorithm, results)
+            save_results(algorithm, y_test, y_pred)
            
         elif algorithm == 'KNN':
             classifier = KNeighborsClassifier()
@@ -224,20 +223,20 @@ def train_models(x, training_algorithms):
                 'n_neighbors': [3,5,7],
                 'weights':['uniform','distance']}
             
-            results = Grid_Search_Process(classifier, grid_param, metrics,
+            y_test,y_pred = Grid_Search_Process(classifier, grid_param, metrics,
                                           x_all, y)
             
-            save_results(algorithm, results)
+            save_results(algorithm, y_test, y_pred)
         
         elif algorithm == 'Adaboost':
             classifier = AdaBoostClassifier()
             grid_param = {
                  'n_estimators': np.arange(100,250,50),
                  'learning_rate': [0.01, 0.05, 0.1, 1]}
-            results = Grid_Search_Process(classifier, grid_param, metrics,
+            y_test,y_pred = Grid_Search_Process(classifier, grid_param, metrics,
                                           x_all, y)
             
-            save_results(algorithm, results)
+            save_results(algorithm, y_test, y_pred)
         
 
         elif algorithm == 'Extratrees':
@@ -245,10 +244,10 @@ def train_models(x, training_algorithms):
             grid_param = {
                 'n_estimators': range(50,126,25),
                 'max_features': range(50,401,50)}
-            results = Grid_Search_Process(classifier, grid_param, metrics,
+            y_test,y_pred = Grid_Search_Process(classifier, grid_param, metrics,
                                           x_all, y)
             
-            save_results(algorithm, results)
+            save_results(algorithm, y_test, y_pred)
         
 
         else:
@@ -256,10 +255,10 @@ def train_models(x, training_algorithms):
             grid_param = {
             'n_estimators': [100, 300],
             'criterion': ['gini', 'entropy']}
-            results = Grid_Search_Process(classifier, grid_param, metrics,
+            y_test,y_pred = Grid_Search_Process(classifier, grid_param, metrics,
                                           x_all, y)
             
-            save_results(algorithm, results)
+            save_results(algorithm, y_test, y_pred)
 
 
 if __name__ == "__main__":

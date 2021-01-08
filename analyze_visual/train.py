@@ -18,14 +18,13 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier, RandomForestClassifier
+from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier, \
+    RandomForestClassifier
 from analyze_visual import dir_process_video
 from sklearn.metrics import make_scorer, accuracy_score, precision_score, \
     recall_score, f1_score, plot_confusion_matrix, confusion_matrix
-from sklearn.model_selection import cross_val_predict
 import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import cross_val_score
 
 
 def parse_arguments():
@@ -96,7 +95,8 @@ def data_preparation(x):
     lb = preprocessing.LabelEncoder()
     y = lb.fit_transform(y)
 
-    return x_all,y
+    return x_all, y
+
 
 def plot_confusion_matrix(name, cm, classes):
     """
@@ -157,10 +157,10 @@ def Grid_Search_Process(classifier, grid_param, metrics, x_all, y):
     np.set_printoptions(precision=2)
 
     plt.figure()
-    plot_confusion_matrix(str(classifier), conf_mat, classes= set(y)) 
-   
+    plot_confusion_matrix(str(classifier), conf_mat, classes=set(y))
 
     return results    
+
 
 def save_results(algorithm,results):
     """
@@ -210,8 +210,9 @@ def train_models(x, training_algorithms):
             classifier = DecisionTreeClassifier()
             grid_param = {
                 'criterion': ['gini', 'entropy'],
-                'max_depth':range(1,10)}
-            results = Grid_Search_Process(classifier, grid_param, metrics, x_all, y)
+                'max_depth':range(1, 10)}
+            results = Grid_Search_Process(classifier, grid_param, metrics,
+                                          x_all, y)
             
             save_results(algorithm, results)
            
@@ -221,7 +222,8 @@ def train_models(x, training_algorithms):
                 'n_neighbors': [3,5,7],
                 'weights':['uniform','distance']}
             
-            results = Grid_Search_Process(classifier, grid_param, metrics, x_all, y)
+            results = Grid_Search_Process(classifier, grid_param, metrics,
+                                          x_all, y)
             
             save_results(algorithm, results)
         
@@ -230,7 +232,8 @@ def train_models(x, training_algorithms):
             grid_param = {
                  'n_estimators': np.arange(100,250,50),
                  'learning_rate': [0.01, 0.05, 0.1, 1]}
-            results = Grid_Search_Process(classifier, grid_param, metrics, x_all, y)
+            results = Grid_Search_Process(classifier, grid_param, metrics,
+                                          x_all, y)
             
             save_results(algorithm, results)
         
@@ -240,7 +243,8 @@ def train_models(x, training_algorithms):
             grid_param = {
                 'n_estimators': range(50,126,25),
                 'max_features': range(50,401,50)}
-            results = Grid_Search_Process(classifier, grid_param, metrics, x_all, y)
+            results = Grid_Search_Process(classifier, grid_param, metrics,
+                                          x_all, y)
             
             save_results(algorithm, results)
         
@@ -250,7 +254,8 @@ def train_models(x, training_algorithms):
             grid_param = {
             'n_estimators': [100, 300],
             'criterion': ['gini', 'entropy']}
-            results = Grid_Search_Process(classifier, grid_param, metrics, x_all, y)
+            results = Grid_Search_Process(classifier, grid_param, metrics,
+                                          x_all, y)
             
             save_results(algorithm, results)
 
@@ -272,7 +277,8 @@ if __name__ == "__main__":
         assert os.path.exists(paths), "Video Path doesn't exist, " + \
                                     str(paths)
 
-    available_algorithms = ['SVM', 'Decision_Trees', 'KNN', 'Adaboost', 'Extratrees', 'RandomForest']
+    available_algorithms = ['SVM', 'Decision_Trees', 'KNN', 'Adaboost',
+                            'Extratrees', 'RandomForest']
 
     for algorithm in training_algorithms:
         if algorithm not in available_algorithms:

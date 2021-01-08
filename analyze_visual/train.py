@@ -24,7 +24,7 @@ from analyze_visual import dir_process_video
 from sklearn.metrics import make_scorer, accuracy_score, precision_score, \
     recall_score, f1_score, plot_confusion_matrix, confusion_matrix
 import matplotlib.pyplot as plt
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, train_test_split
 
 
 def parse_arguments():
@@ -137,43 +137,46 @@ def Grid_Search_Process(classifier, grid_param, metrics, x_all, y):
 
     results={}
 
+    X_train, X_test, y_train, y_test = train_test_split(x_all, y, test_size=0.33)
+
     for metric in metrics:
 
         gd_sr = GridSearchCV(estimator=classifier,
                         param_grid=grid_param,
                         scoring=metric,
-                        cv=10,
+                        cv=5,
                         n_jobs=-1)
 
 
-        gd_sr.fit(x_all, y)
+        gd_sr.fit(X_train, y_train)
         
         results[str(metric)] = gd_sr.best_score_
-
+   
     #Plot confusion matrix process
-    y_pred = gd_sr.best_estimator_.predict(x_all)
-    conf_mat = confusion_matrix(y, y_pred) 
-
+    y_pred = gd_sr.best_estimator_.predict(X_test)
+    conf_mat = confusion_matrix(y_test, y_pred) 
+    print('Accuracy Score : ' + str(accuracy_score(y_test,y_pred)))
+    print(gd_sr.best_score_)
+    print(conf_mat)
+   
     np.set_printoptions(precision=2)
 
     plt.figure()
     plot_confusion_matrix(str(classifier), conf_mat, classes=set(y))
-
+ 
     return results    
-
+    
 
 def save_results(algorithm,results):
     """
-    Print the results to file named results.txt  
+    Print the results to files based on classifier  
     :param algorithm: name of the train algorithm
     :results: dictionary with results
     """
   
     for key,values in results.items():
-        msg = "%s: %s, %f" % (algorithm, key, values)
-        print(msg,file = open('results.txt','a'))
-
-    print('--------------',file = open('results.txt','a'))
+        msg = "%s: %s---> %f" % (algorithm, key, values)
+        print(msg,file = open(str(algorithm)+'_results.txt','a'))
     
 
 def train_models(x, training_algorithms):
@@ -184,10 +187,9 @@ def train_models(x, training_algorithms):
     :training_algorithms: algorithm/s for training
     """
 
-    try:
-        os.remove('results.txt')
-    except OSError:
-        pass
+    for item in os.listdir():
+        if item.endswith("results.txt"):   
+           os.remove(item)
 
     x_all, y = data_preparation(x)
 

@@ -5,7 +5,8 @@ Usage example:
 
 python3 train.py -v dataset/Aerial dataset/None -a SVM Decision_Trees
 
-Available algorithms for traning: SVM, Decision_Trees, KNN, Adaboost, Extratrees, RandomForest
+Available algorithms for traning: SVM, Decision_Trees, KNN, Adaboost,
+Extratrees, RandomForest
 
 
 """
@@ -197,8 +198,7 @@ def train_models(x, training_algorithms):
         if algorithm == 'SVM':
             classifier = SVC()
             grid_param = {
-              'C': [0.1, 1, 10, 100, 1000],  
-              'gamma': [1, 0.1, 0.01, 0.001, 0.0001], 
+              'C': [0.1, 0.5, 1, 5, 10, 100],
               'kernel': ['rbf']}
         elif algorithm == 'Decision_Trees':
             classifier = DecisionTreeClassifier()
@@ -208,19 +208,19 @@ def train_models(x, training_algorithms):
         elif algorithm == 'KNN':
             classifier = KNeighborsClassifier()
             grid_param = {
-                'n_neighbors': [3,5,7],
+                'n_neighbors': [3, 5, 7],
                 'weights': ['uniform','distance']}
 
         elif algorithm == 'Adaboost':
             classifier = AdaBoostClassifier()
             grid_param = {
-                 'n_estimators': np.arange(100,250,50),
+                 'n_estimators': np.arange(100, 250, 50),
                  'learning_rate': [0.01, 0.05, 0.1, 1]}
         elif algorithm == 'Extratrees':
             classifier = ExtraTreesClassifier()
             grid_param = {
-                'n_estimators': range(50,126,25),
-                'max_features': range(50,401,50)}
+                'n_estimators': range(50, 126, 25),
+                'max_features': range(50, 401, 50)}
         else:
             classifier = RandomForestClassifier()
             grid_param = {

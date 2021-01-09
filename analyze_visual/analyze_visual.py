@@ -74,6 +74,7 @@ def process_video(video_path, process_mode, print_flag=True,
     """
 
     # ---Initializations-------------------------------------------------------
+    os.environ['KMP_DUPLICATE_LIB_OK']='True'
     t_start = time.time()
     t_0 = t_start
     capture = cv2.VideoCapture(video_path)
@@ -413,7 +414,7 @@ def process_video(video_path, process_mode, print_flag=True,
 def dir_process_video(dir_name, process_mode, print_flag,
                       online_display,  save_results):
     """Processes all videos from a given directory."""
-
+    
     dir_name_no_path = os.path.basename(os.path.normpath(dir_name))
 
     features_all = []
@@ -435,12 +436,13 @@ def dir_process_video(dir_name, process_mode, print_flag,
         # 'vehicle_mean_confidence', 'vehicle_mean_area_ratio'
 
         features_all.append(features_stats)
-    np.save(dir_name_no_path + "_features.npy", features_all)
-    np.save(dir_name_no_path + "_video_files_list.npy", video_files_list)
+
+    np.save(os.path.join(dir_name,dir_name_no_path + "_features.npy"), features_all)
+    np.save(os.path.join(dir_name,dir_name_no_path + "_video_files_list.npy"), video_files_list)
     features_all = np.array(features_all)
 
     return features_all, video_files_list
-
+    
   
 def main(argv):
 

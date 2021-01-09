@@ -1,9 +1,12 @@
 """
+This script is used to train different ML algorithms and save the results. 
+
 Usage example:
 
 python3 train.py -v dataset/Aerial dataset/None -a SVM Decision_Trees
 
 Available algorithms for traning: SVM, Decision_Trees, KNN, Adaboost, Extratrees, RandomForest
+
 
 """
 import warnings

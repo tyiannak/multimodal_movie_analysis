@@ -5,6 +5,7 @@ python3 train.py -v dataset/Aerial dataset/None -a SVM Decision_Trees
 Available algorithms for traning: SVM, Decision_Trees, KNN, Adaboost,
 Extratrees, RandomForest
 """
+
 import warnings
 from collections import deque
 import argparse
@@ -23,11 +24,15 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier, \
     RandomForestClassifier
+
+
 from analyze_visual import dir_process_video
 from sklearn.metrics import make_scorer, accuracy_score, precision_score, \
     recall_score, f1_score, plot_confusion_matrix, confusion_matrix
 import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV, train_test_split
+
+
 
 
 from sklearn.feature_selection import RFECV
@@ -56,6 +61,7 @@ def feature_extraction(videos_path):
     """
     x = {}
     name_of_files = {}
+    f_names = {}
 
     for folder in videos_path:
         # for each class-folder
@@ -70,13 +76,16 @@ def feature_extraction(videos_path):
                 if os.path.isfile(os.path.join(folder, file)):
                     x["x_{0}".format(folder)] = np.load(os.path.join(folder,
                                                                      file))
+                    f_names['f_name_{0}'.format(folder)] = np.load(os.path.join(folder,
+                                                                     file))
         else:
             # calculate features for current folder:
             x["x_{0}".format(folder)],\
-            name_of_files["paths_{0}".format(folder)] = \
+            name_of_files["paths_{0}".format(folder)],\
+            f_names['f_name_{0}'.format(folder)]     = \
                 dir_process_video(folder, 2, True, True, True)   
 
-    return x, name_of_files
+    return x, name_of_files, f_names
 
 def plot_feature_histograms(list_of_feature_mtr, feature_names,
                             class_names, n_columns=5):
@@ -95,8 +104,6 @@ def plot_feature_histograms(list_of_feature_mtr, feature_names,
                                       subplot_titles=feature_names)
     figs['layout'].update(height=(n_rows * 250))
     clr = get_color_combinations(len(class_names))
-
-    print(list_of_feature_mtr.ndim)
 
     for i in range(n_features):
         # for each feature get its bin range (min:(max-min)/n_bins:max)
@@ -128,13 +135,14 @@ def get_color_combinations(n_classes):
                                               clr_map(range_cl[i])[3]))
     return clr
 
-def data_preparation(x):
+def data_preparation(x, f_name):
     """
     Prepare the data before the training process
     :param x: exracted features from videos
     :return: features and labels
     """
     x_all = np.empty((0, 244), float)
+    f_names = np.empty((0, 244), float)
     y = []
 
     for key, value in x.items():
@@ -142,20 +150,30 @@ def data_preparation(x):
         for i in range(value.shape[0]):
             y.append(str(key))
 
+    for key, value in f_name.items():
+        f_names = np.append(f_names,value,axis=0)
+
     # Standarization
     scaler = StandardScaler()
     # fit and transform the data
     x_all = scaler.fit_transform(x_all)
-    '''
+    print(x_all.shape)
+    print(f_names.shape)
+    print(f_names)
+    print(x_all)
+    
+
+    
     #Fail try to plot features histogram
-    feature_names = [i for i in range(244)]
-    plot_feature_histograms(x_all, feature_names, y)
-    '''
+    
+    #plot_feature_histograms(x_all, f_names, y)
+    
     # Encode target labels with value between 0 and n_classes-1
     lb = preprocessing.LabelEncoder()
     y = lb.fit_transform(y)
 
     #Feature selection
+    '''
     rfecv = RFECV(DecisionTreeClassifier(),cv=StratifiedKFold(10), step=1)
     rfecv = rfecv.fit(x_all, y)
 
@@ -168,7 +186,7 @@ def data_preparation(x):
     plt.plot(range(1, len(rfecv.grid_scores_) + 1), rfecv.grid_scores_, color='#303F9F', linewidth=3)
 
     plt.show()
-
+    '''
     return x_all, y
 
 
@@ -249,7 +267,7 @@ def save_results(algorithm, y_test, y_pred):
         print(msg, file=open(str(algorithm)+'_results.txt','a'))
     
 
-def train_models(x, training_algorithms):
+def train_models(x, training_algorithms, f_names):
     """
     Check the name of given algorithm and train the proper model
     using Grid_Search_Process() then save results.
@@ -262,7 +280,7 @@ def train_models(x, training_algorithms):
         if item.endswith("results.txt"):   
            os.remove(item)
 
-    x_all, y = data_preparation(x)
+    x_all, y = data_preparation(x,f_names)
 
     for algorithm in training_algorithms:
         if algorithm == 'SVM':
@@ -327,7 +345,7 @@ if __name__ == "__main__":
                      'Usage example' % (algorithm))
 
     #Extract features of videos
-    x, name_of_files = feature_extraction(videos_path)
+    x, name_of_files, f_names = feature_extraction(videos_path)
 
     #Train the models
-    train_models(x, training_algorithms)
+    train_models(x, training_algorithms, f_names)

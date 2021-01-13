@@ -1,21 +1,15 @@
 """
 Visual Analysis.
-
 The script extracts visual-based features from videos.
-
 Flags:
-
     - f: extract features from specific file
         E.g. python3 analyze_visual.py -f <filename>
     - d: extract features from all files of a directory
         E.g. python3 analyze_visual.py -d <directory_name>
-
 Basic functions:
-
     - process_video :  extracts features from specific file
     - dir_process_video : extracts features from all files of a directory
     - dirs_process_video : extracts features from all files of different directories
-
 Please read the docstrings for further information.
 """
 
@@ -27,12 +21,9 @@ import numpy as np
 import collections
 import sys
 import os.path
-sys.path.insert(0, os.path.join(os.path.dirname(
-    os.path.realpath(__file__)), "../"))
-
-from analyze_visual.object_detection import detection_utils as dutils
-from analyze_visual.object_detection import generic_model as gmodel
-from analyze_visual.utils import *
+from object_detection import detection_utils as dutils
+from object_detection import generic_model as gmodel
+from utils import *
 
 
 generic_model = gmodel.SsdNvidia()
@@ -43,9 +34,7 @@ def process_video(video_path, process_mode, print_flag=True,
     """
     Extracts and displays features representing color, flow, objects detected
     and shot duration from video
-
     Args:
-
         video_path (str) : Path to video file
         process_mode (int) : Processing modes:
             - 0 : No processing
@@ -54,9 +43,7 @@ def process_video(video_path, process_mode, print_flag=True,
         print_flag (bool) : Flag to allow the display of terminal messages.
         online_display (bool): Flag to allow the display of online video features
         save_results (bool) : Boolean variable to allow save results files.
-
     Returns:
-
         features_stats (array_like) : Feature vector with stats on features
             over time. Stats:
                 - mean value of every feature over time
@@ -103,7 +90,6 @@ def process_video(video_path, process_mode, print_flag=True,
             0: returns features for all 80 categories
             1: returns features for 12 super categories
             2: returns features for both 80 and 12 categories
-
         """
         # --------------------------------------------------------------------
         overlap_threshold = 0.8
@@ -439,9 +425,10 @@ def dir_process_video(dir_name, process_mode, print_flag,
 
     np.save(os.path.join(dir_name,dir_name_no_path + "_features.npy"), features_all)
     np.save(os.path.join(dir_name,dir_name_no_path + "_video_files_list.npy"), video_files_list)
+    np.save(os.path.join(dir_name,dir_name_no_path + "_f_names.npy"), f_names)
     features_all = np.array(features_all)
 
-    return features_all, video_files_list
+    return features_all, video_files_list, f_names
     
   
 def main(argv):
@@ -459,7 +446,7 @@ def main(argv):
                                                             save_results)
         elif argv[1] == "-d":  # directory
             dir_name = argv[2]
-            features_all, video_files_list = dir_process_video(dir_name,
+            features_all, video_files_list, f_names = dir_process_video(dir_name,
                                                                process_mode,
                                                                print_flag,
                                                                online_display,

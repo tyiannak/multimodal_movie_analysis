@@ -24,12 +24,13 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier, \
     RandomForestClassifier
-from analyze_visual import dir_process_video
 from sklearn.metrics import make_scorer, accuracy_score, precision_score, \
     recall_score, f1_score, plot_confusion_matrix, confusion_matrix
 import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV, train_test_split
 
+sys.path.insert(0, '..')
+from analyze_visual.analyze_visual import dir_process_video
 
 def parse_arguments():
     """Parse arguments for real time demo.

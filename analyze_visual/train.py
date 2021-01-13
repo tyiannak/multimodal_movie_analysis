@@ -25,7 +25,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier, \
     RandomForestClassifier
 
-
+sys.path.insert(0, '..')
 from analyze_visual import dir_process_video
 from sklearn.metrics import make_scorer, accuracy_score, precision_score, \
     recall_score, f1_score, plot_confusion_matrix, confusion_matrix

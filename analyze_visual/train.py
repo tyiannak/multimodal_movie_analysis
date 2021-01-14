@@ -26,7 +26,7 @@ from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier, \
     RandomForestClassifier
 
 sys.path.insert(0, '..')
-from analyze_visual import dir_process_video
+from analyze_visual.analyze_visual import dir_process_video
 from sklearn.metrics import make_scorer, accuracy_score, precision_score, \
     recall_score, f1_score, plot_confusion_matrix, confusion_matrix
 import matplotlib.pyplot as plt
@@ -69,13 +69,17 @@ def feature_extraction(videos_path):
         # get list of np files in that folder (where features can have
         # been saved):
         np_feature_files = fnmatch.filter(os.listdir(folder), '*_features.npy')
+        np_fnames_files = fnmatch.filter(os.listdir(folder), '*_f_names.npy')
         print(np_feature_files)
+        print(np_fnames_files)
         # if feature npy files exist:
-        if len(np_feature_files) > 0:
+        if len(np_feature_files) > 0 and len(np_fnames_files) > 0:
             for file in np_feature_files:
                 if os.path.isfile(os.path.join(folder, file)):
-                    x["x_{0}".format(folder)] = np.load(os.path.join(folder,
+                    x["{0}".format(folder)] = np.load(os.path.join(folder,
                                                                      file))
+            for file in np_fnames_files:
+                if os.path.isfile(os.path.join(folder, file)):
                     f_names['f_name_{0}'.format(folder)] = np.load(os.path.join(folder,
                                                                      file))
         else:
@@ -135,58 +139,45 @@ def get_color_combinations(n_classes):
                                               clr_map(range_cl[i])[3]))
     return clr
 
-def data_preparation(x, f_name):
+def data_preparation(x, fname):
     """
     Prepare the data before the training process
     :param x: exracted features from videos
     :return: features and labels
     """
     x_all = np.empty((0, 244), float)
-    f_names = np.empty((0, 244), float)
+    features = []
+    class_names = []
     y = []
 
+    #Convert dict to numpt array
     for key, value in x.items():
         x_all = np.append(x_all,value,axis=0)
+        features.append(value)
+        class_names.append(key)
         for i in range(value.shape[0]):
             y.append(str(key))
 
-    for key, value in f_name.items():
-        f_names = np.append(f_names,value,axis=0)
+    #Insert features names to numpy array
+    values = fname.values()
+    value_iterator = iter(values)
+    fnames = next(value_iterator)
 
     # Standarization
     scaler = StandardScaler()
+    
     # fit and transform the data
     x_all = scaler.fit_transform(x_all)
-    print(x_all.shape)
-    print(f_names.shape)
-    print(f_names)
-    print(x_all)
-    
-
-    
-    #Fail try to plot features histogram
-    
-    #plot_feature_histograms(x_all, f_names, y)
+    print(class_names)
+        
+    #Plot features histogram   
+    plot_feature_histograms(features, fnames, class_names)
     
     # Encode target labels with value between 0 and n_classes-1
     lb = preprocessing.LabelEncoder()
     y = lb.fit_transform(y)
 
-    #Feature selection
-    '''
-    rfecv = RFECV(DecisionTreeClassifier(),cv=StratifiedKFold(10), step=1)
-    rfecv = rfecv.fit(x_all, y)
 
-    print('Optimal number of features: {}'.format(rfecv.n_features_))
-
-    plt.figure(figsize=(16, 9))
-    plt.title('Recursive Feature Elimination with Cross-Validation', fontsize=18, fontweight='bold', pad=20)
-    plt.xlabel('Number of features selected', fontsize=14, labelpad=20)
-    plt.ylabel('% Correct Classification', fontsize=14, labelpad=20)
-    plt.plot(range(1, len(rfecv.grid_scores_) + 1), rfecv.grid_scores_, color='#303F9F', linewidth=3)
-
-    plt.show()
-    '''
     return x_all, y
 
 

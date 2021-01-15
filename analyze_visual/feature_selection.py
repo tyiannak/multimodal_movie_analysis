@@ -77,8 +77,9 @@ def get_color_combinations(n_classes):
 
 def data_preparation(x, fname):
     """
-    Prepare the data before the training process
+    Prepare the data before the plot process
     :param x: exracted features from videos
+    :fname: names of features
     :return: features, features names, class names
     """
     features = []

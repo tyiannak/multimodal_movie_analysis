@@ -143,18 +143,14 @@ def data_preparation(x, fname):
     """
     Prepare the data before the training process
     :param x: exracted features from videos
-    :return: features and labels
+    :return: features, labels and feature names
     """
     x_all = np.empty((0, 244), float)
-    features = []
-    class_names = []
     y = []
 
-    #Convert dict to numpt array
+    #Save features and labels to numpy and to list 
     for key, value in x.items():
         x_all = np.append(x_all,value,axis=0)
-        features.append(value)
-        class_names.append(key)
         for i in range(value.shape[0]):
             y.append(str(key))
 
@@ -162,23 +158,20 @@ def data_preparation(x, fname):
     values = fname.values()
     value_iterator = iter(values)
     fnames = next(value_iterator)
-
+    
     # Standarization
     scaler = StandardScaler()
     
     # fit and transform the data
     x_all = scaler.fit_transform(x_all)
-    print(class_names)
         
-    #Plot features histogram   
-    plot_feature_histograms(features, fnames, class_names)
     
     # Encode target labels with value between 0 and n_classes-1
     lb = preprocessing.LabelEncoder()
     y = lb.fit_transform(y)
 
 
-    return x_all, y
+    return x_all, y, fnames
 
 
 def plot_confusion_matrix(name, cm, classes):
@@ -271,7 +264,7 @@ def train_models(x, training_algorithms, f_names):
         if item.endswith("results.txt"):   
            os.remove(item)
 
-    x_all, y = data_preparation(x,f_names)
+    x_all, y, _ = data_preparation(x,f_names)
 
     for algorithm in training_algorithms:
         if algorithm == 'SVM':

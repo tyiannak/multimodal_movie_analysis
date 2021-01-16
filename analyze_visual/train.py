@@ -17,6 +17,7 @@ import numpy as np
 import sys
 import fnmatch
 import itertools
+import pickle
 from sklearn import model_selection, preprocessing
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
@@ -86,19 +87,20 @@ def data_preparation(x):
     x_all = np.empty((0, 244), float)
     y = []
 
+
     for key, value in x.items():
         x_all = np.append(x_all,value,axis=0)
         for i in range(value.shape[0]):
             y.append(str(key))
-    
+
     # Standarization
     scaler = StandardScaler()
-    # fit and transform the data
+    # Fit and transform the data
     x_all = scaler.fit_transform(x_all)
 
     # Encode target labels with value between 0 and n_classes-1
-    lb = preprocessing.LabelEncoder()
-    y = lb.fit_transform(y)
+    #lb = preprocessing.LabelEncoder()
+    #y = lb.fit_transform(y)
 
     return x_all, y
 
@@ -130,7 +132,7 @@ def plot_confusion_matrix(name, cm, classes):
     plt.savefig("Conf_Mat_"+str(name)+".jpg")
 
 
-def Grid_Search_Process(classifier, grid_param, x_all, y):
+def Grid_Search_Process(classifier, algorithm, grid_param, x_all, y):
     """
     Hyperparameter tuning process and fit the model
     :classifier: classifier for train
@@ -149,6 +151,10 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
                          n_jobs=-1)
 
     gd_sr.fit(X_train, y_train)
+
+    #Save model
+    if algorithm == 'SVM':
+        pickle.dump(gd_sr,open('trained_svm.sav','wb'))
    
     # Plot confusion matrix process
     y_pred = gd_sr.best_estimator_.predict(X_test)
@@ -228,7 +234,7 @@ def train_models(x, training_algorithms):
             'n_estimators': [100, 300],
             'criterion': ['gini', 'entropy']}
 
-        y_test,y_pred = Grid_Search_Process(classifier, grid_param, x_all, y)
+        y_test,y_pred = Grid_Search_Process(classifier, algorithm, grid_param, x_all, y)
         save_results(algorithm, y_test, y_pred)
 
 

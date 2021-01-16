@@ -153,8 +153,8 @@ def Grid_Search_Process(classifier, algorithm, grid_param, x_all, y):
     gd_sr.fit(X_train, y_train)
 
     #Save model
-    if algorithm == 'SVM':
-        pickle.dump(gd_sr,open('trained_svm.sav','wb'))
+    
+    pickle.dump(gd_sr,open('trained_'+str(algorithm)+'.sav','wb'))
    
     # Plot confusion matrix process
     y_pred = gd_sr.best_estimator_.predict(X_test)

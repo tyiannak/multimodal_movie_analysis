@@ -403,7 +403,7 @@ def process_video(video_path, process_mode, print_flag=True,
         if save_results:
             np.savetxt("feature_matrix.csv", feature_matrix, delimiter=",")
             np.savetxt("features_stats.csv", features_stats, delimiter=",")            
-            np.save(os.path.join(video_path + "_features.npy"), features_stats)
+            np.save(os.path.join(video_path + "_shot_features.npy"), features_stats)
 
 
     f_names, f_names_stats = get_features_names(process_mode,

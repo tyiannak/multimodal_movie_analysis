@@ -3,7 +3,7 @@ This script is used to predict video's class.
 
 Usage example:
 
-python3 train.py -v dataset/trump.mp4 -v SVM
+python3 train.py -v dataset/trump.mp4 -m SVM
 
 Available algorithms for traning: SVM, Decision_Trees, KNN, Adaboost,
 Extratrees, RandomForest

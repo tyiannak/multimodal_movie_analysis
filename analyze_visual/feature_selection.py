@@ -85,7 +85,7 @@ def data_preparation(x, fname):
     features = []
     class_names = []
 
-    #Save features and labels to numpy and to list 
+    #Save features and labels to list 
     for key, value in x.items():
         features.append(value)
         class_names.append(key)

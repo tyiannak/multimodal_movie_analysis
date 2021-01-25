@@ -61,6 +61,7 @@ def plot_feature_histograms(list_of_feature_mtr, feature_names,
             figs.append_trace(scatter_1, int(i/n_columns)+1, i % n_columns+1)
     for i in figs['layout']['annotations']:
         i['font'] = dict(size=10, color='#224488')
+        
     plotly.offline.plot(figs, filename="report.html", auto_open=True)
 
 def get_color_combinations(n_classes):
@@ -94,8 +95,6 @@ def data_preparation(x, fname):
     values = fname.values()
     value_iterator = iter(values)
     fnames = next(value_iterator)
-
-
 
     return features, fnames, class_names
 

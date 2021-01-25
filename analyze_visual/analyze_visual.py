@@ -21,9 +21,12 @@ import numpy as np
 import collections
 import sys
 import os.path
-from object_detection import detection_utils as dutils
-from object_detection import generic_model as gmodel
-from utils import *
+sys.path.insert(0, os.path.join(os.path.dirname(
+    os.path.realpath(__file__)), "../"))
+
+from analyze_visual.object_detection import detection_utils as dutils
+from analyze_visual.object_detection import generic_model as gmodel
+from analyze_visual.utils import *
 
 
 generic_model = gmodel.SsdNvidia()

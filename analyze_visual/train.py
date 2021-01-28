@@ -1,22 +1,22 @@
 """
 This script is used to train different ML algorithms and save the results. 
+
 Usage example:
+
 python3 train.py -v dataset/Aerial dataset/None -a SVM Decision_Trees
+
 Available algorithms for traning: SVM, Decision_Trees, KNN, Adaboost,
 Extratrees, RandomForest
-"""
 
+
+"""
 import warnings
-from collections import deque
 import argparse
 import os
 import numpy as np
 import sys
 import fnmatch
 import itertools
-import plotly
-import plotly.graph_objs as go
-from plotly.subplots import make_subplots
 from sklearn import model_selection, preprocessing
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
@@ -31,12 +31,6 @@ from sklearn.model_selection import GridSearchCV, train_test_split
 
 sys.path.insert(0, '..')
 from analyze_visual.analyze_visual import dir_process_video
-
-
-
-from sklearn.feature_selection import RFECV
-from sklearn.model_selection import StratifiedKFold
-
 
 def parse_arguments():
     """Parse arguments for real time demo.
@@ -60,7 +54,6 @@ def feature_extraction(videos_path):
     """
     x = {}
     name_of_files = {}
-    f_names = {}
 
     for folder in videos_path:
         # for each class-folder
@@ -68,60 +61,46 @@ def feature_extraction(videos_path):
         # get list of np files in that folder (where features can have
         # been saved):
         np_feature_files = fnmatch.filter(os.listdir(folder), '*_features.npy')
-        np_fnames_files = fnmatch.filter(os.listdir(folder), '*_f_names.npy')
         print(np_feature_files)
-        print(np_fnames_files)
         # if feature npy files exist:
-        if len(np_feature_files) > 0 and len(np_fnames_files) > 0:
+        if len(np_feature_files) > 0:
             for file in np_feature_files:
                 if os.path.isfile(os.path.join(folder, file)):
-                    x["{0}".format(folder)] = np.load(os.path.join(folder,
-                                                                     file))
-            for file in np_fnames_files:
-                if os.path.isfile(os.path.join(folder, file)):
-                    f_names['f_name_{0}'.format(folder)] = np.load(os.path.join(folder,
+                    x["x_{0}".format(folder)] = np.load(os.path.join(folder,
                                                                      file))
         else:
             # calculate features for current folder:
             x["x_{0}".format(folder)],\
-            name_of_files["paths_{0}".format(folder)],\
-            f_names['f_name_{0}'.format(folder)]     = \
+            name_of_files["paths_{0}".format(folder)] = \
                 dir_process_video(folder, 2, True, True, True)   
 
-    return x, name_of_files, f_names
+    return x, name_of_files
 
-def data_preparation(x, fname):
+
+def data_preparation(x):
     """
     Prepare the data before the training process
     :param x: exracted features from videos
-    :return: features, labels and feature names
+    :return: features and labels
     """
     x_all = np.empty((0, 244), float)
     y = []
 
-    #Save features and labels to numpy and to list 
     for key, value in x.items():
         x_all = np.append(x_all,value,axis=0)
         for i in range(value.shape[0]):
             y.append(str(key))
-
-    #Insert features names to numpy array
-    values = fname.values()
-    value_iterator = iter(values)
-    fnames = next(value_iterator)
-
+    
     # Standarization
     scaler = StandardScaler()
-    
     # fit and transform the data
-    x_all = scaler.fit_transform(x_all)       
-    
+    x_all = scaler.fit_transform(x_all)
+
     # Encode target labels with value between 0 and n_classes-1
     lb = preprocessing.LabelEncoder()
     y = lb.fit_transform(y)
 
-
-    return x_all, y, fnames
+    return x_all, y
 
 
 def plot_confusion_matrix(name, cm, classes):
@@ -201,7 +180,7 @@ def save_results(algorithm, y_test, y_pred):
         print(msg, file=open(str(algorithm)+'_results.txt','a'))
     
 
-def train_models(x, training_algorithms, f_names):
+def train_models(x, training_algorithms):
     """
     Check the name of given algorithm and train the proper model
     using Grid_Search_Process() then save results.
@@ -214,7 +193,7 @@ def train_models(x, training_algorithms, f_names):
         if item.endswith("results.txt"):   
            os.remove(item)
 
-    x_all, y, _ = data_preparation(x,f_names)
+    x_all, y = data_preparation(x)
 
     for algorithm in training_algorithms:
         if algorithm == 'SVM':
@@ -279,7 +258,8 @@ if __name__ == "__main__":
                      'Usage example' % (algorithm))
 
     #Extract features of videos
-    x, name_of_files, f_names = feature_extraction(videos_path)
+    x, name_of_files = feature_extraction(videos_path)
 
     #Train the models
-    train_models(x, training_algorithms, f_names)
+    train_models(x, training_algorithms)
+

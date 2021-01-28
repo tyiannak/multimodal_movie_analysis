@@ -54,27 +54,35 @@ def feature_extraction(videos_path):
     """
     x = {}
     name_of_files = {}
+    f_names = {}
 
-    for folder in videos_path:
-        # for each class-folder
+    for folder in videos_path: # for each class-folder
 
         # get list of np files in that folder (where features can have
         # been saved):
         np_feature_files = fnmatch.filter(os.listdir(folder), '*_features.npy')
+        np_fnames_files = fnmatch.filter(os.listdir(folder), '*_f_names.npy')
         print(np_feature_files)
+        print(np_fnames_files)
         # if feature npy files exist:
-        if len(np_feature_files) > 0:
+        if len(np_feature_files) > 0 and len(np_fnames_files) > 0:
             for file in np_feature_files:
                 if os.path.isfile(os.path.join(folder, file)):
-                    x["x_{0}".format(folder)] = np.load(os.path.join(folder,
-                                                                     file))
+                    x["{0}".format(folder)] = np.load(os.path.join(folder,
+                                                                   file))
+            for file in np_fnames_files:
+                if os.path.isfile(os.path.join(folder, file)):
+                    f_names['f_name_{0}'.format(folder)] = np.load(
+                        os.path.join(folder,
+                                     file))
         else:
             # calculate features for current folder:
-            x["x_{0}".format(folder)],\
-            name_of_files["paths_{0}".format(folder)] = \
-                dir_process_video(folder, 2, True, True, True)   
+            x["x_{0}".format(folder)], \
+            name_of_files["paths_{0}".format(folder)], \
+            f_names['f_name_{0}'.format(folder)] = \
+                dir_process_video(folder, 2, True, True, True)
 
-    return x, name_of_files
+    return x, name_of_files, f_names
 
 
 def data_preparation(x):
@@ -258,7 +266,7 @@ if __name__ == "__main__":
                      'Usage example' % (algorithm))
 
     #Extract features of videos
-    x, name_of_files = feature_extraction(videos_path)
+    x, name_of_files, _ = feature_extraction(videos_path)
 
     #Train the models
     train_models(x, training_algorithms)

@@ -41,7 +41,7 @@ def model_predict(features,model):
     #Predict the class
     result = loaded_model.predict(features)
 
-    print('This shot is: ', result)
+    print('This shot belongs to class: ', result)
 
 
 if __name__ == "__main__":

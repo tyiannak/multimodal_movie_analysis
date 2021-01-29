@@ -5,7 +5,7 @@ Usage example:
 
 python3 wrapper.py -f dataset/trump.mp4 -m SVM
 
-Available algorithms for traning: SVM, Decision_Trees, KNN, Adaboost,
+Available algorithms to use: SVM, Decision_Trees, KNN, Adaboost,
 Extratrees, RandomForest
 '''
 import sys
@@ -20,7 +20,7 @@ from analyze_visual.analyze_visual import process_video
 def parse_arguments():
     """Parse arguments for real time demo.
     """
-    parser = argparse.ArgumentParser(description="Parser"
+    parser = argparse.ArgumentParser(description="Wrapper"
                                                  "Predict shot class")
     parser.add_argument("-f", "--file", required=True, nargs=None,
                         help="File")
@@ -36,8 +36,9 @@ def model_predict(features,model):
     :param features: features
     :return:
     """
+    #Load pre-trained model
     loaded_model = pickle.load(open('trained_'+str(model)+'.sav', 'rb'))
-
+    #Predict the class
     result = loaded_model.predict(features)
 
     print('This shot is: ', result)
@@ -50,6 +51,7 @@ if __name__ == "__main__":
     model = args.model
     print(shot)
 
+    #Check if npy file of video file exists
     if path.exists(str(shot)+'_shot_features.npy'):
         features_stats = np.load(str(shot)+'_shot_features.npy')
         features = features_stats.reshape(1,-1)

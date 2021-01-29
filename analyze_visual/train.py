@@ -16,6 +16,7 @@ import os
 import numpy as np
 import sys
 import fnmatch
+import pickle
 import itertools
 from sklearn import model_selection, preprocessing
 from sklearn.preprocessing import StandardScaler
@@ -104,10 +105,6 @@ def data_preparation(x):
     # fit and transform the data
     x_all = scaler.fit_transform(x_all)
 
-    # Encode target labels with value between 0 and n_classes-1
-    lb = preprocessing.LabelEncoder()
-    y = lb.fit_transform(y)
-
     return x_all, y
 
 
@@ -158,6 +155,9 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
 
     gd_sr.fit(X_train, y_train)
    
+    #Save model    
+    pickle.dump(gd_sr,open('trained_'+str(algorithm)+'.sav','wb'))
+
     # Plot confusion matrix process
     y_pred = gd_sr.best_estimator_.predict(X_test)
     conf_mat = confusion_matrix(y_test, y_pred) 

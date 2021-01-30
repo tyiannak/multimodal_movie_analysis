@@ -16,10 +16,10 @@ import os
 import numpy as np
 import sys
 import fnmatch
-import pickle
 import itertools
+from pickle import dump
 from sklearn import model_selection, preprocessing
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
@@ -99,11 +99,6 @@ def data_preparation(x):
         x_all = np.append(x_all,value,axis=0)
         for i in range(value.shape[0]):
             y.append(str(key))
-    
-    # Standarization
-    scaler = StandardScaler()
-    # fit and transform the data
-    x_all = scaler.fit_transform(x_all)
 
     return x_all, y
 
@@ -146,6 +141,16 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
 
     X_train, X_test, y_train, y_test = train_test_split(x_all, y, test_size=0.33)
 
+    # Define scaler
+    scaler = MinMaxScaler()
+
+    # Fit scaler on the training dataset
+    scaler.fit(X_train)
+
+    # Transform both datasets
+    X_train_scaled = scaler.transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
     
     gd_sr = GridSearchCV(estimator=classifier,
                          param_grid=grid_param,
@@ -153,13 +158,16 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
                          cv=5,
                          n_jobs=-1)
 
-    gd_sr.fit(X_train, y_train)
+    gd_sr.fit(X_train_scaled, y_train)
    
-    #Save model    
-    pickle.dump(gd_sr,open('trained_'+str(algorithm)+'.sav','wb'))
+    # Save model    
+    dump(gd_sr,open('trained_'+str(algorithm)+'.pkl','wb'))
+
+    # Save the scaler
+    dump(scaler, open(str(algorithm)+'_scaler.pkl', 'wb'))
 
     # Plot confusion matrix process
-    y_pred = gd_sr.best_estimator_.predict(X_test)
+    y_pred = gd_sr.best_estimator_.predict(X_test_scaled)
     conf_mat = confusion_matrix(y_test, y_pred) 
     print(conf_mat)
     np.set_printoptions(precision=2)

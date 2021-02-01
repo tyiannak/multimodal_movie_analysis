@@ -33,8 +33,10 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Wrapper"
                                                  "Predict shot class")
 
-    parser.add_argument("-f", "-d", "--videos_path", required=True, action='append',
-                        nargs='+', help="Videos folder path")
+    parser.add_argument("-i", "--input_videos_path",
+                        required=True,
+                        nargs=None,
+                        help="Videos folder path")
 
     parser.add_argument("-m", "--model", required=True, nargs=None,
                         help="Model")
@@ -99,35 +101,23 @@ def dir_class_predict(features,labels,algorithm):
 def main(argv):
 
     args = parse_arguments()
-    videos_path = args.videos_path
+    videos_path = args.input_videos_path
     algorithm = args.model
 
-    # Convert list of lists to a single list
-    videos_path = [item for sublist in videos_path for item in sublist]
-    
-    if argv[1] == "-f":
-        
-        shot = videos_path[0]
 
-        #Extract features of video and save features and label
-        features_stats = process_video(shot, 2, True, True, True)
+    if os.path.isfile(videos_path):
+        features_stats = process_video(videos_path, 2, True, True, True)
         features = features_stats[0]
-        features = features.reshape(1,-1)
-
+        features = features.reshape(1, -1)
         #Predict the classes of shots
-        video_class_predict(features,algorithm)
-
-    else:
-
+        video_class_predict(features, algorithm)
+    elif os.path.isdir(videos_path):
         #Extract features of videos
-        x, _, _ = feature_extraction(videos_path)
-        
-        print (x)
-        #Prepare the data    
-        features,labels = data_preparation(x)
-
+        x, _, _ = feature_extraction([videos_path])
+        #Prepare the data
+        features, labels = data_preparation(x)
         #Predict the classes of shots
-        dir_class_predict(features,labels,algorithm)
+        dir_class_predict(features, labels, algorithm)
 
     
 if __name__ == '__main__':

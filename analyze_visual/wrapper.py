@@ -42,7 +42,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def video_class_predict(X_test,y_test,algorithm):
+def video_class_predict(X_test,algorithm):
     """
     Loads pre-trained model and predict single shot's class
     :param features: features
@@ -64,8 +64,6 @@ def video_class_predict(X_test,y_test,algorithm):
     results = model.predict(X_test_scaled)
     
     #Print the results
-    acc = accuracy_score(y_test, results)
-    print('Test Accuracy of classifier: ', acc)
     print('The shots belongs to class: ', results)   
 
 
@@ -116,17 +114,15 @@ def main(argv):
         features = features_stats[0]
         features = features.reshape(1,-1)
 
-        labels = ['Handled' for i in range(features.shape[0])]
-
         #Predict the classes of shots
-        video_class_predict(features,labels,algorithm)
-
+        video_class_predict(features,algorithm)
 
     else:
 
         #Extract features of videos
         x, _, _ = feature_extraction(videos_path)
-
+        
+        print (x)
         #Prepare the data    
         features,labels = data_preparation(x)
 

@@ -65,37 +65,7 @@ def video_class_predict(X_test,algorithm):
     # Predict the class
     results = model.predict(X_test_scaled)
     
-    #Print the results
-    print('The shots belongs to class: ', results)   
-
-
-def dir_class_predict(features,labels,algorithm):
-    """
-    Loads pre-trained model and predict videos class
-    :param features: features
-    :labels: labels
-    :algorithm: Training algorithm
-    :return:
-    """
-
-    _, X_test, _, y_test = train_test_split(features, labels, test_size=0.33)
-
-    # Load the model
-    model = load(open('trained_'+str(algorithm)+'.pkl', 'rb'))
-
-    # Load the scaler
-    scaler = load(open(str(algorithm)+'_scaler.pkl', 'rb'))
-
-    # Transform the test dataset
-    X_test_scaled = scaler.transform(X_test)
-
-    # Predict the class
-    results = model.predict(X_test_scaled)
-    
-    #Print the results
-    acc = accuracy_score(y_test, results)
-    print('Test Accuracy of classifier: ', acc)
-    print('The shots belongs to class: ', results)
+    return results
 
 
 def main(argv):
@@ -110,15 +80,22 @@ def main(argv):
         features = features_stats[0]
         features = features.reshape(1, -1)
         #Predict the classes of shots
-        video_class_predict(features, algorithm)
+        r = video_class_predict(features, algorithm)
+        print(f'Video {videos_path} belongs to {r}')
     elif os.path.isdir(videos_path):
-        #Extract features of videos
-        x, _, _ = feature_extraction([videos_path])
-        #Prepare the data
-        features, labels = data_preparation(x)
-        #Predict the classes of shots
-        dir_class_predict(features, labels, algorithm)
-
+        import glob
+        types = ('*.avi', '*.mpeg', '*.mpg', '*.mp4', '*.mkv', '*.webm')
+        video_files_list = []
+        for files in types:
+            video_files_list.extend(glob.glob(os.path.join(videos_path, files)))
+        video_files_list = sorted(video_files_list)
+        for v in video_files_list:
+            features_stats = process_video(v, 2, True, True, True)
+            features = features_stats[0]
+            features = features.reshape(1, -1)
+            # Predict the classes of shots
+            r = video_class_predict(features, algorithm)
+            print(f'Video {v} belongs to {r}')
     
 if __name__ == '__main__':
     main(sys.argv)

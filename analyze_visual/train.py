@@ -28,6 +28,7 @@ from sklearn.metrics import accuracy_score, precision_score, \
     recall_score, f1_score, plot_confusion_matrix, confusion_matrix
 import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV, train_test_split
+import json
 sys.path.insert(0, '..')
 from analyze_visual.analyze_visual import dir_process_video
 
@@ -190,15 +191,23 @@ def save_results(algorithm, y_test, y_pred):
     :y_pred: predicted values
     """
     results = {}
-    results['accuracy'] = str(accuracy_score(y_test, y_pred))
-    results['precision'] = str(precision_score(y_test, y_pred, average='macro'))
-    results['recall'] = str(recall_score(y_test, y_pred, average='macro'))
+    class_names = list(set(y_test))
+    precisions = precision_score(y_test, y_pred, average=None,
+                                 labels=class_names)
+    recalls = recall_score(y_test, y_pred, average=None,
+                              labels=class_names)
+
+    results['accuracy'] = accuracy_score(y_test, y_pred)
     results['f1'] = str(f1_score(y_test, y_pred, average='macro'))
-    fp = open('shot_classifier_' + str(algorithm) + '_results.txt', 'w')
-    for key, values in results.items():
-        msg = "%s: %s---> %s" % (algorithm, key, values)
-        print(msg, file=fp)
-    
+    results['precision_mean'] = precision_score(y_test, y_pred, average='macro')
+    results['recall_mean'] = recall_score(y_test, y_pred, average='macro')
+    results['precisions'] = {class_names[i]: precisions[i]
+                             for i in range(len(class_names))}
+    results['recalls'] = {class_names[i]: recalls[i]
+                          for i in range(len(class_names))}
+    with open("shot_classifier_" + algorithm + "_results.json", 'w') as fp:
+        json.dump(results, fp, indent=4)
+
 
 def train_models(x, training_algorithms):
     """

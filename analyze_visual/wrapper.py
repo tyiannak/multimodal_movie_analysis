@@ -1,4 +1,4 @@
-'''
+"""
 This script is used to predict video's class.
 The input can be single video or directory. 
 
@@ -8,19 +8,15 @@ python3 wrapper.py -i dataset/Panoramic/trump.mp4 -m SVM
 
 Available algorithms to use: SVM, Decision_Trees, KNN, Adaboost,
 Extratrees, RandomForest
-'''
+"""
+
 import sys
-import pickle
 import argparse
 import os.path
-from os import path
-import numpy as np
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
 from pickle import load
 sys.path.insert(0, '..')
 from analyze_visual.analyze_visual import process_video
-from train import feature_extraction, data_preparation
+
 
 def parse_arguments():
     """Parse arguments for real time demo.
@@ -29,8 +25,7 @@ def parse_arguments():
                                                  "Predict shot class")
 
     parser.add_argument("-i", "--input_videos_path",
-                        required=True,
-                        nargs=None,
+                        required=True, nargs=None,
                         help="Videos folder path")
 
     parser.add_argument("-m", "--model", required=True, nargs=None,
@@ -39,7 +34,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def video_class_predict(X_test,algorithm):
+def video_class_predict(features, algorithm):
     """
     Loads pre-trained model and predict single shot's class
     :param features: features
@@ -54,10 +49,10 @@ def video_class_predict(X_test,algorithm):
     scaler = load(open(str(algorithm)+'_scaler.pkl', 'rb'))
 
     # Transform the test dataset
-    X_test_scaled = scaler.transform(X_test)
+    features_scaled = scaler.transform(features)
 
     # Predict the class
-    results = model.predict(X_test_scaled)
+    results = model.predict(features_scaled)
 
     return results
 
@@ -72,7 +67,7 @@ def main(argv):
         features_stats = process_video(videos_path, 2, True, True, True)
         features = features_stats[0]
         features = features.reshape(1, -1)
-        #Predict the classes of shots
+        # Predict the classes of shots
         r = video_class_predict(features, algorithm)
         print(f'Video {videos_path} belongs to {r}')
     elif os.path.isdir(videos_path):
@@ -90,8 +85,7 @@ def main(argv):
             r = video_class_predict(features, algorithm)
             results[v]= r
     [print(f'Video {key} belongs to {value}') for key, value in results.items()]    
+
+
 if __name__ == '__main__':
     main(sys.argv)
-    
-
-    

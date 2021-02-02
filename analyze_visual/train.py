@@ -194,11 +194,10 @@ def save_results(algorithm, y_test, y_pred):
     results['precision'] = str(precision_score(y_test, y_pred, average='macro'))
     results['recall'] = str(recall_score(y_test, y_pred, average='macro'))
     results['f1'] = str(f1_score(y_test, y_pred, average='macro'))
-
+    fp = open('shot_classifier_' + str(algorithm) + '_results.txt', 'w')
     for key, values in results.items():
         msg = "%s: %s---> %s" % (algorithm, key, values)
-        print(msg, file=open('shot_classifier_' + str(algorithm) +
-                             '_results.txt', 'a'))
+        print(msg, file=fp)
     
 
 def train_models(x, training_algorithms):
@@ -209,10 +208,6 @@ def train_models(x, training_algorithms):
     :param training_algorithms: list of training_algorithms to use
     :training_algorithms: algorithm/s for training
     """
-
-    for item in os.listdir():
-        if item.endswith("results.txt"):   
-           os.remove(item)
 
     x_all, y = data_preparation(x)
 

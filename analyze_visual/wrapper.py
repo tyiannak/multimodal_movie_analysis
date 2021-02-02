@@ -1,15 +1,10 @@
 '''
-This script is used to predict video's class. 
+This script is used to predict video's class.
+The input can be single video or directory. 
 
 Usage example:
 
-Run single file:
-
-python3 wrapper.py -f dataset/Panoramic/trump.mp4 -m SVM
-
-Run directory:
-
-python3 wrapper.py -d dataset/Panoramic -m SVM
+python3 wrapper.py -i dataset/Panoramic/trump.mp4 -m SVM
 
 Available algorithms to use: SVM, Decision_Trees, KNN, Adaboost,
 Extratrees, RandomForest
@@ -48,7 +43,6 @@ def video_class_predict(X_test,algorithm):
     """
     Loads pre-trained model and predict single shot's class
     :param features: features
-    :labels: labels
     :algorithm: Training algorithm
     :return:    
     """
@@ -64,7 +58,7 @@ def video_class_predict(X_test,algorithm):
 
     # Predict the class
     results = model.predict(X_test_scaled)
-    
+
     return results
 
 
@@ -73,8 +67,7 @@ def main(argv):
     args = parse_arguments()
     videos_path = args.input_videos_path
     algorithm = args.model
-
-
+    results = {}
     if os.path.isfile(videos_path):
         features_stats = process_video(videos_path, 2, True, True, True)
         features = features_stats[0]
@@ -95,8 +88,8 @@ def main(argv):
             features = features.reshape(1, -1)
             # Predict the classes of shots
             r = video_class_predict(features, algorithm)
-            print(f'Video {v} belongs to {r}')
-    
+            results[v]= r
+    [print(f'Video {key} belongs to {value}') for key, value in results.items()]    
 if __name__ == '__main__':
     main(sys.argv)
     

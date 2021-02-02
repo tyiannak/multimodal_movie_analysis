@@ -98,8 +98,12 @@ def data_preparation(x):
     for key, value in x.items():
         x_all = np.append(x_all,value,axis=0)
         for i in range(value.shape[0]):
-            y.append(str(key))
-
+            y.append(str(key))   
+    #Convert format of labels         
+    for i,label in enumerate(y):           
+        splitting = label.split('/')
+        label = splitting[-1]
+        y[i]=label
     return x_all, y
 
 
@@ -254,8 +258,7 @@ if __name__ == "__main__":
     args = parse_arguments()
     videos_path = args.videos_path
     training_algorithms = args.training_algorithms
-
-    
+   
     # Convert list of lists to a single list
     videos_path = [item for sublist in videos_path for item in sublist]
     training_algorithms = [item for sublist in training_algorithms
@@ -278,4 +281,4 @@ if __name__ == "__main__":
 
     #Train the models
     train_models(x, training_algorithms)
-
+    

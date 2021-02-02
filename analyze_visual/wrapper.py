@@ -43,10 +43,11 @@ def video_class_predict(features, algorithm):
     """
 
     # Load the model
-    model = load(open('trained_'+str(algorithm)+'.pkl', 'rb'))
+    model = load(open('shot_classifier_' + str(algorithm)+'.pkl', 'rb'))
 
     # Load the scaler
-    scaler = load(open(str(algorithm)+'_scaler.pkl', 'rb'))
+    scaler = load(open('shot_classifier_' + str(algorithm) +
+                       '_scaler.pkl', 'rb'))
 
     # Transform the test dataset
     features_scaled = scaler.transform(features)

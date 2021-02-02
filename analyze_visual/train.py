@@ -18,20 +18,19 @@ import sys
 import fnmatch
 import itertools
 from pickle import dump
-from sklearn import model_selection, preprocessing
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier, \
     RandomForestClassifier
-from sklearn.metrics import make_scorer, accuracy_score, precision_score, \
+from sklearn.metrics import accuracy_score, precision_score, \
     recall_score, f1_score, plot_confusion_matrix, confusion_matrix
 import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV, train_test_split
-
 sys.path.insert(0, '..')
 from analyze_visual.analyze_visual import dir_process_video
+
 
 def parse_arguments():
     """Parse arguments for real time demo.
@@ -58,7 +57,6 @@ def feature_extraction(videos_path):
     f_names = {}
 
     for folder in videos_path: # for each class-folder
-
         # get list of np files in that folder (where features can have
         # been saved):
         np_feature_files = fnmatch.filter(os.listdir(folder), '*_features.npy')
@@ -99,8 +97,8 @@ def data_preparation(x):
         x_all = np.append(x_all,value,axis=0)
         for i in range(value.shape[0]):
             y.append(str(key))   
-    #Convert format of labels         
-    for i,label in enumerate(y):           
+    # Convert format of labels
+    for i, label in enumerate(y):
         splitting = label.split('/')
         label = splitting[-1]
         y[i]=label
@@ -143,7 +141,8 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
     :y: labels
     """
 
-    X_train, X_test, y_train, y_test = train_test_split(x_all, y, test_size=0.33)
+    X_train, X_test, y_train, y_test = train_test_split(x_all, y,
+                                                        test_size=0.33)
 
     # Define scaler
     scaler = MinMaxScaler()
@@ -155,20 +154,19 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
     X_train_scaled = scaler.transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
-    
     gd_sr = GridSearchCV(estimator=classifier,
                          param_grid=grid_param,
                          scoring='f1_macro',
-                         cv=5,
-                         n_jobs=-1)
+                         cv=5, n_jobs=-1)
 
     gd_sr.fit(X_train_scaled, y_train)
    
     # Save model    
-    dump(gd_sr,open('trained_'+str(algorithm)+'.pkl','wb'))
+    dump(gd_sr, open('shot_classifier_' + str(algorithm)+'.pkl', 'wb'))
 
     # Save the scaler
-    dump(scaler, open(str(algorithm)+'_scaler.pkl', 'wb'))
+    dump(scaler, open('shot_classifier_' + str(algorithm) +
+                      '_scaler.pkl', 'wb'))
 
     # Plot confusion matrix process
     y_pred = gd_sr.best_estimator_.predict(X_test_scaled)
@@ -197,7 +195,7 @@ def save_results(algorithm, y_test, y_pred):
 
     for key, values in results.items():
         msg = "%s: %s---> %s" % (algorithm, key, values)
-        print(msg, file=open(str(algorithm)+'_results.txt','a'))
+        print(msg, file=open(str(algorithm) + '_results.txt', 'a'))
     
 
 def train_models(x, training_algorithms):
@@ -205,7 +203,7 @@ def train_models(x, training_algorithms):
     Check the name of given algorithm and train the proper model
     using Grid_Search_Process() then save results.
     :param x: features
-    :param list of training_algorithms to use
+    :param training_algorithms: list of training_algorithms to use
     :training_algorithms: algorithm/s for training
     """
 
@@ -219,7 +217,7 @@ def train_models(x, training_algorithms):
         if algorithm == 'SVM':
             classifier = SVC()
             grid_param = {
-              'C': [0.1, 0.5, 1, 5, 10, 100],
+              'C': [0.1, 0.5, 1, 2, 5, 10, 100],
               'kernel': ['rbf']}
         elif algorithm == 'Decision_Trees':
             classifier = DecisionTreeClassifier()
@@ -240,8 +238,8 @@ def train_models(x, training_algorithms):
         elif algorithm == 'Extratrees':
             classifier = ExtraTreesClassifier()
             grid_param = {
-                'n_estimators': range(50, 126, 25),
-                'max_features': range(50, 401, 50)}
+                'n_estimators': range(25, 126, 25),
+                'max_features': range(25, 401, 25)}
         else:
             classifier = RandomForestClassifier()
             grid_param = {
@@ -274,11 +272,11 @@ if __name__ == "__main__":
     for algorithm in training_algorithms:
         if algorithm not in available_algorithms:
             sys.exit('%s is not available please read the '
-                     'Usage example' % (algorithm))
+                     'Usage example' % algorithm)
 
-    #Extract features of videos
+    # Extract features of videos
     x, name_of_files, _ = feature_extraction(videos_path)
 
-    #Train the models
+    # Train the models
     train_models(x, training_algorithms)
-    
+

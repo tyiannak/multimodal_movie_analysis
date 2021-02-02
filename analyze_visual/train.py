@@ -7,9 +7,9 @@ python3 train.py -v dataset/Aerial dataset/None -a SVM Decision_Trees
 
 Available algorithms for traning: SVM, Decision_Trees, KNN, Adaboost,
 Extratrees, RandomForest
-
-
 """
+
+
 import warnings
 import argparse
 import os
@@ -112,6 +112,7 @@ def plot_confusion_matrix(name, cm, classes):
     :cm: estimates of confusion matrix
     :classes: all the classes
     """
+    plt.figure()
     plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
     plt.title('Confusion matrix')
     plt.colorbar()
@@ -129,7 +130,7 @@ def plot_confusion_matrix(name, cm, classes):
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
-    plt.savefig("Conf_Mat_"+str(name)+".jpg")
+    plt.savefig("shot_classifier_conf_mat_" + str(name) + ".jpg")
 
 
 def Grid_Search_Process(classifier, grid_param, x_all, y):
@@ -168,14 +169,15 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
     dump(scaler, open('shot_classifier_' + str(algorithm) +
                       '_scaler.pkl', 'wb'))
 
+
+    class_labels = list(set(y_test))
     # Plot confusion matrix process
     y_pred = gd_sr.best_estimator_.predict(X_test_scaled)
-    conf_mat = confusion_matrix(y_test, y_pred) 
+    conf_mat = confusion_matrix(y_test, y_pred, labels=class_labels)
     print(conf_mat)
     np.set_printoptions(precision=2)
 
-    plt.figure()
-    plot_confusion_matrix(str(classifier), conf_mat, classes=set(y))
+    plot_confusion_matrix(str(classifier), conf_mat, classes=class_labels)
  
     return y_test, y_pred   
     
@@ -195,7 +197,8 @@ def save_results(algorithm, y_test, y_pred):
 
     for key, values in results.items():
         msg = "%s: %s---> %s" % (algorithm, key, values)
-        print(msg, file=open(str(algorithm) + '_results.txt', 'a'))
+        print(msg, file=open('shot_classifier_' + str(algorithm) +
+                             '_results.txt', 'a'))
     
 
 def train_models(x, training_algorithms):

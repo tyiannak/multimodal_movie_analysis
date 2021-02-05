@@ -426,9 +426,12 @@ def dir_process_video(dir_name, process_mode, print_flag,
 
         features_all.append(features_stats)
 
-    np.save(os.path.join(dir_name,dir_name_no_path + "_features.npy"), features_all)
-    np.save(os.path.join(dir_name,dir_name_no_path + "_video_files_list.npy"), video_files_list)
-    np.save(os.path.join(dir_name,dir_name_no_path + "_f_names.npy"), f_names)
+    np.save(os.path.join(dir_name,dir_name_no_path + "_features.npy"),
+            features_all)
+    np.save(os.path.join(dir_name,dir_name_no_path + "_video_files_list.npy"),
+            video_files_list)
+    np.save(os.path.join(dir_name,dir_name_no_path + "_f_names.npy"),
+            f_names_stats)
     features_all = np.array(features_all)
 
     return features_all, video_files_list, f_names

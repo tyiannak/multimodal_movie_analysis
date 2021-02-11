@@ -18,10 +18,15 @@ import sys
 import fnmatch
 import itertools
 from pickle import dump
+from collections import Counter
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
+from imblearn.pipeline import Pipeline
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.over_sampling import RandomOverSampler
 from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier, \
     RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, \
@@ -84,6 +89,24 @@ def feature_extraction(videos_path):
 
     return x, name_of_files, f_names
 
+def remove_features(x_all):
+    
+    '''
+    #Remove colors + hsv 
+    delete = list(range(0,45,1))
+    delete.extend(range(52,97,1))
+    delete.extend(range(104,149,1))
+    delete.extend(range(156,201,1)) 
+    '''
+    #Remove object detection features
+    delete = list(range(208,243,1))
+
+
+    x = np.delete(x_all,delete, axis=1)
+
+    print('Shape of features after feature selection: ', x.shape)
+
+    return x
 
 def data_preparation(x):
     """
@@ -103,6 +126,11 @@ def data_preparation(x):
         splitting = label.split('/')
         label = splitting[-1]
         y[i]=label
+
+    #Freature selection, delete selected features\
+
+    x_all = remove_features(x_all)
+  
     return x_all, y
 
 
@@ -133,6 +161,23 @@ def plot_confusion_matrix(name, cm, classes):
     plt.xlabel('Predicted label')
     plt.savefig("shot_classifier_conf_mat_" + str(name) + ".jpg")
 
+def smote_process(x,y,classifier):
+    
+    #Check for imbalanced classes
+    counter = Counter(y)
+    distribution  = dict(counter)
+    print(distribution)
+
+    #Define the number of training samples 
+    smote = SMOTE()
+
+    #Create pipeline for smote
+    steps = [('smote', smote),('model',classifier)]
+    pipeline = Pipeline(steps=steps)
+
+
+    return pipeline
+
 
 def Grid_Search_Process(classifier, grid_param, x_all, y):
     """
@@ -156,7 +201,15 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
     X_train_scaled = scaler.transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
-    gd_sr = GridSearchCV(estimator=classifier,
+    #Not smote process pipeline
+    '''
+    steps = [('model',classifier)]
+    pipeline = Pipeline(steps=steps)
+    '''
+    #Smote process pipeline
+    pipeline = smote_process(x_all,y,classifier)
+
+    gd_sr = GridSearchCV(estimator=pipeline,
                          param_grid=grid_param,
                          scoring='f1_macro',
                          cv=5, n_jobs=-1)
@@ -170,7 +223,6 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
     dump(scaler, open('shot_classifier_' + str(algorithm) +
                       '_scaler.pkl', 'wb'))
 
-
     class_labels = list(set(y_test))
     # Plot confusion matrix process
     y_pred = gd_sr.best_estimator_.predict(X_test_scaled)
@@ -179,9 +231,10 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
     np.set_printoptions(precision=2)
 
     plot_confusion_matrix(str(classifier), conf_mat, classes=class_labels)
- 
-    return y_test, y_pred   
     
+    return y_test, y_pred   
+
+      
 
 def save_results(algorithm, y_test, y_pred):
     """
@@ -224,34 +277,34 @@ def train_models(x, training_algorithms):
         if algorithm == 'SVM':
             classifier = SVC()
             grid_param = {
-              'C': [0.1, 0.5, 1, 2, 5, 10, 100],
-              'kernel': ['rbf']}
+              'model__C': [0.1, 0.5, 1, 2, 5, 10, 100],
+              'model__kernel': ['rbf']}
         elif algorithm == 'Decision_Trees':
             classifier = DecisionTreeClassifier()
             grid_param = {
-                'criterion': ['gini', 'entropy'],
-                'max_depth': range(1, 10)}
+                'model__criterion': ['gini', 'entropy'],
+                'model__max_depth': range(1, 10)}
         elif algorithm == 'KNN':
             classifier = KNeighborsClassifier()
             grid_param = {
-                'n_neighbors': [3, 5, 7],
-                'weights': ['uniform','distance']}
+                'model__n_neighbors': [3, 5, 7],
+                'model__weights': ['uniform','distance']}
 
         elif algorithm == 'Adaboost':
             classifier = AdaBoostClassifier()
             grid_param = {
-                 'n_estimators': np.arange(100, 250, 50),
-                 'learning_rate': [0.01, 0.05, 0.1, 1]}
+                 'model__n_estimators': np.arange(100, 250, 50),
+                 'model__learning_rate': [0.01, 0.05, 0.1, 1]}
         elif algorithm == 'Extratrees':
             classifier = ExtraTreesClassifier()
             grid_param = {
-                'n_estimators': range(25, 126, 25),
-                'max_features': range(25, 401, 25)}
+                'model__n_estimators': range(25, 126, 25),
+                'model__max_features': range(25, 401, 25)}
         else:
             classifier = RandomForestClassifier()
             grid_param = {
-            'n_estimators': [100, 300],
-            'criterion': ['gini', 'entropy']}
+                'model__n_estimators': [100, 300],
+                'model__criterion': ['gini', 'entropy']}
 
         y_test,y_pred = Grid_Search_Process(classifier, grid_param, x_all, y)
         save_results(algorithm, y_test, y_pred)
@@ -286,4 +339,3 @@ if __name__ == "__main__":
 
     # Train the models
     train_models(x, training_algorithms)
-

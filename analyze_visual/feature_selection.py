@@ -48,7 +48,11 @@ def plot_feature_histograms(list_of_feature_mtr, feature_names,
     for i in range(n_features):
         # for each feature get its bin range (min:(max-min)/n_bins:max)
         f = np.vstack([x[:, i:i + 1] for x in list_of_feature_mtr])
-        bins = np.arange(f.min(), f.max(), (f.max() - f.min()) / n_bins)
+        np.seterr(all='raise')
+        try:
+            bins = np.arange(f.min(), f.max(), (f.max() - f.min()) / n_bins)
+        except:
+            print ('Floating point error')
         for fi, f in enumerate(list_of_feature_mtr):
             # load the color for the current class (fi)
             mark_prop = dict(color=clr[fi], line=dict(color=clr[fi], width=3))
@@ -86,19 +90,53 @@ def data_preparation(x, fname):
     """
     features = []
     class_names = []
-
-    #Save features and labels to list 
+    #Save features and labels to list of numpy arrays
     for key, value in x.items():
         features.append(value)
         class_names.append(key)
+    
 
     #Insert features names to numpy array
     values = fname.values()
     value_iterator = iter(values)
     fnames = next(value_iterator)
 
+    #Add a number to the features for easier detection
+    numbers = np.arange(244)
+    numbers = numbers.astype(str)
+    fnames = np.core.defchararray.add(numbers, fnames)
+
     return features, fnames, class_names
 
+def remove_features(features,fnames):
+    '''
+    #COlors + hsv 
+    delete = list(range(0,45,1))
+    delete.extend(range(52,97,1))
+    delete.extend(range(104,149,1))
+    delete.extend(range(156,201,1))  
+    '''
+    #Remove frontal_faces
+    #delete = [46,47,98,99,150,151,202,203] 
+    
+    #Remove object detection features
+    delete = list(range(208,243,1))
+
+    for i in delete:
+        print (i)
+
+    deleted_features=[]
+    for x in features:
+        deleted_features.append(np.delete(x,delete,axis=1))
+        print(x.shape)
+    for x in deleted_features:
+        print(x.shape)
+
+    deleted_fnames = np.delete(fnames,delete,axis=0)
+
+    print(deleted_fnames.shape)
+
+    return deleted_features, deleted_fnames
 
 if __name__ == "__main__": 
 
@@ -113,6 +151,8 @@ if __name__ == "__main__":
 
     #Prepare data for plot
     features, fnames, class_names = data_preparation(x,f_names)
+    
+    features,fnames = remove_features(features,fnames)
 
     #Plot features histogram   
     plot_feature_histograms(features, fnames, class_names)

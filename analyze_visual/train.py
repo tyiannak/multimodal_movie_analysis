@@ -89,20 +89,18 @@ def feature_extraction(videos_path):
     return x, name_of_files, f_names
 
 def remove_features(x_all):
-    
-
     #Remove colors + hsv 
     
     delete = list(range(0,45,1))
     delete.extend(range(52,97,1))
     delete.extend(range(104,149,1))
     delete.extend(range(156,201,1)) 
-    delete.extend(range(208,243,1))
+    #delete.extend(range(208,243,1))
     
     #Remove object detection features
-    
-    #delete = list(range(208,243,1))
-    
+    '''
+    delete = list(range(208,243,1))
+    '''
 
     x = np.delete(x_all,delete, axis=1)
 
@@ -130,7 +128,6 @@ def data_preparation(x):
         y[i]=label
 
     #Freature selection, delete selected features\
-
     x_all = remove_features(x_all)
   
     return x_all, y
@@ -162,6 +159,7 @@ def plot_confusion_matrix(name, cm, classes):
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     plt.savefig("shot_classifier_conf_mat_" + str(name) + ".jpg")
+
 
 def smote_process(x,y,classifier):
     
@@ -235,9 +233,9 @@ def Grid_Search_Process(classifier, grid_param, algorithm,  x_all, y):
 
     plot_confusion_matrix(str(algorithm), conf_mat, classes=class_labels)
     
+    
     return y_test, y_pred   
-
-      
+ 
 
 def save_results(algorithm, y_test, y_pred):
     """

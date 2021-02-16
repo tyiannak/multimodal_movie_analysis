@@ -6,7 +6,7 @@ Usage example:
 python3 train.py -v dataset/Aerial dataset/None -a SVM Decision_Trees
 
 Available algorithms for traning: SVM, Decision_Trees, KNN, Adaboost,
-Extratrees, RandomForest
+Extratrees, RandomForest, XGBoost
 """
 
 
@@ -25,10 +25,9 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from imblearn.pipeline import Pipeline
 from imblearn.over_sampling import SMOTE
-from imblearn.under_sampling import RandomUnderSampler
-from imblearn.over_sampling import RandomOverSampler
 from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier, \
     RandomForestClassifier
+from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, precision_score, \
     recall_score, f1_score, plot_confusion_matrix, confusion_matrix
 import matplotlib.pyplot as plt
@@ -91,16 +90,19 @@ def feature_extraction(videos_path):
 
 def remove_features(x_all):
     
-    '''
+
     #Remove colors + hsv 
+    
     delete = list(range(0,45,1))
     delete.extend(range(52,97,1))
     delete.extend(range(104,149,1))
     delete.extend(range(156,201,1)) 
-    '''
+    delete.extend(range(208,243,1))
+    
     #Remove object detection features
-    delete = list(range(208,243,1))
-
+    
+    #delete = list(range(208,243,1))
+    
 
     x = np.delete(x_all,delete, axis=1)
 
@@ -179,11 +181,12 @@ def smote_process(x,y,classifier):
     return pipeline
 
 
-def Grid_Search_Process(classifier, grid_param, x_all, y):
+def Grid_Search_Process(classifier, grid_param, algorithm,  x_all, y):
     """
     Hyperparameter tuning process and fit the model
     :classifier: classifier for train
     :grid_param: different parameters of classifier to test
+    :algorithm: Name of training algorithm
     :x_all: features
     :y: labels
     """
@@ -201,7 +204,7 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
     X_train_scaled = scaler.transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
-    #Not smote process pipeline
+    #No smote process pipeline
     '''
     steps = [('model',classifier)]
     pipeline = Pipeline(steps=steps)
@@ -230,7 +233,7 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
     print(conf_mat)
     np.set_printoptions(precision=2)
 
-    plot_confusion_matrix(str(classifier), conf_mat, classes=class_labels)
+    plot_confusion_matrix(str(algorithm), conf_mat, classes=class_labels)
     
     return y_test, y_pred   
 
@@ -273,6 +276,7 @@ def train_models(x, training_algorithms):
 
     x_all, y = data_preparation(x)
 
+    
     for algorithm in training_algorithms:
         if algorithm == 'SVM':
             classifier = SVC()
@@ -289,7 +293,6 @@ def train_models(x, training_algorithms):
             grid_param = {
                 'model__n_neighbors': [3, 5, 7],
                 'model__weights': ['uniform','distance']}
-
         elif algorithm == 'Adaboost':
             classifier = AdaBoostClassifier()
             grid_param = {
@@ -300,13 +303,18 @@ def train_models(x, training_algorithms):
             grid_param = {
                 'model__n_estimators': range(25, 126, 25),
                 'model__max_features': range(25, 401, 25)}
-        else:
+        elif algorithm == "RandomForest":
             classifier = RandomForestClassifier()
             grid_param = {
                 'model__n_estimators': [100, 300],
                 'model__criterion': ['gini', 'entropy']}
+        else: 
+            classifier = XGBClassifier()
+            grid_param = {
+                'model__learning_rate': [0.05, 0.10, 0.20, 0.30],
+                "model__max_depth"        : [3,5,8,10]}
 
-        y_test,y_pred = Grid_Search_Process(classifier, grid_param, x_all, y)
+        y_test,y_pred = Grid_Search_Process(classifier, grid_param, algorithm, x_all, y)
         save_results(algorithm, y_test, y_pred)
 
 
@@ -327,7 +335,7 @@ if __name__ == "__main__":
                                     str(paths)
 
     available_algorithms = ['SVM', 'Decision_Trees', 'KNN', 'Adaboost',
-                            'Extratrees', 'RandomForest']
+                            'Extratrees', 'RandomForest', 'XGBoost']
 
     for algorithm in training_algorithms:
         if algorithm not in available_algorithms:

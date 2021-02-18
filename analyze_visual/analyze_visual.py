@@ -53,14 +53,22 @@ def process_video(video_path, process_mode, print_flag=True,
                 - standard deviation of every feature over time
                 - mean value of standard deviation of every feature over time
                 - mean value of the 10 highest-valued frames for every feature
+             This is the video-level representation (one feature vector for the
+             whole video)
+
+        f_names_stats: list of feature statistics names (video-level featuers)
+
         feature matrix (array_like) : Array of the extracted features.
-            Contains one feature vector for every frame.
+            Contains one feature vector for every processed frame.
             If object detection is used, the feature matrix contains information
             for the first n = (number_of_frames - max_frames + 1) frames.
-        feature_names (tuple) : 2D tuple that contains the name
-            of the extracted features.
-            - feature_names[0] (list) : names of the feature_matrix features
-            - feature_names[1] (list) : names of the feature_stats features
+            [n_features x n_windows]
+
+        feature_names: list of feature names [n_features] length
+
+        shot_change_times: list of timestamps where shot changes
+        have been detected
+
     """
 
     # ---Initializations-------------------------------------------------------

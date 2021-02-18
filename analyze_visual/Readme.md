@@ -43,7 +43,7 @@ the following 88 visual features are extracted:
  * Current shot duration (1 feature): a basic shot detection method is implemented in this library 
  (see function utils.shot_change()). The length of the shot (in seconds)
  in which each frame belongs to, is used as a feature.
- * Object-related features (36): We use the TODO PANAGIOTIS method for detecting 
+ * Object-related features (36): We use the Single Shot Multibox Detector method for detecting 
  12 categories of objects. For each frame, as soon as the object(s) of each 
  category are detected, three statistics are extracted: number of objects detected,
  average detection confidence and average ratio of the objects' area to the area 

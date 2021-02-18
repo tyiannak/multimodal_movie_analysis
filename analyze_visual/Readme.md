@@ -64,9 +64,8 @@ the following 88 visual features are extracted:
 
 In addition, `process_video()` computes and returns video-level statistics of the 
 above non-object features. In particular, mean, std, median by std ratio and top-10 average 
-are computed for each of the 52 non-object features for the whole video. 
+are computed for each of the 52 non-object features for the whole video. As for the object detection, the frame-level predictions are post processed under local time widnows with two different ways: (i) the object frame-level confidences are smoothed across time windows in order to increase the accuracy of the predictions and (ii)  every object that is not present to at least a minimum number (threshold) of subsequent frames, is excluded from the final feature vector.  
 This results to 52x4 + 36 = 244 feature statistics that describe the whole video.
-TODO PANAGIOTIS STH ON THE OBJECT POST PROCESSING HERE
 
 To sum up `process_video()` returns five arguments: 
  * the 244 feature vector of the whole video (as a numpy array)

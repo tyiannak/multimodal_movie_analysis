@@ -62,13 +62,13 @@ the following 88 visual features are extracted:
     * appliance
     * indoor
 
-In addition, `process_audio()` computes and returns video-level statistics of the 
+In addition, `process_video()` computes and returns video-level statistics of the 
 above non-object features. In particular, mean, std, median by std ratio and top-10 average 
 are computed for each of the 52 non-object features for the whole video. 
 This results to 52x4 + 36 = 244 feature statistics that describe the whole video.
 TODO PANAGIOTIS STH ON THE OBJECT POST PROCESSING HERE
 
-To sum up `process_audio()` returns five arguments: 
+To sum up `process_video()` returns five arguments: 
  * the 244 feature vector of the whole video (as a numpy array)
  * the 244 corresponding feature statistic names (as a list)
  * the feature matrix of the 88-D feature vectors (one for each frame) as a 

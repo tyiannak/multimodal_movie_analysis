@@ -436,7 +436,6 @@ def train_for_roc_pr_curves(x):
                 y_pos_label.append(1)
             else:
                 y_pos_label.append(0)
-        print(name)
         #Plot roc curves
         plot_roc_curve(y_score[:,p], y_pos_label, n_classes, name)
         #Plot Precision-Recall curves

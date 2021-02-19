@@ -3,33 +3,35 @@ This script is used to train different ML algorithms and save the results.
 
 Usage example:
 
-python3 train.py -v dataset/Aerial dataset/None -a SVM Decision_Trees
+python3 train.py -v dataset/Aerial dataset/Zoom_in -a SVM Decision_Trees
 
 Available algorithms for traning: SVM, Decision_Trees, KNN, Adaboost,
 Extratrees, RandomForest, XGBoost
 """
-
-
+import os
+import sys
 import warnings
 import argparse
-import os
+import shutil
 import numpy as np
-import sys
 import fnmatch
 import itertools
 from pickle import dump
 from collections import Counter
+from sklearn import preprocessing
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.multiclass import OneVsRestClassifier
 from imblearn.pipeline import Pipeline
 from imblearn.over_sampling import SMOTE
 from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier, \
     RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, precision_score, \
-    recall_score, f1_score, plot_confusion_matrix, confusion_matrix
+    recall_score, f1_score, plot_confusion_matrix, confusion_matrix, \
+    roc_curve, auc, precision_recall_curve, average_precision_score    
 import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV, train_test_split
 import json
@@ -89,8 +91,12 @@ def feature_extraction(videos_path):
     return x, name_of_files, f_names
 
 def remove_features(x_all):
+    """
+    Remove features
+    :param x_all: training features
+    :return: new set of features
+    """
     #Remove colors + hsv 
-    
     delete = list(range(0,45,1))
     delete.extend(range(52,97,1))
     delete.extend(range(104,149,1))
@@ -160,9 +166,90 @@ def plot_confusion_matrix(name, cm, classes):
     plt.xlabel('Predicted label')
     plt.savefig("shot_classifier_conf_mat_" + str(name) + ".jpg")
 
+def plot_roc_curve(y_score, y_test, n_classes):
+    """
+    Plot ROC curve
+    :y_score: Predicted labels
+    :y_test: labels of test set 
+    :n_classes: Number of classes   
+    """
+    path = 'Roc_curves'
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.mkdir(path)
 
-def smote_process(x,y,classifier):
+    # Compute ROC curve and ROC area for each class
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = roc_curve(y_test[:, i], y_score[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+
+    for key,value in roc_auc.items():
+        print(key,value)
+
+    # Compute micro-average ROC curve and ROC area
+    fpr["micro"], tpr["micro"], _ = roc_curve(y_test.ravel(), y_score.ravel())
+    roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+ 
+    for i in range(n_classes):
+        plt.figure()
+        plt.plot(fpr[i], tpr[i],color='darkorange',
+                 label='ROC curve (area = %0.2f)' % roc_auc[i])
+        plt.plot([0, 1], [0, 1], 'k--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('ROC Curve for '+str(i))
+        plt.legend(loc="lower right")
+        plt.savefig('Roc_curves/Roc_curve_class_'+str(i)+'.png')
     
+def prec_rec_curve(y_score, y_test, n_classes):
+    """
+    Plot Precision-Recall curve
+    :y_score: Predicted labels
+    :y_test: labels of set y
+    :n_classes: Number of classes   
+    """
+    path = 'Precision-Recall_curves'
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.mkdir(path)
+
+    # For each class
+    precision = dict()
+    recall = dict()
+    average_precision = dict()
+    for i in range(n_classes):
+        precision[i], recall[i], _ = precision_recall_curve(y_test[:, i],
+                                                            y_score[:, i])
+        average_precision[i] = average_precision_score(y_test[:, i], y_score[:, i])
+
+    # A "micro-average": quantifying score on all classes jointly
+    precision["micro"], recall["micro"], _ = precision_recall_curve(y_test.ravel(),
+        y_score.ravel())
+    for i in range(n_classes):
+        plt.figure()
+        plt.step(recall[i], precision[i], where='post')
+
+        plt.xlabel('Recall')
+        plt.ylabel('Precision')
+        plt.ylim([0.0, 1.05])
+        plt.xlim([0.0, 1.0])
+        plt.title('Precision-Recall curve')
+
+        plt.savefig('Precision-Recall_curves/Precision-Recall-curve_class_'+str(i)+'.png')
+
+
+def smote_process(y,classifier):
+    '''
+    Create samples for minority classes with smote process
+    :param y: labels
+    :classifier: classifier for train
+    :return: Pipeline with smote and classifier
+    '''
     #Check for imbalanced classes
     counter = Counter(y)
     distribution  = dict(counter)
@@ -208,7 +295,7 @@ def Grid_Search_Process(classifier, grid_param, algorithm,  x_all, y):
     pipeline = Pipeline(steps=steps)
     '''
     #Smote process pipeline
-    pipeline = smote_process(x_all,y,classifier)
+    pipeline = smote_process(y,classifier)
 
     gd_sr = GridSearchCV(estimator=pipeline,
                          param_grid=grid_param,
@@ -315,6 +402,60 @@ def train_models(x, training_algorithms):
         y_test,y_pred = Grid_Search_Process(classifier, grid_param, algorithm, x_all, y)
         save_results(algorithm, y_test, y_pred)
 
+def train_for_roc_pr_curves(x):
+    """
+    Train process for plotting roc and precision-recall curves.
+    One hot encoding to labeled data and use OneVsRestClassifier.
+    :param x: training data
+    :return:
+    """
+    # Data preparation
+    x_all, y = data_preparation(x)
+    classes_names = list(set(y))
+    n_classes = len(classes_names)
+
+    # Use OneVsRestClassifier  
+    classifier = OneVsRestClassifier(ExtraTreesClassifier())
+
+    pipeline = smote_process(y,classifier)
+
+    #One hot encoding to labels
+    lb = preprocessing.LabelBinarizer()
+    y_binarized= lb.fit_transform(y)
+
+        
+    # Split data to train and test
+    X_train, X_test, y_train, y_test = train_test_split(x_all, y_binarized,
+                                                        test_size=0.33) 
+
+    # Define scaler
+    scaler = MinMaxScaler()
+
+    # Fit scaler on the training dataset
+    scaler.fit(X_train)
+
+    # Transform both datasets
+    X_train_scaled = scaler.transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    grid_param = {
+        'model__estimator__n_estimators': range(25, 126, 25),
+        'model__estimator__max_features': range(25, 401, 25)}
+
+    # Grid search process
+    gd_sr = GridSearchCV(estimator=pipeline,
+                         param_grid=grid_param,
+                         scoring='f1_macro',
+                         cv=5, n_jobs=-1)
+
+    y_score = gd_sr.fit(X_train_scaled,y_train).predict_proba(X_test_scaled)
+
+    #Plot roc curves
+    plot_roc_curve(y_score, y_test, n_classes)
+
+    #Plot Precision-Recall curves
+    prec_rec_curve(y_score, y_test, n_classes)    
+    
 
 if __name__ == "__main__":
     warnings.filterwarnings('ignore')
@@ -344,4 +485,7 @@ if __name__ == "__main__":
     x, name_of_files, _ = feature_extraction(videos_path)
 
     # Train the models
-    train_models(x, training_algorithms)
+    #train_models(x, training_algorithms)
+
+    #Train with different method and plot roc and precision-recall curves
+    train_for_roc_pr_curves(x)

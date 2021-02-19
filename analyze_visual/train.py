@@ -166,81 +166,51 @@ def plot_confusion_matrix(name, cm, classes):
     plt.xlabel('Predicted label')
     plt.savefig("shot_classifier_conf_mat_" + str(name) + ".jpg")
 
-def plot_roc_curve(y_score, y_test, n_classes):
+def plot_roc_curve(y_score, y_test, n_classes, name):
     """
     Plot ROC curve
     :y_score: Predicted labels
     :y_test: labels of test set 
     :n_classes: Number of classes   
     """
-    path = 'Roc_curves'
-    if os.path.exists(path):
-        shutil.rmtree(path)
-    os.mkdir(path)
 
-    # Compute ROC curve and ROC area for each class
-    fpr = dict()
-    tpr = dict()
-    roc_auc = dict()
-    for i in range(n_classes):
-        fpr[i], tpr[i], _ = roc_curve(y_test[:, i], y_score[:, i])
-        roc_auc[i] = auc(fpr[i], tpr[i])
+    # Compute ROC curve
+    fpr, tpr, _ = roc_curve(y_test, y_score)
+    roc_auc = auc(fpr, tpr)
 
-    for key,value in roc_auc.items():
-        print(key,value)
-
-    # Compute micro-average ROC curve and ROC area
-    fpr["micro"], tpr["micro"], _ = roc_curve(y_test.ravel(), y_score.ravel())
-    roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
- 
-    for i in range(n_classes):
-        plt.figure()
-        plt.plot(fpr[i], tpr[i],color='darkorange',
-                 label='ROC curve (area = %0.2f)' % roc_auc[i])
-        plt.plot([0, 1], [0, 1], 'k--')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title('ROC Curve for '+str(i))
-        plt.legend(loc="lower right")
-        plt.savefig('Roc_curves/Roc_curve_class_'+str(i)+'.png')
+    # Plot of a ROC curve
+    plt.figure()
+    plt.plot(fpr, tpr, label='ROC curve (area = %0.2f)' % roc_auc)
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Roc curve for '+str(name)+' class')
+    plt.legend(loc="lower right")
+    plt.savefig('Roc_curves/Roc_curve_'+str(name)+'.png')
     
-def prec_rec_curve(y_score, y_test, n_classes):
+def prec_rec_curve(y_score, y_test, n_classes, name):
     """
     Plot Precision-Recall curve
     :y_score: Predicted labels
     :y_test: labels of set y
     :n_classes: Number of classes   
     """
-    path = 'Precision-Recall_curves'
-    if os.path.exists(path):
-        shutil.rmtree(path)
-    os.mkdir(path)
+    # Compute Precision-Recall curve
+    precision, recall, _ = precision_recall_curve(y_test, y_score)
+    average_precision = average_precision_score(y_test, y_score)
 
-    # For each class
-    precision = dict()
-    recall = dict()
-    average_precision = dict()
-    for i in range(n_classes):
-        precision[i], recall[i], _ = precision_recall_curve(y_test[:, i],
-                                                            y_score[:, i])
-        average_precision[i] = average_precision_score(y_test[:, i], y_score[:, i])
+    #Plot PRecision-Recall curve
+    plt.figure()
+    plt.step(recall, precision, where='post')
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.ylim([0.0, 1.05])
+    plt.xlim([0.0, 1.0])
+    plt.title('Precision-Recall curve for '+str(name)+' class')
 
-    # A "micro-average": quantifying score on all classes jointly
-    precision["micro"], recall["micro"], _ = precision_recall_curve(y_test.ravel(),
-        y_score.ravel())
-    for i in range(n_classes):
-        plt.figure()
-        plt.step(recall[i], precision[i], where='post')
-
-        plt.xlabel('Recall')
-        plt.ylabel('Precision')
-        plt.ylim([0.0, 1.05])
-        plt.xlim([0.0, 1.0])
-        plt.title('Precision-Recall curve')
-
-        plt.savefig('Precision-Recall_curves/Precision-Recall-curve_class_'+str(i)+'.png')
+    plt.savefig('Precision-Recall_curves/Precision-Recall-curve_'+str(name)+'.png')
 
 
 def smote_process(y,classifier):
@@ -409,6 +379,17 @@ def train_for_roc_pr_curves(x):
     :param x: training data
     :return:
     """
+    #Create directories to save plots
+    path = 'Roc_curves'
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.mkdir(path)
+
+    path = 'Precision-Recall_curves'
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.mkdir(path)
+
     # Data preparation
     x_all, y = data_preparation(x)
     classes_names = list(set(y))
@@ -417,15 +398,11 @@ def train_for_roc_pr_curves(x):
     # Use OneVsRestClassifier  
     classifier = OneVsRestClassifier(ExtraTreesClassifier())
 
+    #Create pipeline for smote
     pipeline = smote_process(y,classifier)
 
-    #One hot encoding to labels
-    lb = preprocessing.LabelBinarizer()
-    y_binarized= lb.fit_transform(y)
-
-        
     # Split data to train and test
-    X_train, X_test, y_train, y_test = train_test_split(x_all, y_binarized,
+    X_train, X_test, y_train, y_test = train_test_split(x_all, y,
                                                         test_size=0.33) 
 
     # Define scaler
@@ -450,11 +427,24 @@ def train_for_roc_pr_curves(x):
 
     y_score = gd_sr.fit(X_train_scaled,y_train).predict_proba(X_test_scaled)
 
-    #Plot roc curves
-    plot_roc_curve(y_score, y_test, n_classes)
+    y_pos_label = []
 
-    #Plot Precision-Recall curves
-    prec_rec_curve(y_score, y_test, n_classes)    
+    p = 0
+    for name in gd_sr.classes_:
+        for i in y_test:
+            if i == name:
+                y_pos_label.append(1)
+            else:
+                y_pos_label.append(0)
+        print(name)
+        #Plot roc curves
+        plot_roc_curve(y_score[:,p], y_pos_label, n_classes, name)
+        #Plot Precision-Recall curves
+        prec_rec_curve(y_score[:,p], y_pos_label, n_classes, name)  
+        
+        y_pos_label.clear()
+        p+=1
+    
     
 
 if __name__ == "__main__":
@@ -485,7 +475,7 @@ if __name__ == "__main__":
     x, name_of_files, _ = feature_extraction(videos_path)
 
     # Train the models
-    train_models(x, training_algorithms)
+    #train_models(x, training_algorithms)
 
     #Train with different method and plot roc and precision-recall curves
     train_for_roc_pr_curves(x)

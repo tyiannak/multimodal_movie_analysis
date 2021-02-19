@@ -485,7 +485,7 @@ if __name__ == "__main__":
     x, name_of_files, _ = feature_extraction(videos_path)
 
     # Train the models
-    #train_models(x, training_algorithms)
+    train_models(x, training_algorithms)
 
     #Train with different method and plot roc and precision-recall curves
     train_for_roc_pr_curves(x)

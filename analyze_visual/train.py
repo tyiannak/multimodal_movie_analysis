@@ -151,7 +151,7 @@ def plot_confusion_matrix(name, cm, classes):
     plt.title('Confusion matrix')
     plt.colorbar()
     tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
+    plt.xticks(tick_marks, classes, rotation=90)
     plt.yticks(tick_marks, classes)
 
     fmt = 'd'
@@ -199,7 +199,6 @@ def prec_rec_curve(y_score, y_test, n_classes, name):
     """
     # Compute Precision-Recall curve
     precision, recall, _ = precision_recall_curve(y_test, y_score)
-    average_precision = average_precision_score(y_test, y_score)
 
     #Plot PRecision-Recall curve
     plt.figure()
@@ -288,7 +287,13 @@ def Grid_Search_Process(classifier, grid_param, algorithm,  x_all, y):
     print(conf_mat)
     np.set_printoptions(precision=2)
 
+    #Plot confusion matrix
     plot_confusion_matrix(str(algorithm), conf_mat, classes=class_labels)
+
+    y_pred_proba = gd_sr.best_estimator_.predict_proba(X_test_scaled)
+
+    #Prepare data and plot roc, precision-recall cruves
+    roc_pr_curves_prep(gd_sr, y_pred_proba, y_test)
     
     
     return y_test, y_pred   
@@ -372,10 +377,9 @@ def train_models(x, training_algorithms):
         y_test,y_pred = Grid_Search_Process(classifier, grid_param, algorithm, x_all, y)
         save_results(algorithm, y_test, y_pred)
 
-def train_for_roc_pr_curves(x):
+def roc_pr_curves_prep(gd_sr, y_score, y_test):
     """
-    Train process for plotting roc and precision-recall curves.
-    One hot encoding to labeled data and use OneVsRestClassifier.
+    Prepate data for plotting roc and precision-recall curves.
     :param x: training data
     :return:
     """
@@ -390,42 +394,9 @@ def train_for_roc_pr_curves(x):
         shutil.rmtree(path)
     os.mkdir(path)
 
-    # Data preparation
-    x_all, y = data_preparation(x)
-    classes_names = list(set(y))
+    classes_names = list(set(y_test))
     n_classes = len(classes_names)
-
-    # Use OneVsRestClassifier  
-    classifier = OneVsRestClassifier(ExtraTreesClassifier())
-
-    #Create pipeline for smote
-    pipeline = smote_process(y,classifier)
-
-    # Split data to train and test
-    X_train, X_test, y_train, y_test = train_test_split(x_all, y,
-                                                        test_size=0.33) 
-
-    # Define scaler
-    scaler = MinMaxScaler()
-
-    # Fit scaler on the training dataset
-    scaler.fit(X_train)
-
-    # Transform both datasets
-    X_train_scaled = scaler.transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
-
-    grid_param = {
-        'model__estimator__n_estimators': range(25, 126, 25),
-        'model__estimator__max_features': range(25, 401, 25)}
-
-    # Grid search process
-    gd_sr = GridSearchCV(estimator=pipeline,
-                         param_grid=grid_param,
-                         scoring='f1_macro',
-                         cv=5, n_jobs=-1)
-
-    y_score = gd_sr.fit(X_train_scaled,y_train).predict_proba(X_test_scaled)
+    print(classes_names, n_classes)
 
     y_pos_label = []
 
@@ -444,8 +415,6 @@ def train_for_roc_pr_curves(x):
         y_pos_label.clear()
         p+=1
     
-    
-
 if __name__ == "__main__":
     warnings.filterwarnings('ignore')
 
@@ -474,7 +443,4 @@ if __name__ == "__main__":
     x, name_of_files, _ = feature_extraction(videos_path)
 
     # Train the models
-    #train_models(x, training_algorithms)
-
-    #Train with different method and plot roc and precision-recall curves
-    train_for_roc_pr_curves(x)
+    train_models(x, training_algorithms)

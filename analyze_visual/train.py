@@ -173,7 +173,6 @@ def plot_roc_curve(y_score, y_test, n_classes, name):
     :y_test: labels of test set 
     :n_classes: Number of classes   
     """
-
     # Compute ROC curve
     fpr, tpr, _ = roc_curve(y_test, y_score)
     roc_auc = auc(fpr, tpr)
@@ -380,8 +379,9 @@ def train_models(x, training_algorithms):
 def roc_pr_curves_prep(gd_sr, y_score, y_test):
     """
     Prepate data for plotting roc and precision-recall curves.
-    :param x: training data
-    :return:
+    :param gd_sr: grid search
+    :y_score: predicted labels
+    :y_test: labels
     """
     #Create directories to save plots
     path = 'Roc_curves'
@@ -394,12 +394,13 @@ def roc_pr_curves_prep(gd_sr, y_score, y_test):
         shutil.rmtree(path)
     os.mkdir(path)
 
+    #Save the number of classes
     classes_names = list(set(y_test))
     n_classes = len(classes_names)
-    print(classes_names, n_classes)
 
     y_pos_label = []
 
+    #One hot encoding
     p = 0
     for name in gd_sr.classes_:
         for i in y_test:

@@ -542,7 +542,11 @@ def get_features_stats(feature_matrix):
                                              shape[0])::,
                                        :]
     f_mu10top = feature_matrix_sorted_rows_top10.mean(axis=0)
-    features_stats = np.concatenate((f_mu, f_std, f_stdmu, f_mu10top), axis=1)
+
+    f_diff_mean = (feature_matrix[:, 1:] - feature_matrix[:, 0:-1]).mean(axis=0)
+    f_diff_std = (feature_matrix[:, 1:] - feature_matrix[:, 0:-1]).std(axis=0)
+
+    features_stats = np.concatenate((f_mu, f_std, f_stdmu, f_mu10top, f_diff_mean, f_diff_std), axis=1)
     features_stats = np.squeeze(np.asarray(features_stats))
 
     return features_stats
@@ -630,6 +634,8 @@ def get_features_names(process_mode, which_object_categories):
         feature_stats_names += ['std_' + name for name in feature_names]
         feature_stats_names += ['stdmean_' + name for name in feature_names]
         feature_stats_names += ['mean10top_' + name for name in feature_names]
+        feature_stats_names += ['diff_mean' + name for name in feature_names]
+        feature_stats_names += ['diff_std' + name for name in feature_names]
 
         if which_object_categories > 0:
             category_names = ['person', 'vehicle', 'outdoor', 'animal',

@@ -91,7 +91,7 @@ def data_preparation(x):
     :param x: exracted features from videos
     :return: features and labels
     """
-    x_all = np.empty((0, 244), float)
+    x_all = np.empty((0, 346), float)
     y = []
 
     for key, value in x.items():
@@ -145,6 +145,11 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
 
     X_train, X_test, y_train, y_test = train_test_split(x_all, y,
                                                         test_size=0.33)
+    print(X_train.shape, X_test.shape)
+    from imblearn.over_sampling import SMOTE
+    smt = SMOTE(random_state=0)
+    X_train, y_train = smt.fit_sample(X_train, y_train)
+    print(X_train.shape, X_test.shape)
 
     # Define scaler
     scaler = MinMaxScaler()

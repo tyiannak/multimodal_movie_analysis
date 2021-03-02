@@ -91,18 +91,21 @@ def data_preparation(x):
     :param x: exracted features from videos
     :return: features and labels
     """
-    x_all = np.empty((0, 346), float)
     y = []
-
+    count_classes = 0
     for key, value in x.items():
-        x_all = np.append(x_all,value,axis=0)
+        if count_classes == 0:
+            x_all = value
+        else:
+            x_all = np.append(x_all, value, axis=0)
+        count_classes += 1
         for i in range(value.shape[0]):
-            y.append(str(key))   
+            y.append(str(key))
     # Convert format of labels
     for i, label in enumerate(y):
         splitting = label.split('/')
         label = splitting[-1]
-        y[i]=label
+        y[i] = label
     return x_all, y
 
 

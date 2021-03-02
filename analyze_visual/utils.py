@@ -370,10 +370,13 @@ def color_analysis(feature_vector_old, rgb):
     hist_s = hist_s / np.sum(hist_s)
 
     # update the current feature vector
+#    feature_vector_new = np.concatenate(
+#        (feature_vector_old, hist_r, hist_g,
+#         hist_b, hist_v, hist_rgb_ratio, hist_s),
+#        0)
     feature_vector_new = np.concatenate(
-        (feature_vector_old, hist_r, hist_g,
-         hist_b, hist_v, hist_rgb_ratio, hist_s),
-        0)
+            (feature_vector_old, hist_v, hist_rgb_ratio, hist_s),
+            0)
 
     return feature_vector_new, hist_rgb_ratio, hist_s, hist_v, v_norm, s_norm
 
@@ -594,18 +597,18 @@ def display_time(dur_secs, fps_process, t_process, t_0,
 
 def get_features_names(process_mode, which_object_categories):
     feature_names = []
-    hist_r = 'hist_r'
-    hist_g = 'hist_g'
-    hist_b = 'hist_b'
+#    hist_r = 'hist_r'
+#    hist_g = 'hist_g'
+#    hist_b = 'hist_b'
     hist_v = 'hist_v'
     hist_rgb_ratio = 'hist_rgb'
     hist_s = 'hist_s'
-    for i in range(0, 8):
-        feature_names.append(hist_r + '{}'.format(i))
-    for i in range(0, 8):
-        feature_names.append(hist_g + '{}'.format(i))
-    for i in range(0, 8):
-        feature_names.append(hist_b + '{}'.format(i))
+#    for i in range(0, 8):
+#        feature_names.append(hist_r + '{}'.format(i))
+#    for i in range(0, 8):
+#        feature_names.append(hist_g + '{}'.format(i))
+#    for i in range(0, 8):
+#        feature_names.append(hist_b + '{}'.format(i))
     for i in range(0, 8):
         feature_names.append(hist_v + '{}'.format(i))
     for i in range(0, 5):

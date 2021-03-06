@@ -370,13 +370,14 @@ def color_analysis(feature_vector_old, rgb):
     hist_s = hist_s / np.sum(hist_s)
 
     # update the current feature vector
-#    feature_vector_new = np.concatenate(
-#        (feature_vector_old, hist_r, hist_g,
-#         hist_b, hist_v, hist_rgb_ratio, hist_s),
-#        0)
     feature_vector_new = np.concatenate(
-            (feature_vector_old, hist_v, hist_rgb_ratio, hist_s),
-            0)
+        (feature_vector_old, hist_r, hist_g,
+         hist_b, hist_v, hist_rgb_ratio, hist_s),
+        0)
+# use this instead to disable RGB features
+#    feature_vector_new = np.concatenate(
+#            (feature_vector_old, hist_v, hist_rgb_ratio, hist_s),
+#            0)
 
     return feature_vector_new, hist_rgb_ratio, hist_s, hist_v, v_norm, s_norm
 

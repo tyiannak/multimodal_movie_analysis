@@ -9,8 +9,8 @@ process_step = 0.2
 plot_step = 2
 
 # face detection-related paths:
-HAAR_CASCADE_PATH_FRONTAL = "haarcascade_frontalface_default.xml"
-HAAR_CASCADE_PATH_PROFILE = "haarcascade_frontalface_default.xml"
+HAAR_CASCADE_PATH_FRONTAL =  cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+HAAR_CASCADE_PATH_PROFILE =  cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 
 # flow-related parameters:
 lk_params = dict(winSize=(15, 15),

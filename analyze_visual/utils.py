@@ -374,6 +374,10 @@ def color_analysis(feature_vector_old, rgb):
         (feature_vector_old, hist_r, hist_g,
          hist_b, hist_v, hist_rgb_ratio, hist_s),
         0)
+# use this instead to disable RGB features
+#    feature_vector_new = np.concatenate(
+#            (feature_vector_old, hist_v, hist_rgb_ratio, hist_s),
+#            0)
 
     return feature_vector_new, hist_rgb_ratio, hist_s, hist_v, v_norm, s_norm
 
@@ -542,7 +546,11 @@ def get_features_stats(feature_matrix):
                                              shape[0])::,
                                        :]
     f_mu10top = feature_matrix_sorted_rows_top10.mean(axis=0)
-    features_stats = np.concatenate((f_mu, f_std, f_stdmu, f_mu10top), axis=1)
+
+    f_diff_mean = (feature_matrix[:, 1:] - feature_matrix[:, 0:-1]).mean(axis=0)
+    f_diff_std = (feature_matrix[:, 1:] - feature_matrix[:, 0:-1]).std(axis=0)
+
+    features_stats = np.concatenate((f_mu, f_std, f_stdmu, f_mu10top, f_diff_mean, f_diff_std), axis=1)
     features_stats = np.squeeze(np.asarray(features_stats))
 
     return features_stats
@@ -590,18 +598,18 @@ def display_time(dur_secs, fps_process, t_process, t_0,
 
 def get_features_names(process_mode, which_object_categories):
     feature_names = []
-    hist_r = 'hist_r'
-    hist_g = 'hist_g'
-    hist_b = 'hist_b'
+#    hist_r = 'hist_r'
+#    hist_g = 'hist_g'
+#    hist_b = 'hist_b'
     hist_v = 'hist_v'
     hist_rgb_ratio = 'hist_rgb'
     hist_s = 'hist_s'
-    for i in range(0, 8):
-        feature_names.append(hist_r + '{}'.format(i))
-    for i in range(0, 8):
-        feature_names.append(hist_g + '{}'.format(i))
-    for i in range(0, 8):
-        feature_names.append(hist_b + '{}'.format(i))
+#    for i in range(0, 8):
+#        feature_names.append(hist_r + '{}'.format(i))
+#    for i in range(0, 8):
+#        feature_names.append(hist_g + '{}'.format(i))
+#    for i in range(0, 8):
+#        feature_names.append(hist_b + '{}'.format(i))
     for i in range(0, 8):
         feature_names.append(hist_v + '{}'.format(i))
     for i in range(0, 5):
@@ -630,6 +638,8 @@ def get_features_names(process_mode, which_object_categories):
         feature_stats_names += ['std_' + name for name in feature_names]
         feature_stats_names += ['stdmean_' + name for name in feature_names]
         feature_stats_names += ['mean10top_' + name for name in feature_names]
+        feature_stats_names += ['diff_mean' + name for name in feature_names]
+        feature_stats_names += ['diff_std' + name for name in feature_names]
 
         if which_object_categories > 0:
             category_names = ['person', 'vehicle', 'outdoor', 'animal',

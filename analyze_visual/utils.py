@@ -534,7 +534,7 @@ def get_features_stats(feature_matrix):
     Calculates statistics on features over time
     and puts them to the feature stats vector.
     """
-
+    print(feature_matrix.shape)
     f_mu = feature_matrix.mean(axis=0)
     f_std = feature_matrix.std(axis=0)
     f_stdmu = feature_matrix.std(axis=0) \
@@ -547,10 +547,12 @@ def get_features_stats(feature_matrix):
                                        :]
     f_mu10top = feature_matrix_sorted_rows_top10.mean(axis=0)
 
-    f_diff_mean = (feature_matrix[:, 1:] - feature_matrix[:, 0:-1]).mean(axis=0)
-    f_diff_std = (feature_matrix[:, 1:] - feature_matrix[:, 0:-1]).std(axis=0)
+    diff = feature_matrix[1:, :] - feature_matrix[0:-1, :]
+    f_diff_mean = diff.mean(axis=0)
+    f_diff_std = diff.std(axis=0)
 
-    features_stats = np.concatenate((f_mu, f_std, f_stdmu, f_mu10top, f_diff_mean, f_diff_std), axis=1)
+    features_stats = np.concatenate((f_mu, f_std, f_stdmu, f_mu10top,
+                                     f_diff_mean, f_diff_std), axis=1)
     features_stats = np.squeeze(np.asarray(features_stats))
 
     return features_stats
@@ -598,18 +600,18 @@ def display_time(dur_secs, fps_process, t_process, t_0,
 
 def get_features_names(process_mode, which_object_categories):
     feature_names = []
-#    hist_r = 'hist_r'
-#    hist_g = 'hist_g'
-#    hist_b = 'hist_b'
+    hist_r = 'hist_r'
+    hist_g = 'hist_g'
+    hist_b = 'hist_b'
     hist_v = 'hist_v'
     hist_rgb_ratio = 'hist_rgb'
     hist_s = 'hist_s'
-#    for i in range(0, 8):
-#        feature_names.append(hist_r + '{}'.format(i))
-#    for i in range(0, 8):
-#        feature_names.append(hist_g + '{}'.format(i))
-#    for i in range(0, 8):
-#        feature_names.append(hist_b + '{}'.format(i))
+    for i in range(0, 8):
+        feature_names.append(hist_r + '{}'.format(i))
+    for i in range(0, 8):
+        feature_names.append(hist_g + '{}'.format(i))
+    for i in range(0, 8):
+        feature_names.append(hist_b + '{}'.format(i))
     for i in range(0, 8):
         feature_names.append(hist_v + '{}'.format(i))
     for i in range(0, 5):

@@ -62,9 +62,9 @@ the following 88 visual features are extracted:
     * appliance
     * indoor
 
-In addition, `process_video()` computes and returns video-level statistics of the 
-above non-object features. In particular, mean, std, median by std ratio and top-10 average 
-are computed for each of the 52 non-object features for the whole video. 
+In addition, `process_video()` computes and returns six (6) video-level statistics of the 
+above non-object features. In particular, mean, std, median by std ratio, top-10 percentile, 
+mean of the delta features and std of the delta features are computed for each of the 52 non-object features for the whole video. 
 As for the object detection, the frame-level predictions are post processed under 
 local time widnows with two different ways: 
 (i) the object frame-level confidences are smoothed across time windows in 
@@ -73,8 +73,7 @@ order to increase the accuracy of the predictions and
  of subsequent frames, is excluded from the final feature vector. However, 
  this smoothing procedure is the only post-processing performed on the object-related features: 
  no other statistics are extracted for the whole video, other than the object features' simple averages.
-This process therefore results to 52x4 + 36 = 244 feature statistics 
-that describe the whole video.
+This process therefore results to 52x6 + 36 = 348 feature statistics that describe the whole video.
 
 To sum up `process_video()` returns five arguments: 
  * the 244 feature vector of the whole video (as a numpy array)

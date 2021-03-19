@@ -151,7 +151,7 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
     print(X_train.shape, X_test.shape)
     from imblearn.over_sampling import SMOTE
     smt = SMOTE(random_state=0)
-    X_train, y_train = smt.fit_sample(X_train, y_train)
+    X_train, y_train = smt.fit_resample(X_train, y_train)
     print(X_train.shape, X_test.shape)
 
     # Define scaler

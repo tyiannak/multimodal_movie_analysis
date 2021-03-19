@@ -51,7 +51,7 @@ def crop_dir(dir_name):
 def main(argv):
     if len(argv) == 3:
         if argv[1] == "-f":
-            _, _, shot_change_t = process_video(argv[2], 2, True, True)
+            _, _, _, _, shot_change_t = process_video(argv[2], 2, True, True)
             crop_shots(argv[2],shot_change_t)
             print(shot_change_t)
         elif argv[1] == "-d":  # directory

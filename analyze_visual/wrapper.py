@@ -13,6 +13,7 @@ Extratrees, RandomForest
 import sys
 import argparse
 import os.path
+import numpy as np
 from pickle import load
 sys.path.insert(0, '..')
 from analyze_visual.analyze_visual import process_video

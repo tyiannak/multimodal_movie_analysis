@@ -79,7 +79,8 @@ def main(argv):
         # Predict the classes of shots
         probas, classes = video_class_predict(features, algorithm)
         for class_name, proba in zip(classes, probas):
-            print(f'Video {videos_path} belongs by {proba} in {class_name} class')
+            print(f'Video {videos_path} belongs by '
+                  f'{proba} in {class_name} class')
     elif os.path.isdir(videos_path):
         import glob
         types = ('*.avi', '*.mpeg', '*.mpg', '*.mp4', '*.mkv', '*.webm')
@@ -97,13 +98,18 @@ def main(argv):
             #Save results of every video in a text file
             with open(str(videos_path)+".txt", "a") as text_file:
                 for class_name, proba in zip(classes, probas):
-                    print(f'Video {v} belongs by {proba} in {class_name} class', file=text_file)  
+                    print(f'Video {v} belongs by {proba} in {class_name} class',
+                          file=text_file)
         final_proba=final_proba.mean(axis=0)
         #Print and save the final results
         with open(str(videos_path)+".txt", "a") as text_file:
             for class_name, proba in zip(classes, final_proba):
-                print(f'The movie {videos_path} belongs by {"{:.2%}".format(proba)} in {class_name} class', file=text_file)
-                print(f'The movie {videos_path} belongs by {"{:.2%}".format(proba)} in {class_name} class')   
+                print(f'The movie {videos_path} belongs by '
+                      f'{"{:.2%}".format(proba)} '
+                      f'in {class_name} class', file=text_file)
+                print(f'The movie {videos_path} '
+                      f'belongs by {"{:.2%}".format(proba)} '
+                      f'in {class_name} class')
 
 
 if __name__ == '__main__':

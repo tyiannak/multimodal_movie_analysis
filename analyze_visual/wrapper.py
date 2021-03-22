@@ -68,7 +68,8 @@ def main(argv):
     args = parse_arguments()
     videos_path = args.input_videos_path
     algorithm = args.model
-    final_proba = np.empty((0, 2))
+    model = load(open('shot_classifier_' + str(algorithm)+'.pkl', 'rb'))
+    final_proba = np.empty((0, len(model.classes_)))
         if os.path.exists(str(videos_path)+".txt"):
         os.remove(str(videos_path)+".txt")
     if os.path.isfile(videos_path):

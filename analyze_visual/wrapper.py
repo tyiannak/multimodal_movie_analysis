@@ -70,7 +70,7 @@ def main(argv):
     algorithm = args.model
     model = load(open('shot_classifier_' + str(algorithm)+'.pkl', 'rb'))
     final_proba = np.empty((0, len(model.classes_)))
-        if os.path.exists(str(videos_path)+".txt"):
+    if os.path.exists(str(videos_path)+".txt"):
         os.remove(str(videos_path)+".txt")
     if os.path.isfile(videos_path):
         features_stats = process_video(videos_path, 2, True, True, True)

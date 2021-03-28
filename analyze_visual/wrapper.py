@@ -4,7 +4,7 @@ The input can be single video or directory.
 
 Usage example:
 
-python3 wrapper.py -i dataset/Panoramic/trump.mp4 -m SVM
+python3 wrapper.py -i dataset/Panoramic/trump.mp4 -m SVM -o output_file.csv
 
 Available algorithms to use: SVM, Decision_Trees, KNN, Adaboost,
 Extratrees, RandomForest
@@ -14,6 +14,7 @@ import sys
 import argparse
 import os.path
 import numpy as np
+import pandas as pd
 from pickle import load
 sys.path.insert(0, '..')
 from analyze_visual.analyze_visual import process_video
@@ -32,15 +33,54 @@ def parse_arguments():
     parser.add_argument("-m", "--model", required=True, nargs=None,
                         help="Model")
 
+    parser.add_argument("-o", "--output_file", required=True, nargs=None,
+                        help="Output file with results")
+
     return parser.parse_args()
 
+def create_dataframe(names):
+    """
+    Create an emtry dataframe with named columns
+    :param name: names of classes
+    :return: dataframe
+    """
+    # Create Dataframe
+    names = names.tolist() 
+    df = pd.DataFrame(columns=names)
+    df.insert(0,'File_name', value = [])
+
+    return df
+
+def save_results(df, name, classes, probas):
+    """
+    Fill the dataframe with values
+    :param df: dataframe
+    :name: name of file
+    :classes: names of classes
+    :probas: posteriors probability of every class
+    :return: dataframe
+    """
+    #Convert format of file names
+    splitting = name.split('/')
+    name = splitting[-1]
+
+    #Insert values to dataframe
+    df = df.append({'File_name':name}, ignore_index=True)
+
+    for class_name, proba in zip(classes, probas):
+        for col in df.columns:
+            if class_name == col:
+                df[col] = proba
+
+    return df
 
 def video_class_predict(features, algorithm):
     """
     Loads pre-trained model and predict single shot's class
     :param features: features
     :algorithm: Training algorithm
-    :return:    
+    :return probas: posterior probability of every class
+    :classes: names of classes    
     """
 
     # Load the model
@@ -68,8 +108,10 @@ def main(argv):
     args = parse_arguments()
     videos_path = args.input_videos_path
     algorithm = args.model
+    file_name = args.output_file
     model = load(open('shot_classifier_' + str(algorithm)+'.pkl', 'rb'))
     final_proba = np.empty((0, len(model.classes_)))
+    df = create_dataframe(model.classes_)   
     if os.path.exists(str(videos_path)+".txt"):
         os.remove(str(videos_path)+".txt")
     if os.path.isfile(videos_path):
@@ -95,11 +137,11 @@ def main(argv):
             probas, classes = video_class_predict(features, algorithm)
             #Save the resuls in a numpy array
             final_proba = np.append(final_proba,[probas],axis=0)
-            #Save results of every video in a text file
-            with open(str(videos_path)+".txt", "a") as text_file:
-                for class_name, proba in zip(classes, probas):
-                    print(f'Video {v} belongs by {proba} in {class_name} class',
-                          file=text_file)
+            #Create dataframe
+            df = save_results(df, v, classes, probas)
+        #Save values to csv
+        df.to_csv(file_name)
+
         final_proba=final_proba.mean(axis=0)
         #Print and save the final results
         with open(str(videos_path)+".txt", "a") as text_file:
@@ -110,7 +152,7 @@ def main(argv):
                 print(f'The movie {videos_path} '
                       f'belongs by {"{:.2%}".format(proba)} '
                       f'in {class_name} class')
-
+ 
 
 if __name__ == '__main__':
     main(sys.argv)

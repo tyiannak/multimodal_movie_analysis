@@ -16,6 +16,7 @@ import os.path
 import numpy as np
 import pandas as pd
 from pickle import load
+import glob
 sys.path.insert(0, '..')
 from analyze_visual.analyze_visual import process_video
 
@@ -38,6 +39,7 @@ def parse_arguments():
 
     return parser.parse_args()
 
+
 def create_dataframe(names):
     """
     Create an emtry dataframe with named columns
@@ -51,6 +53,7 @@ def create_dataframe(names):
 
     return df
 
+
 def save_results(df, name, classes, probas):
     """
     Fill the dataframe with values
@@ -60,11 +63,11 @@ def save_results(df, name, classes, probas):
     :probas: posteriors probability of every class
     :return: dataframe
     """
-    #Convert format of file names
+    # Convert format of file names
     splitting = name.split('/')
     name = splitting[-1]
 
-    #Insert values to dataframe
+    # Insert values to dataframe
     df = df.append({'File_name':name}, ignore_index=True)
 
     for class_name, proba in zip(classes, probas):
@@ -73,6 +76,7 @@ def save_results(df, name, classes, probas):
                 df[col] = proba
 
     return df
+
 
 def video_class_predict(features, algorithm):
     """
@@ -124,7 +128,6 @@ def main(argv):
             print(f'Video {videos_path} belongs by '
                   f'{proba} in {class_name} class')
     elif os.path.isdir(videos_path):
-        import glob
         types = ('*.avi', '*.mpeg', '*.mpg', '*.mp4', '*.mkv', '*.webm')
         video_files_list = []
         for files in types:
@@ -135,15 +138,15 @@ def main(argv):
             features = features_stats[0]
             features = features.reshape(1, -1)
             probas, classes = video_class_predict(features, algorithm)
-            #Save the resuls in a numpy array
+            # Save the resuls in a numpy array
             final_proba = np.append(final_proba,[probas],axis=0)
-            #Create dataframe
+            # Create dataframe
             df = save_results(df, v, classes, probas)
-        #Save values to csv
+        # Save values to csv
         df.to_csv(file_name)
 
         final_proba=final_proba.mean(axis=0)
-        #Print and save the final results
+        # Print and save the final results
         with open(str(videos_path)+".txt", "a") as text_file:
             for class_name, proba in zip(classes, final_proba):
                 print(f'The movie {videos_path} belongs by '

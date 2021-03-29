@@ -4,16 +4,19 @@ This script takes a video file and generates video files based on shots.
 Usage example:
 
 for single file:
-python3 wrapper.py -f dataset/data/trump.mp4
+python3 shot_generator.py -f dataset/data/trump.mp4
 
 for directory:
-python3 wrapper.py -d dataset/data
+python3 shot_generator.py -d dataset/data
 """
 
-from analyze_visual import *
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 import os
 import os.path
+import sys
+import glob
+sys.path.insert(0, '..')
+from analyze_visual.analyze_visual import process_video
 
 def crop_shots(video_path, shot_change_times):
     """
@@ -62,7 +65,7 @@ def crop_dir(dir_name):
 def main(argv):
     if len(argv) == 3:
         if argv[1] == "-f":
-             _, _, _, _, shot_change_t = process_video(argv[2], 2, True, True)
+            _, _, _, _, shot_change_t = process_video(argv[2], 2, True, True)
             crop_shots(argv[2],shot_change_t)
             print(shot_change_t)
         elif argv[1] == "-d":  # directory

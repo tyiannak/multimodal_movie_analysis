@@ -1,15 +1,28 @@
 """
-TODO
+This script takes a video file and generates video files based on shots. 
+
+Usage example:
+
+for single file:
+python3 shot_generator.py -f dataset/data/trump.mp4
+
+for directory:
+python3 shot_generator.py -d dataset/data
 """
 
-from analyze_visual import *
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 import os
 import os.path
+import sys
+import glob
+sys.path.insert(0, '..')
+from analyze_visual.analyze_visual import process_video
 
 def crop_shots(video_path, shot_change_times):
     """
-    TODO
+    Crop video based on given timestamps
+    :param video_path: path of video
+    :shot_change_times: timestamps
     """
     for index in range(0, len(shot_change_times)):
         shot_change_times = [int(i) for i in shot_change_times]
@@ -32,7 +45,8 @@ def crop_shots(video_path, shot_change_times):
 
 def crop_dir(dir_name):
     """
-    TODO
+    Crop directory videos based on given timestamps
+    :param dir_name: path of difectory
     """
     shot_change_t = []
     types = ('*.avi', '*.mpeg', '*.mpg', '*.mp4', '*.mkv')
@@ -51,7 +65,7 @@ def crop_dir(dir_name):
 def main(argv):
     if len(argv) == 3:
         if argv[1] == "-f":
-            _, _, shot_change_t = process_video(argv[2], 2, True, True)
+            _, _, _, _, shot_change_t = process_video(argv[2], 2, True, True)
             crop_shots(argv[2],shot_change_t)
             print(shot_change_t)
         elif argv[1] == "-d":  # directory

@@ -230,7 +230,7 @@ def train_models(x, training_algorithms):
 
     for algorithm in training_algorithms:
         if algorithm == 'SVM':
-            classifier = SVC()
+            classifier = SVC(probability=True)
             grid_param = {
               'C': [0.1, 0.5, 1, 2, 5, 10, 100],
               'kernel': ['rbf']}

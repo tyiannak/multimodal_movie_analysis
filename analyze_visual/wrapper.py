@@ -101,24 +101,21 @@ def clustering(videos_path, model, algorithm,
 
     features_all= []
     final_df = create_dataframe(model.classes_)
-    features = np.empty((0, len(model.classes_)))
-    for video in videos_path:
 
-        f, c, ft, df = video_class_predict_folder(video, model, algorithm,
+    for movie in videos_path:
+
+        f, c, ft, df = video_class_predict_folder(movie, model, algorithm,
                                 outfilename)
         features_all.append(ft)
         final_df = final_df.append(df, ignore_index=True)
 
         print(f,c)
-        
+    
     final_df.to_csv(outfilename)
-    #Convert to list of lists
-    for i in range(2):
-        features_all = [item for sublist in features_all for item in sublist]
 
     #Convert list of lists to numpy array
     features = np.array(features_all)
-
+    
     # Define scaler
     scaler = MinMaxScaler()
 
@@ -135,10 +132,9 @@ def clustering(videos_path, model, algorithm,
     yhat = model.predict(scaled_features)
 
     with open("cluster_prediction.txt", "w") as output:
-        output.write(str(yhat))
-
-    print(yhat)
-
+        for movie,y in zip(videos_path,yhat):
+            print(f'{movie} : {y}',file = output)
+        
     clusters = unique(yhat)
 
     for cluster in clusters:
@@ -149,7 +145,7 @@ def clustering(videos_path, model, algorithm,
 
     # show the plot
     pyplot.savefig('plot_clusters.png')
-
+    
 
 def video_class_predict_folder(videos_path, model, algorithm,
                                outfilename):
@@ -188,6 +184,7 @@ def video_class_predict_folder(videos_path, model, algorithm,
             features_stats = process_video(v, 2, True, True, True)
             features = features_stats[0]
             features = features.reshape(1, -1)
+            features = features.tolist()
             features_all.append(features)
             probas, classes = video_class_predict(features, algorithm)           
             # Save the resuls in a numpy array
@@ -197,7 +194,8 @@ def video_class_predict_folder(videos_path, model, algorithm,
             v = splitting[-1]
             # Insert values to dataframe
             df = df.append({'File_name': v}, ignore_index=True)
-
+        for i in range(2):
+            features_all = [item for sublist in features_all for item in sublist]
         for i, class_name in enumerate(classes):
             df[class_name] = final_proba[:, i]
         # Save results to csv

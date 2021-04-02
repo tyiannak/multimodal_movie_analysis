@@ -88,63 +88,6 @@ def video_class_predict(features, algorithm):
 
     return probas, classes
 
-def clustering(videos_path, model, algorithm,
-                               outfilename):
-    """
-    Clustering process
-    :param videos_path: path to video directory of filename to be analyzed
-    :param model: path name of the model
-    :param algorithm: type of the modelling algorithm (e.g. SVM)
-    :param outfilename: output csv filename (only for input folder)
-    :return:
-    """
-
-    features_all= []
-    final_df = create_dataframe(model.classes_)
-
-    for movie in videos_path:
-
-        f, c, ft, df = video_class_predict_folder(movie, model, algorithm,
-                                outfilename)
-        features_all.append(ft)
-        final_df = final_df.append(df, ignore_index=True)
-
-        print(f,c)
-    
-    final_df.to_csv(outfilename)
-
-    #Convert list of lists to numpy array
-    features = np.array(features_all)
-    
-    # Define scaler
-    scaler = MinMaxScaler()
-
-    # Fit scaler on the training dataset
-    scaler.fit(features)
-
-    # Transform both datasets
-    scaled_features = scaler.transform(features)
-
-    model = KMeans(n_clusters=len(videos_path))
-
-    model.fit(scaled_features)
-
-    yhat = model.predict(scaled_features)
-
-    with open("cluster_prediction.txt", "w") as output:
-        for movie,y in zip(videos_path,yhat):
-            print(f'{movie} : {y}',file = output)
-        
-    clusters = unique(yhat)
-
-    for cluster in clusters:
-        # get row indexes for samples with this cluster
-        row_ix = where(yhat == cluster)
-        # create scatter of these samples
-        pyplot.scatter(scaled_features[row_ix, 0], scaled_features[row_ix, 1])
-
-    # show the plot
-    pyplot.savefig('plot_clusters.png')
     
 
 def video_class_predict_folder(videos_path, model, algorithm,
@@ -157,7 +100,7 @@ def video_class_predict_folder(videos_path, model, algorithm,
     :param outfilename: output csv filename (only for input folder)
     :return:
     """
-    features_all = []
+
     final_proba = np.empty((0, len(model.classes_)))
     df = create_dataframe(model.classes_)
     
@@ -184,8 +127,6 @@ def video_class_predict_folder(videos_path, model, algorithm,
             features_stats = process_video(v, 2, True, True, True)
             features = features_stats[0]
             features = features.reshape(1, -1)
-            features = features.tolist()
-            features_all.append(features)
             probas, classes = video_class_predict(features, algorithm)           
             # Save the resuls in a numpy array
             final_proba = np.append(final_proba, [probas], axis=0)
@@ -194,8 +135,6 @@ def video_class_predict_folder(videos_path, model, algorithm,
             v = splitting[-1]
             # Insert values to dataframe
             df = df.append({'File_name': v}, ignore_index=True)
-        for i in range(2):
-            features_all = [item for sublist in features_all for item in sublist]
         for i, class_name in enumerate(classes):
             df[class_name] = final_proba[:, i]
         # Save results to csv
@@ -213,9 +152,58 @@ def video_class_predict_folder(videos_path, model, algorithm,
                       f'belongs by {"{:.2%}".format(proba)} '
                       f'in {class_name} class')
 
-    return final_proba, classes, features_all, df
+    return final_proba, classes, df
 
+def clustering(videos_path, model, algorithm,
+                               outfilename):
+    """
+    Clustering process
+    :param videos_path: path to video directory of filename to be analyzed
+    :param model: path name of the model
+    :param algorithm: type of the modelling algorithm (e.g. SVM)
+    :param outfilename: output csv filename (only for input folder)
+    :return:
+    """
+    final_proba = []
+    final_df = create_dataframe(model.classes_)
+   
+    for movie in videos_path:
 
+        f, c, df = video_class_predict_folder(movie, model, algorithm,
+                                outfilename)
+
+        final_proba.append(f)
+        final_df = final_df.append(df, ignore_index=True)
+
+        print(f,c)
+
+    final_df.to_csv(outfilename)
+    
+    final_proba = np.array(final_proba)
+
+    print(final_proba)
+       
+    model = KMeans(n_clusters=len(model.classes_))
+
+    model.fit(final_proba)
+
+    yhat = model.predict(final_proba)
+
+    with open("cluster_prediction.txt", "w") as output:
+        for movie,y in zip(videos_path,yhat):
+            print(f'{movie} : {y}',file = output)
+        
+    clusters = unique(yhat)
+    
+    for cluster in clusters:
+        # get row indexes for samples with this cluster
+        row_ix = where(yhat == cluster)
+        # create scatter of these samples
+        pyplot.scatter(final_proba[row_ix, 0], final_proba[row_ix, 1])
+
+    # show the plot
+    pyplot.savefig('plot_clusters.png')
+    
 def main():
     args = parse_arguments()
     videos_path = args.input_videos_path
@@ -230,7 +218,7 @@ def main():
     else:
         videos_path = videos_path[-1]
         print(videos_path)
-        f, c, _, _ = video_class_predict_folder(videos_path, model, algorithm,
+        f, c, _ = video_class_predict_folder(videos_path, model, algorithm,
                                     outfilename)
         print(f, c)
 

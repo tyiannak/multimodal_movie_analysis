@@ -124,17 +124,20 @@ def video_class_predict_folder(videos_path, model, algorithm,
             video_files_list.extend(glob.glob(os.path.join(videos_path, files)))
         video_files_list = sorted(video_files_list)
         for v in video_files_list:
-            features_stats = process_video(v, 2, True, True, True)
-            features = features_stats[0]
-            features = features.reshape(1, -1)
-            probas, classes = video_class_predict(features, algorithm)           
-            # Save the resuls in a numpy array
-            final_proba = np.append(final_proba, [probas], axis=0)
-            # Convert format of file names
-            splitting = v.split('/')
-            v = splitting[-1]
-            # Insert values to dataframe
-            df = df.append({'File_name': v}, ignore_index=True)
+            try:
+                features_stats = process_video(v, 2, True, True, True)
+                features = features_stats[0]
+                features = features.reshape(1, -1)
+                probas, classes = video_class_predict(features, algorithm)           
+                # Save the resuls in a numpy array
+                final_proba = np.append(final_proba, [probas], axis=0)
+                # Convert format of file names
+                splitting = v.split('/')
+                v = splitting[-1]
+                # Insert values to dataframe
+                df = df.append({'File_name': v}, ignore_index=True)
+            except:
+                print('This video is corrupted')
         for i, class_name in enumerate(classes):
             df[class_name] = final_proba[:, i]
         # Save results to csv

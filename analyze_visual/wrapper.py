@@ -157,6 +157,7 @@ def video_class_predict_folder(videos_path, model, algorithm,
 
     return final_proba, classes, df
 
+
 def clustering(videos_path, model, algorithm,
                                outfilename):
     """
@@ -173,31 +174,24 @@ def clustering(videos_path, model, algorithm,
     for movie in videos_path:
 
         f, c, df = video_class_predict_folder(movie, model, algorithm,
-                                outfilename)
+                                              outfilename)
 
         final_proba.append(f)
         final_df = final_df.append(df, ignore_index=True)
-
-        print(f,c)
+        print(f, c)
 
     final_df.to_csv(outfilename)
-    
     final_proba = np.array(final_proba)
-
     print(final_proba)
-       
     model = KMeans(n_clusters=len(model.classes_))
-
     model.fit(final_proba)
-
     yhat = model.predict(final_proba)
-
     with open("cluster_prediction.txt", "w") as output:
-        for movie,y in zip(videos_path,yhat):
+        for movie, y in zip(videos_path,yhat):
             print(f'{movie} : {y}',file = output)
         
     clusters = unique(yhat)
-    
+    print(clusters)
     for cluster in clusters:
         # get row indexes for samples with this cluster
         row_ix = where(yhat == cluster)
@@ -206,7 +200,8 @@ def clustering(videos_path, model, algorithm,
 
     # show the plot
     pyplot.savefig('plot_clusters.png')
-    
+
+
 def main():
     args = parse_arguments()
     videos_path = args.input_videos_path

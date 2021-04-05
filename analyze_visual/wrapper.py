@@ -43,6 +43,11 @@ def parse_arguments():
     parser.add_argument("-o", "--output_file", required=True, nargs=None,
                         help="Output file with results")
 
+    parser.add_argument("-c", "--num_of_clusters", required=False, nargs=None,
+                        default=2, help="number of clusters used"
+                                        "(clustering is executed only if "
+                                        "number of directories is more than 1")
+
     return parser.parse_args()
 
 
@@ -164,13 +169,14 @@ def video_class_predict_folder(videos_path, model, algorithm,
     return final_proba, classes, df
 
 
-def clustering(videos_path, model, algorithm, outfilename):
+def clustering(videos_path, model, algorithm, outfilename, nclusters=2):
     """
     Clustering process
     :param videos_path: path to video directory of filename to be analyzed
     :param model: path name of the model
     :param algorithm: type of the modelling algorithm (e.g. SVM)
     :param outfilename: output csv filename (only for input folder)
+    :param nclusters: number of clusters to use
     :return:
     """
     final_proba = []
@@ -188,7 +194,7 @@ def clustering(videos_path, model, algorithm, outfilename):
     final_df.to_csv(outfilename)
     final_proba = np.array(final_proba)
     print(final_proba)
-    model = KMeans(n_clusters=len(model.classes_))
+    model = KMeans(n_clusters=nclusters)
     model.fit(final_proba)
     yhat = model.predict(final_proba)
     with open("cluster_prediction.txt", "w") as output:
@@ -212,17 +218,18 @@ def main():
     videos_path = args.input_videos_path
     algorithm = args.model
     outfilename = args.output_file
+    nclusters = int(args.num_of_clusters)
     # Convert list of lists to a single list
     videos_path = [item for sublist in videos_path for item in sublist]    
     model = load(open('shot_classifier_' + str(algorithm)+'.pkl', 'rb'))
 
     if (len(videos_path)) > 1:    
-        clustering(videos_path, model, algorithm, outfilename)
+        clustering(videos_path, model, algorithm, outfilename, nclusters)
     else:
         videos_path = videos_path[-1]
         print(videos_path)
         f, c, _ = video_class_predict_folder(videos_path, model, algorithm,
-                                    outfilename)
+                                             outfilename)
         print(f, c)
 
  

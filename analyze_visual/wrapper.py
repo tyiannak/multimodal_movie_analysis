@@ -123,8 +123,13 @@ def video_class_predict_folder(videos_path, model, algorithm,
         for files in types:
             video_files_list.extend(glob.glob(os.path.join(videos_path, files)))
         video_files_list = sorted(video_files_list)
+        print(video_files_list)
+        count_processed = 0
         for v in video_files_list:
             try:
+                # TODO remove long try-except statement
+                print(algorithm)
+                print(v)
                 features_stats = process_video(v, 2, True, True, True)
                 features = features_stats[0]
                 features = features.reshape(1, -1)
@@ -132,10 +137,11 @@ def video_class_predict_folder(videos_path, model, algorithm,
                 # Save the resuls in a numpy array
                 final_proba = np.append(final_proba, [probas], axis=0)
                 # Convert format of file names
-                splitting = v.split('/')
+                splitting = v.split(os.sep)
                 v = splitting[-1]
                 # Insert values to dataframe
                 df = df.append({'File_name': v}, ignore_index=True)
+                count_processed += 1
             except:
                 print('This video is corrupted')
         for i, class_name in enumerate(classes):
@@ -158,8 +164,7 @@ def video_class_predict_folder(videos_path, model, algorithm,
     return final_proba, classes, df
 
 
-def clustering(videos_path, model, algorithm,
-                               outfilename):
+def clustering(videos_path, model, algorithm, outfilename):
     """
     Clustering process
     :param videos_path: path to video directory of filename to be analyzed

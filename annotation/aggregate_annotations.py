@@ -174,9 +174,9 @@ def report_annotations(file, annotators):
     ann_gr = df[df['Number_annotations'] >= annotators]
 
     ann_gr.to_csv('aggregated.csv', index=False)
-    print("\nAverage agreement : %.2f%%" % ann_gr_2['Confidence'].mean())
+    print("\nAverage agreement : %.2f%%" % ann_gr['Confidence'].mean())
     print("\n")
 
 
 if __name__ == "__main__":
-    report_annotations('annotations_database.txt',1)
+    report_annotations('annotations_database.txt', 2)

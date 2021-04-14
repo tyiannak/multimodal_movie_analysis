@@ -60,26 +60,39 @@ def process_audio(audio_path, save_results=True):
 
     for ic, c in enumerate(class_generic):
         features[c] = np.count_nonzero(flag_generic == float(ic))
+        features[c] /= len(flag_generic)
 
     for ic, c in enumerate(class_speech_ar):
         features["speech_arousal_" + c] = np.count_nonzero(
             (flag_speech_ar == float(ic)) &
-            (flag_generic == float(class_generic.index("speech"))) )
+            (flag_generic == float(class_generic.index("speech"))))
+        features["speech_arousal_" + c] /= (np.count_nonzero(flag_generic ==
+                                                             float(class_generic.index("speech")))
+                                            + 0.001)
 
     for ic, c in enumerate(class_speech_val):
         features["speech_valence_" + c] = np.count_nonzero(
             (flag_speech_val == float(ic)) &
             (flag_generic == float(class_generic.index("speech"))))
+        features["speech_valence_" + c] /= (np.count_nonzero(flag_generic ==
+                                                             float(class_generic.index("speech")))
+                                            + 0.001)
 
     for ic, c in enumerate(class_mus_en):
         features["music_energy_" + c] = np.count_nonzero(
             (flag_mus_en == float(ic)) &
             (flag_generic == float(class_generic.index("music"))))
+        features["music_energy_" + c] /= (np.count_nonzero(flag_generic ==
+                                                             float(class_generic.index("music")))
+                                            + 0.001)
 
     for ic, c in enumerate(class_mus_val):
         features["music_valence_" + c] = np.count_nonzero(
             (flag_mus_val == float(ic)) &
             (flag_generic == float(class_generic.index("music"))))
+        features["music_valence_" + c] /= (np.count_nonzero(flag_generic ==
+                                                             float(class_generic.index("music")))
+                                            + 0.001)
 
     return features.values(), features.keys()
 
@@ -114,7 +127,6 @@ def dir_process_audio(dir_name):
 def main(argv):
     if len(argv) == 3:
         if argv[1] == "-f":
-#            f_stat, f_stat_n, f, f_n = process_audio(argv[2], save_results)
             f_stat, f_stat_n = process_audio(argv[2])
             print(f_stat, f_stat_n)
 

@@ -4,7 +4,8 @@
 ## Train segment-level audio classifiers
 
 ### Train generic audio classifier (4-class):
-This is a general audio classifier to distinguish between 4 generic classes namely speech, music, silence and others:
+This is a general audio classifier to distinguish between 4 generic classes namely speech, music, silence and others
+(Note: download the 4class_balanced.zip dataset from google drive or use your own dataset of music, speech, others and silence classes):
 ```
 python3 train.py -i 4class_balanced/music 4class_balanced/other 4class_balanced/silence 4class_balanced/speech -o audio_4class
 ```
@@ -29,7 +30,8 @@ Selected params: 5.00000
 
 
 ### Train speech emotion classifiers (2 classifiers):
-Speech emotion arousal: 
+Speech emotion arousal (use the `speech_analytics/data/audio/merged/overall` datasets or your own speech emotion datasets): 
+
 ```
 python3 train.py -i speech/arousal/low speech/arousal/neutral speech/arousal/high -o speech_arousal
 ```
@@ -81,7 +83,7 @@ Selected params: 1.00000
 ```
 
 ### Train music classifiers
-Music emotional energy
+Music emotional energy (use the `Music/giantas_music_balanced` dataset or your own music emotion recognition dataset):
 ```
 python3 train.py -i ~/Downloads/music/energy/low ~/Downloads/music/energy/medium ~/Downloads/music/energy/high -o music_energy
 ```

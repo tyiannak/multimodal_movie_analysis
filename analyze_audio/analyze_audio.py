@@ -16,7 +16,6 @@ Please read the docstrings for further information.
 import glob
 import os
 import numpy as np
-import collections
 import sys
 import os.path
 from pyAudioAnalysis.audioSegmentation import mid_term_file_classification \
@@ -31,29 +30,40 @@ def process_audio(audio_path, save_results=True):
     """
 
     """
-    flag_generic, class_generic, _, _ = mtf(audio_path, "audio_4class",
+    models_path = "segment_models"
+    flag_generic, class_generic, _, _ = mtf(audio_path,
+                                            os.path.join(models_path,
+                                                         "audio_4class"),
                                             "svm_rbf", False)
 
-    flag_speech_ar, class_speech_ar, _, _ = mtf(audio_path, "speech_arousal",
+    flag_speech_ar, class_speech_ar, _, _ = mtf(audio_path,
+                                                os.path.join(models_path,
+                                                             "speech_arousal"),
                                                 "svm_rbf", False)
 
-    flag_speech_val, class_speech_val, _, _ = mtf(audio_path, "speech_valence",
+    flag_speech_val, class_speech_val, _, _ = mtf(audio_path,
+                                                   os.path.join(models_path,
+                                                                "speech_valence"),
                                                   "svm_rbf", False)
 
-    flag_mus_en, class_mus_en, _, _ = mtf(audio_path, "music_energy",
-                                         "svm_rbf", False)
+    flag_mus_en, class_mus_en, _, _ = mtf(audio_path,
+                                          os.path.join(models_path,
+                                                       "music_energy"),
+                                          "svm_rbf", False)
 
-    flag_mus_val, class_mus_val, _, _ = mtf(audio_path, "music_valence",
-                                           "svm_rbf", False)
+    flag_mus_val, class_mus_val, _, _ = mtf(audio_path,
+                                            os.path.join(models_path,
+                                                         "music_valence"),
+                                            "svm_rbf", False)
 
     features = {}
 
-    for ic,c in enumerate(class_generic):
-        features[c] = np.count_nonzero(flag_generic==float(ic))
+    for ic, c in enumerate(class_generic):
+        features[c] = np.count_nonzero(flag_generic == float(ic))
 
     for ic, c in enumerate(class_speech_ar):
         features["speech_arousal_" + c] = np.count_nonzero(
-            (flag_speech_ar == float(ic))  &
+            (flag_speech_ar == float(ic)) &
             (flag_generic == float(class_generic.index("speech"))) )
 
     for ic, c in enumerate(class_speech_val):
@@ -71,7 +81,6 @@ def process_audio(audio_path, save_results=True):
             (flag_mus_val == float(ic)) &
             (flag_generic == float(class_generic.index("music"))))
 
-    print(features)
     return features.values(), features.keys()
 
 

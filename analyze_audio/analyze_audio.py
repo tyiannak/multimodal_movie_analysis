@@ -94,7 +94,7 @@ def process_audio(audio_path, save_results=True):
                                                              float(class_generic.index("music")))
                                             + 0.001)
 
-    return features.values(), features.keys()
+    return np.array(list(features.values())), list(features.keys())
 
 
 def dir_process_audio(dir_name):
@@ -113,11 +113,17 @@ def dir_process_audio(dir_name):
         features_stats, f_names_stats = process_audio(movieFile,)
         features_all.append(features_stats)
 
-    np.save(os.path.join(dir_name,dir_name_no_path + "_features.npy"),
+
+    for i in range(len(video_files_list)):
+        print(video_files_list[i])
+        for f in range(len(f_names_stats)):
+            print(f'{f_names_stats[f]}:{features_all[i][f]}')
+
+    np.save(os.path.join(dir_name, dir_name_no_path + "_features.npy"),
             features_all)
-    np.save(os.path.join(dir_name,dir_name_no_path + "_video_files_list.npy"),
+    np.save(os.path.join(dir_name, dir_name_no_path + "_video_files_list.npy"),
             video_files_list)
-    np.save(os.path.join(dir_name,dir_name_no_path + "_f_names.npy"),
+    np.save(os.path.join(dir_name, dir_name_no_path + "_f_names.npy"),
             f_names_stats)
     features_all = np.array(features_all)
 

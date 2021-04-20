@@ -40,7 +40,8 @@ As soon as the supervised model is trained you can classify an unknown shot
 python3 wrapper.py -m SVM -i test.mp4
 ```
 
-The following script detects the change of the shots in a video file and it stored them in individual files.
+The following script detects the change of the shots in a video file and it stores the respective shots in individual files.
+It can be used in combination with the `wrapper.py` script above to analyze a movie per shot. 
 ```
 python3 shot_generator.py -f data/file.mp4
 ```

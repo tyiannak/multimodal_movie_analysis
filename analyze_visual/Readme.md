@@ -119,3 +119,14 @@ python3 wrapper.py -m SVM -i "test/I_m Not There (2007).avi_shot_6768_6774..avi.
 ```
 
 (can also give a folder that contains videos in -i)
+
+### Generate video files based on shots: 
+You can extract video files based on shots of the given video file. Specifically, the shot_generator.py accepts a set of numbers with the timestamps when shots are changed. Then depending on the timestamps provided, creates individual files where each file corresponds to a shot.
+
+```
+Generate shots from a single video file:
+python3 shot_generator.py -f data/file.mp4
+
+Generate shots from a directory:
+python3 shot_generator.py -f data
+```

@@ -261,7 +261,8 @@ def process_video(video_path, process_mode, print_flag=True,
 
                         # draw motion arrows
                         for i, (new, old) in enumerate(
-                                zip(good_new, good_old)):
+                                zip(good_new.astype('int'),
+                                    good_old.astype('int'))):
                             vis = cv2.arrowedLine(
                                 vis, tuple(new), tuple(old),
                                 color=(0, 255, 0), thickness=1)

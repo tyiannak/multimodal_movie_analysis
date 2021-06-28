@@ -103,31 +103,30 @@ def dir_process_audio(dir_name):
     features_all = []
 
     types = ('*.wav', )
-    video_files_list = []
+    audio_files_list = []
     for files in types:
-        video_files_list.extend(glob.glob(os.path.join(dir_name, files)))
-    video_files_list = sorted(video_files_list)
+        audio_files_list.extend(glob.glob(os.path.join(dir_name, files)))
+    audio_files_list = sorted(audio_files_list)
 
-    for movieFile in video_files_list:
+    for movieFile in audio_files_list:
         print(movieFile)
         features_stats, f_names_stats = process_audio(movieFile,)
         features_all.append(features_stats)
 
-
-    for i in range(len(video_files_list)):
-        print(video_files_list[i])
+    for i in range(len(audio_files_list)):
+        print(audio_files_list[i])
         for f in range(len(f_names_stats)):
             print(f'{f_names_stats[f]}:{features_all[i][f]}')
 
-    np.save(os.path.join(dir_name, dir_name_no_path + "_features.npy"),
+    np.save(os.path.join(dir_name, dir_name_no_path + "audio_features.npy"),
             features_all)
-    np.save(os.path.join(dir_name, dir_name_no_path + "_video_files_list.npy"),
-            video_files_list)
-    np.save(os.path.join(dir_name, dir_name_no_path + "_f_names.npy"),
+    np.save(os.path.join(dir_name, dir_name_no_path + "_audio_files_list.npy"),
+            audio_files_list)
+    np.save(os.path.join(dir_name, dir_name_no_path + "audio_f_names.npy"),
             f_names_stats)
     features_all = np.array(features_all)
 
-    return features_all, video_files_list, f_names_stats
+    return features_all, audio_files_list, f_names_stats
 
 
 def main(argv):
@@ -138,10 +137,10 @@ def main(argv):
 
         elif argv[1] == "-d":  # directory
             dir_name = argv[2]
-            features_all, video_files_list, f_names = \
+            features_all, audio_files_list, f_names = \
                 dir_process_audio(dir_name)
             print(features_all.shape)
-            print(video_files_list)
+            print(audio_files_list)
         else:
             print('Error: Unsupported flag.')
             print('For supported flags please read the modules\' docstring.')

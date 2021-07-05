@@ -36,7 +36,7 @@ generic_model = gmodel.SsdNvidia()
 # E.g. window_step = 1/process_step corresponds to one sec window
 # window_step = 5/process_step corresponds to 5 sec window
 
-window_step = 3/process_step # 1 second windows
+window_step = 1/process_step  # 1 second window
 
 
 def process_video(video_path, process_mode, print_flag=True,
@@ -453,6 +453,7 @@ def features_statistics(feature_matrix):
 
     return stats_vector
 
+
 def split_feature_matrix(class_folder):
     """
     Splits feature matrix of each video
@@ -496,7 +497,7 @@ def split_feature_matrix(class_folder):
         np.save(os.path.join(class_folder + "/" + filename + "_extended.npy"),
                 final_feature_matrix)
 
-    # create a .npy file if windowing is done for this specific class-folder
+    # create an .npy file if windowing is done for this specific class-folder
     window_done = str(int(window_step*process_step)) + "_sec_windowing is done!"
     np.save(os.path.join(class_folder + "/" + str(int(window_step*process_step)) + "_sec_window_done.npy"),
             window_done)

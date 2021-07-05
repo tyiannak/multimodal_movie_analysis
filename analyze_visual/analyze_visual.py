@@ -19,6 +19,7 @@ import glob
 import os
 import numpy as np
 import collections
+import fnmatch
 import sys
 import os.path
 sys.path.insert(0, os.path.join(os.path.dirname(
@@ -30,6 +31,12 @@ from analyze_visual.utils import *
 
 
 generic_model = gmodel.SsdNvidia()
+
+# Select window size
+# E.g. window_step = 1/process_step corresponds to one sec window
+# window_step = 5/process_step corresponds to 5 sec window
+
+window_step = 3/process_step # 1 second windows
 
 
 def process_video(video_path, process_mode, print_flag=True,
@@ -406,6 +413,93 @@ def process_video(video_path, process_mode, print_flag=True,
 
     return features_stats,  f_names_stats,  feature_matrix, f_names, \
            shot_change_times
+
+
+def features_statistics(feature_matrix):
+    """
+    Splits feature_matrix to 52 object related and 36 non-object related features.
+    Then it calculates statistics on object related features over time,
+    and puts them to the stats_vector.
+    :param feature_matrix: the 2D array which corresponds to window size chosen
+    """
+
+    feature_matrix = np.asmatrix(feature_matrix)
+
+    non_object_features = feature_matrix[:, 0: 52]
+    # TODO (averaging when extracting object features)
+    object_features = feature_matrix[2, 52:89]
+
+    f_mu = non_object_features.mean(axis=0)
+
+    f_std = non_object_features.std(axis=0)
+    f_stdmu = non_object_features.std(axis=0) \
+              / (np.median(non_object_features, axis=0) + 0.0001)
+    feature_matrix_sorted_rows = np.sort(non_object_features, axis=0)
+    feature_matrix_sorted_rows_top10 = feature_matrix_sorted_rows[
+                                       - int(0.10 *
+                                             feature_matrix_sorted_rows.
+                                             shape[0])::,
+                                       :]
+    f_mu10top = feature_matrix_sorted_rows_top10.mean(axis=0)
+
+    diff = non_object_features[1:, :] - non_object_features[0:-1, :]
+    f_diff_mean = diff.mean(axis=0)
+    f_diff_std = diff.std(axis=0)
+
+    stats_vector = np.concatenate((f_mu, f_std, f_stdmu, f_mu10top,
+                                     f_diff_mean, f_diff_std), axis=1)
+    stats_vector = np.concatenate((stats_vector, object_features), axis=1)
+    stats_vector = np.squeeze(np.asarray(stats_vector))
+
+    return stats_vector
+
+def split_feature_matrix(class_folder):
+    """
+    Splits feature matrix of each video
+    per number of frames which correspond to window size chosen
+    (from the global variable: window_step).
+    :param class_folder: one class-folder of the directory
+    """
+
+    # find all the npy files which correspond to each shot
+    mp4_npy_shot_files = fnmatch.filter(os.listdir(class_folder), '*mp4.npy')
+
+    # for each .mp4.npy file, create feature matrices per window size
+    # and concatenate them to create a 2d feature matrix for the whole video
+    for filename in mp4_npy_shot_files:
+        feature_matrix = np.load(class_folder + "/" + filename)
+
+        frames = feature_matrix.shape[0]
+        num_of_features = feature_matrix.shape[1]
+
+        split_matrix = np.empty((0, num_of_features), float)
+        split_matrix = np.asmatrix(split_matrix)
+
+        final_feature_matrix = np.empty((0, 348), float)  # 348..
+        final_feature_matrix = np.asmatrix(final_feature_matrix)
+
+        frame_counter = 0
+        for i in range(frames):
+            split_matrix = np.append(split_matrix, [feature_matrix[i]], axis=0)
+
+            if (frame_counter % window_step) == 0:
+                if frame_counter != 0:
+                    # create statistics for number of frames which
+                    # correspond to window size
+                    feature_matrix_per_second = features_statistics(split_matrix)
+                    final_feature_matrix = np.vstack((final_feature_matrix, feature_matrix_per_second))
+                    split_matrix = np.empty((0, num_of_features), float)
+            frame_counter += 1
+
+        # save the final feature matrix to a new _extended.npy file
+        # for each video-shot
+        np.save(os.path.join(class_folder + "/" + filename + "_extended.npy"),
+                final_feature_matrix)
+
+    # create a .npy file if windowing is done for this specific class-folder
+    window_done = str(int(window_step*process_step)) + "_sec_windowing is done!"
+    np.save(os.path.join(class_folder + "/" + str(int(window_step*process_step)) + "_sec_window_done.npy"),
+            window_done)
 
 
 def dir_process_video(dir_name, process_mode, print_flag,

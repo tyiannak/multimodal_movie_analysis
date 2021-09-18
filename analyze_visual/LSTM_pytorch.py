@@ -25,7 +25,7 @@ matplotlib.use('Agg')
 
 """
 RUN:
-python3 lstm_pytorch.py -v /media/ubuntu/Seagate/test/t/Non_Static_3 /media/ubuntu/Seagate/test/t/Static_3
+python3 LSTM_pytorch.py -v /media/ubuntu/Seagate/test/t/Non_Static_5 /media/ubuntu/Seagate/test/t/Static_5
 """
 
 
@@ -150,14 +150,10 @@ def data_preparation(videos_dataset, batch_size):
     X = [x[0] for x in videos_dataset]
     y = [x[1] for x in videos_dataset]
 
-    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,
-    #                                                     random_state=42, stratify=y)
-    # X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.33,
-    #                                                   random_state=42, stratify=y_train)
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         test_size=0.33, stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
-                                                      test_size=0.33, stratify=y_train)
+                                                      test_size=0.2, stratify=y_train)
 
     # Define Scaler
     min_max_scaler = MinMaxScaler()
@@ -195,7 +191,6 @@ class LSTMModel(nn.Module):
 
         self.fc = nn.Linear(hidden_size, output_size)
         self.m = nn.Sigmoid()
-        #self.relu = nn.ReLU()
 
     def forward(self, X, lengths):
         """
@@ -442,7 +437,7 @@ if __name__ == "__main__":
     hidden_size = 16
     num_layers = 1
     batch_size = 32
-    dropout = 0.2
+    dropout = 0.1
     n_epochs = 100
     learning_rate = 1e-6
     weight_decay = 1e-6

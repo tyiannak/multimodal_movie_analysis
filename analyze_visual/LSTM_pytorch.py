@@ -11,6 +11,7 @@ from pathlib import Path
 from collections import OrderedDict
 from torch.nn.utils.rnn import pack_padded_sequence as pack
 from torch.nn.utils.rnn import pad_packed_sequence as unpack
+from sklearn.metrics import f1_score
 from torch.nn.utils.rnn import pad_sequence as pad
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import confusion_matrix
@@ -25,7 +26,11 @@ matplotlib.use('Agg')
 
 """
 RUN:
+apo seagate:
 python3 LSTM_pytorch.py -v /media/ubuntu/Seagate/test/t/Non_Static_5 /media/ubuntu/Seagate/test/t/Static_5
+
+big dataset:
+python3 LSTM_pytorch.py -v /home/ubuntu/LSTM/binary_data/data/Non_Static_4 /home/ubuntu/LSTM/binary_data/data/Static_4
 """
 
 
@@ -40,7 +45,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def seed_all(seed=42):
+def seed_all(seed):
     torch.cuda.empty_cache()
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
@@ -104,7 +109,6 @@ def load_data(X, y, check_train, scaler):
     for i, j in zip(X, y):
         split_dataset.append(tuple((i, j)))
 
-    set_list = []
     x_len = []
     X = []
     labels = []
@@ -112,7 +116,10 @@ def load_data(X, y, check_train, scaler):
         # data[0] corresponds to .npy names
         # data[1] corresponds to y labels
         X_to_tensor = np.load(data[0])
-        #y = torch.Tensor(data[1])
+
+        # keep only specific features
+        X_to_tensor = X_to_tensor[:, 45:89]
+
         y = data[1]
         labels.append(y)
         x_len.append(X_to_tensor.shape[0])
@@ -124,7 +131,6 @@ def load_data(X, y, check_train, scaler):
             X_to_tensor = scaler.transform(X_to_tensor)
 
         X.append(torch.Tensor(X_to_tensor))
-
 
     return X, labels, x_len
 
@@ -151,9 +157,9 @@ def data_preparation(videos_dataset, batch_size):
     y = [x[1] for x in videos_dataset]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        test_size=0.33, stratify=y)
+                                                        test_size=0.2, stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
-                                                      test_size=0.2, stratify=y_train)
+                                                      test_size=0.15, stratify=y_train)
 
     # Define Scaler
     min_max_scaler = MinMaxScaler()
@@ -176,6 +182,27 @@ def data_preparation(videos_dataset, batch_size):
                               collate_fn=my_collate, shuffle=True)
 
     return train_loader, val_loader, test_loader
+
+
+def F_score(logit, label, threshold=0.5, beta=2):
+
+    #prob = torch.sigmoid(logit)
+    #prob = prob > threshold
+
+    prob = logit > threshold
+    label = label > threshold
+
+    TP = (prob & label).sum().float()
+    TN = ((~prob) & (~label)).sum().float()
+    FP = (prob & (~label)).sum().float()
+    FN = ((~prob) & label).sum().float()
+
+    accuracy = (TP+TN)/(TP+TN+FP+FN)
+    precision = torch.mean(TP / (TP + FP + 1e-12))
+    recall = torch.mean(TP / (TP + FN + 1e-12))
+    F2 = (1 + beta**2) * precision * recall / (beta**2 * precision + recall + 1e-12)
+
+    return accuracy, precision, recall, F2.mean(0)
 
 
 class LSTMModel(nn.Module):
@@ -232,7 +259,6 @@ class LSTMModel(nn.Module):
         return outputs.gather(1, idx.type(torch.int64)).squeeze()
 
 
-
 def save_ckp(checkpoint, is_best_val, checkpoint_path, best_model_path):
     """
     state: checkpoint we want to save
@@ -277,10 +303,21 @@ class Optimization:
 
     def train(self, train_loader, val_loader, n_epochs):
 
-        validation_min_loss = float('inf')
+        #validation_min_loss = float('inf')
+        f1_max = -100.0
+        counter_epoch = 0
+
         for epoch in range(1, n_epochs + 1):
+            counter_epoch += 1
 
             train_losses = []
+            val_losses = []
+
+            acc_list = []
+            f1_score_list = []
+            #batch_predictions = []
+            #batch_values = []
+
             # enumerate mini batches
             for batch_idx, batch_info in enumerate(train_loader):
                 # batch_idx -------> batch id
@@ -307,6 +344,8 @@ class Optimization:
 
                     # Calculate loss
                     output = out.squeeze().float()
+
+                    #print("output: ", output)
                     loss = self.loss_fn(output, y_train.float())
 
                     # Computes the gradients
@@ -319,8 +358,9 @@ class Optimization:
             train_step_loss = np.mean(train_losses)
             self.train_loss.append(train_step_loss)
 
+            # validation process
             with torch.no_grad():
-                val_losses = []
+
                 for val_batch_idx, val_batch_info in enumerate(val_loader):
                     X_val = val_batch_info[0]
                     y_val = val_batch_info[1]
@@ -334,6 +374,23 @@ class Optimization:
 
                     val_loss = self.loss_fn(y_hat, y_val.float())
                     val_losses.append(val_loss)
+
+                    #batch_predictions.append(y_hat)
+                    #batch_values.append(y_val)
+
+                    accuracy, precision, recall, F1_score = F_score(y_hat, y_val.float())
+
+                    acc_list.append(accuracy)
+                    f1_score_list.append(F1_score)
+
+                #batch_values = np.concatenate(batch_values).ravel()
+                #batch_predictions = np.concatenate(batch_predictions).ravel()
+                #values_tens = (torch.Tensor(batch_values))
+                #predictions_tens = (torch.Tensor(batch_predictions))
+                #accuracy, precision, recall, f1_score = F_score(predictions_tens, values_tens.float())
+
+                accuracy = np.mean(acc_list)
+                f1_score = np.mean(f1_score_list)
 
                 validation_loss = np.mean(val_losses)
                 self.val_loss.append(validation_loss)
@@ -349,19 +406,30 @@ class Optimization:
             print(
                 f"[{epoch}/{n_epochs}] Training loss: {train_step_loss:.4f}\t Validation loss: {validation_loss:.4f}"
             )
-
+            print("accuracy: {:0.2f}%,".format(accuracy * 100), "f1_score: {:0.2f}%".format(f1_score * 100))
             # save checkpoint
             check_path = Path('checkpoint.pt')
             best_check_path = Path('best_checkpoint.pt')
 
             save_ckp(checkpoint, False, check_path, best_check_path)
 
-            if validation_loss <= validation_min_loss:
-                print('Validation loss decreased ({:.6f} --> {:.6f}).'.format(validation_min_loss,
-                                                                              validation_loss))
+            if f1_score >= f1_max:
+                counter_epoch = 0
+                print('f1_score increased({:.6f} --> {:.6f}).'.format(f1_max, f1_score))
                 # save checkpoint as best model
                 save_ckp(checkpoint, True, check_path, best_check_path)
-                validation_min_loss = validation_loss
+                f1_max = f1_score
+
+            if (epoch > 40) & (counter_epoch >= 15):
+                break
+
+            # if validation_loss <= validation_min_loss:
+            #     print('Validation loss decreased ({:.6f} --> {:.6f}).'.format(validation_min_loss,
+            #                                                                   validation_loss))
+            #     # save checkpoint as best model
+            #     save_ckp(checkpoint, True, check_path, best_check_path)
+            #     validation_min_loss = validation_loss
+            print("\n")
 
     def plot_losses(self):
         plt.plot(self.train_loss, label="Training loss")
@@ -396,22 +464,30 @@ class Optimization:
                 y_pred = y_pred.detach().numpy()
 
                 # round to class values
-                y_pred = y_pred.round()
+                #y_pred = y_pred.round()
 
                 predictions.append(y_pred)
 
                 y_test = y_test.detach().numpy()
                 values.append(y_test)
-                #conf_mat = confusion_matrix(y_test, y_pred, labels=class_labels)
-                #print(conf_mat)
 
-        predictions = np.concatenate(predictions).ravel()
         values = np.concatenate(values).ravel()
+        predictions = np.concatenate(predictions).ravel()
 
-        print('Classification Report:')
-        print(classification_report(values, predictions, labels=[1, 0], digits=4))
+        #print(predictions.shape)
+        values_tensor = (torch.Tensor(values))
+        predictions_tensor = (torch.Tensor(predictions))
 
-        #cm = confusion_matrix(y_test, y_pred, labels=[1, 0])
+        print('\nClassification Report:')
+        accuracy, precision, recall, F1_score = F_score(predictions_tensor, values_tensor)
+
+        print("accuracy: {:0.2f}%,".format(accuracy*100), "precision: {:0.2f}%,".format(precision*100),
+              "recall: {:0.2f}%,".format(recall*100), "F1_score: {:0.2f}%".format(F1_score*100))
+
+        #print('Classification Report:')
+        #print(classification_report(values, predictions, labels=[1, 0], digits=4))
+
+        #cm = confusion_matrix(values, predictions, labels=[1, 0])
         return predictions, values
 
 
@@ -432,14 +508,15 @@ if __name__ == "__main__":
     videos_path = args.videos_path
 
     # parameters
-    input_size = 88 # num of features
+    #input_size = 88 # num of features
+    input_size = 43  # num of features
     output_size = 1
     hidden_size = 16
     num_layers = 1
     batch_size = 32
-    dropout = 0.1
+    dropout = 0.2
     n_epochs = 100
-    learning_rate = 1e-6
+    learning_rate = 1e-4
     weight_decay = 1e-6
 
     model_params = {'input_size': input_size,
@@ -450,7 +527,7 @@ if __name__ == "__main__":
 
     videos_path = [item for sublist in videos_path for item in sublist]
 
-    seed_all(40)
+    seed_all(41)
     dataset = create_dataset(videos_path)
     train_loader, val_loader, test_loader = data_preparation(
         dataset, batch_size=batch_size)
@@ -477,7 +554,7 @@ if __name__ == "__main__":
     # print("validation_min_loss = {:.6f}".format(validation_min_loss), "\n")
 
     predictions, values = opt.evaluate(test_loader, best_model)
-    print("\n==========================\n")
+    #print("\n==========================\n")
     #print(predictions)
     #print("\n", values)
 

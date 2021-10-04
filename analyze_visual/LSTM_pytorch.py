@@ -118,7 +118,7 @@ def load_data(X, y, check_train, scaler):
         X_to_tensor = np.load(data[0])
 
         # keep only specific features
-        X_to_tensor = X_to_tensor[:, 45:89]
+        #X_to_tensor = X_to_tensor[:, 45:89]
 
         y = data[1]
         labels.append(y)
@@ -200,9 +200,12 @@ def F_score(logit, label, threshold=0.5, beta=2):
     accuracy = (TP+TN)/(TP+TN+FP+FN)
     precision = torch.mean(TP / (TP + FP + 1e-12))
     recall = torch.mean(TP / (TP + FN + 1e-12))
-    F2 = (1 + beta**2) * precision * recall / (beta**2 * precision + recall + 1e-12)
+    #F2 = (1 + beta**2) * precision * recall / (beta**2 * precision + recall + 1e-12)
+    F2 = (2 * precision * recall) / (precision + recall + 1e-12)
+    cm = np.array([[TP, FP], [FN, TN]])
+    #print(cm)
 
-    return accuracy, precision, recall, F2.mean(0)
+    return accuracy, precision, recall, F2.mean(0), cm
 
 
 class LSTMModel(nn.Module):
@@ -216,8 +219,70 @@ class LSTMModel(nn.Module):
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers,
                             batch_first=True, dropout=dropout_prob)
 
+        self.drop = nn.Dropout(p=dropout_prob)
         self.fc = nn.Linear(hidden_size, output_size)
         self.m = nn.Sigmoid()
+        # self.fnn = nn.Sequential(OrderedDict([
+        #     ('gelu1', nn.LeakyReLU()),
+        #     ('fc1', nn.Linear(self.hidden_size, 512)),
+        #     ('bn1', nn.BatchNorm1d(512)),
+        #     ('gelu2', nn.LeakyReLU()),
+        #     ('fc2', nn.Linear(512, 512)),
+        #     ('bn2', nn.BatchNorm1d(512)),
+        #     ('gelu3', nn.LeakyReLU()),
+        #     ('fc3', nn.Linear(512, 128)),
+        #     ('bn3', nn.BatchNorm1d(128)),
+        #     ('gelu4', nn.LeakyReLU()),
+        #     ('fc4', nn.Linear(128, 64)),
+        #     ('bn4', nn.BatchNorm1d(64)),
+        #     ('gelu5', nn.LeakyReLU()),
+        #     ('fc5', nn.Linear(64, 32)),
+        #     ('bn5', nn.BatchNorm1d(32)),
+        #     ('gelu6', nn.LeakyReLU()),
+        #     ('fc6', nn.Linear(32, 1))
+        # ]))
+
+        # self.fnn = nn.Sequential(OrderedDict([
+        #     ('gelu1', nn.ReLU()),
+        #     ('fc1', nn.Linear(self.hidden_size, 128)),
+        #     ('bn1', nn.BatchNorm1d(128)),
+        #     ('gelu2', nn.ReLU()),
+        #     ('fc2', nn.Linear(128, 128)),
+        #     ('bn2', nn.BatchNorm1d(128)),
+        #     ('gelu3', nn.ReLU()),
+        #     ('fc3', nn.Linear(128, 64)),
+        #     ('bn3', nn.BatchNorm1d(64)),
+        #     ('gelu4', nn.ReLU()),
+        #     ('fc4', nn.Linear(64, 32)),
+        #     ('bn4', nn.BatchNorm1d(32)),
+        #     ('gelu5', nn.ReLU()),
+        #     ('fc5', nn.Linear(32, 1))
+        # ]))
+
+        # self.fnn = nn.Sequential(OrderedDict([
+        #     ('relu1', nn.GELU()),
+        #     ('fc1', nn.Linear(self.hidden_size, 64)),
+        #     ('bn1', nn.BatchNorm1d(64)),
+        #     ('relu2', nn.GELU()),
+        #     ('fc2', nn.Linear(64, 64)),
+        #     ('bn2', nn.BatchNorm1d(64)),
+        #     ('relu3', nn.GELU()),
+        #     ('fc3', nn.Linear(64, 32)),
+        #     ('bn3', nn.BatchNorm1d(32)),
+        #     ('relu4', nn.GELU()),
+        #     ('fc4', nn.Linear(32, 1))
+        # ]))
+
+        self.fnn = nn.Sequential(OrderedDict([
+            ('relu1', nn.LeakyReLU()),
+            ('fc1', nn.Linear(self.hidden_size, 32)),
+            ('bn1', nn.BatchNorm1d(32)),
+            ('relu2', nn.LeakyReLU()),
+            ('fc2', nn.Linear(32, 32)),
+            ('bn2', nn.BatchNorm1d(32)),
+            ('relu3', nn.LeakyReLU()),
+            ('fc3', nn.Linear(32, 1))
+        ]))
 
     def forward(self, X, lengths):
         """
@@ -245,8 +310,11 @@ class LSTMModel(nn.Module):
 
         # output shape: (batch_size, seq_length, hidden_size)
 
-        output = self.fc(last_states)
+        #output = self.fc(last_states)
+        #last_states = self.drop(last_states)
+        output = self.fnn(last_states)
         output = self.m(output)
+        #output = self.fnn(output)
 
         return output
 
@@ -304,7 +372,7 @@ class Optimization:
     def train(self, train_loader, val_loader, n_epochs):
 
         #validation_min_loss = float('inf')
-        f1_max = -100.0
+        f1_max = -1.0
         counter_epoch = 0
 
         for epoch in range(1, n_epochs + 1):
@@ -378,7 +446,7 @@ class Optimization:
                     #batch_predictions.append(y_hat)
                     #batch_values.append(y_val)
 
-                    accuracy, precision, recall, F1_score = F_score(y_hat, y_val.float())
+                    accuracy, precision, recall, F1_score, cm = F_score(y_hat, y_val.float())
 
                     acc_list.append(accuracy)
                     f1_score_list.append(F1_score)
@@ -420,7 +488,7 @@ class Optimization:
                 save_ckp(checkpoint, True, check_path, best_check_path)
                 f1_max = f1_score
 
-            if (epoch > 40) & (counter_epoch >= 15):
+            if (epoch > 20) & (counter_epoch >= 15):
                 break
 
             # if validation_loss <= validation_min_loss:
@@ -479,10 +547,12 @@ class Optimization:
         predictions_tensor = (torch.Tensor(predictions))
 
         print('\nClassification Report:')
-        accuracy, precision, recall, F1_score = F_score(predictions_tensor, values_tensor)
-
-        print("accuracy: {:0.2f}%,".format(accuracy*100), "precision: {:0.2f}%,".format(precision*100),
-              "recall: {:0.2f}%,".format(recall*100), "F1_score: {:0.2f}%".format(F1_score*100))
+        accuracy, precision, recall, F1_score, cm = F_score(predictions_tensor, values_tensor)
+        print(cm)
+        print("accuracy: {:0.2f}%,".format(accuracy*100),
+              "precision: {:0.2f}%,".format(precision*100),
+              "recall: {:0.2f}%,".format(recall*100),
+              "F1_score: {:0.2f}%".format(F1_score*100))
 
         #print('Classification Report:')
         #print(classification_report(values, predictions, labels=[1, 0], digits=4))
@@ -508,16 +578,16 @@ if __name__ == "__main__":
     videos_path = args.videos_path
 
     # parameters
-    #input_size = 88 # num of features
-    input_size = 43  # num of features
+    input_size = 88 # num of features
+    #input_size = 43  # num of features
     output_size = 1
-    hidden_size = 16
+    hidden_size = 32
     num_layers = 1
-    batch_size = 32
-    dropout = 0.2
+    batch_size = 64
+    dropout = 0.5
     n_epochs = 100
-    learning_rate = 1e-4
-    weight_decay = 1e-6
+    learning_rate = 1e-3
+    weight_decay = 1e-1
 
     model_params = {'input_size': input_size,
                     'hidden_size': hidden_size,
@@ -544,7 +614,8 @@ if __name__ == "__main__":
     opt.plot_losses()
 
     ckp_path = "best_checkpoint.pt"
-    best_model, optimizer, start_epoch, validation_min_loss = load_ckp(ckp_path, model, optimizer)
+    best_model, optimizer, start_epoch, \
+    validation_min_loss = load_ckp(ckp_path, model, optimizer)
 
     # print("\nAfter validation:")
     # print("model = ", model)
@@ -554,7 +625,4 @@ if __name__ == "__main__":
     # print("validation_min_loss = {:.6f}".format(validation_min_loss), "\n")
 
     predictions, values = opt.evaluate(test_loader, best_model)
-    #print("\n==========================\n")
-    #print(predictions)
-    #print("\n", values)
 

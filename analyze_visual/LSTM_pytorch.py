@@ -11,7 +11,7 @@ from pathlib import Path
 from collections import OrderedDict
 from torch.nn.utils.rnn import pack_padded_sequence as pack
 from torch.nn.utils.rnn import pad_packed_sequence as unpack
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score
 from torch.nn.utils.rnn import pad_sequence as pad
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import confusion_matrix
@@ -118,7 +118,7 @@ def load_data(X, y, check_train, scaler):
         X_to_tensor = np.load(data[0])
 
         # keep only specific features
-        #X_to_tensor = X_to_tensor[:, 45:89]
+        X_to_tensor = X_to_tensor[:, 45:89]
 
         y = data[1]
         labels.append(y)
@@ -182,6 +182,20 @@ def data_preparation(videos_dataset, batch_size):
                               collate_fn=my_collate, shuffle=True)
 
     return train_loader, val_loader, test_loader
+
+
+def calculate_metrics(predicted_values, actual_values, threshold=0.5):
+
+    y_pred = predicted_values > threshold
+    y = actual_values
+
+    y_pred = y_pred.float()
+
+    cm = confusion_matrix(y, y_pred)
+    f1_score_macro = f1_score(y, y_pred, average='macro')
+    acc = accuracy_score(y, y_pred)
+
+    return acc, f1_score_macro, cm
 
 
 def F_score(logit, label, threshold=0.5, beta=2):
@@ -273,16 +287,16 @@ class LSTMModel(nn.Module):
         #     ('fc4', nn.Linear(32, 1))
         # ]))
 
-        self.fnn = nn.Sequential(OrderedDict([
-            ('relu1', nn.LeakyReLU()),
-            ('fc1', nn.Linear(self.hidden_size, 32)),
-            ('bn1', nn.BatchNorm1d(32)),
-            ('relu2', nn.LeakyReLU()),
-            ('fc2', nn.Linear(32, 32)),
-            ('bn2', nn.BatchNorm1d(32)),
-            ('relu3', nn.LeakyReLU()),
-            ('fc3', nn.Linear(32, 1))
-        ]))
+        # self.fnn = nn.Sequential(OrderedDict([
+        #     ('relu1', nn.LeakyReLU()),
+        #     ('fc1', nn.Linear(self.hidden_size, 32)),
+        #     ('bn1', nn.BatchNorm1d(32)),
+        #     ('relu2', nn.LeakyReLU()),
+        #     ('fc2', nn.Linear(32, 32)),
+        #     ('bn2', nn.BatchNorm1d(32)),
+        #     ('relu3', nn.LeakyReLU()),
+        #     ('fc3', nn.Linear(32, 1))
+        # ]))
 
     def forward(self, X, lengths):
         """
@@ -310,10 +324,14 @@ class LSTMModel(nn.Module):
 
         # output shape: (batch_size, seq_length, hidden_size)
 
-        #output = self.fc(last_states)
+        output = self.fc(last_states)
+
         #last_states = self.drop(last_states)
-        output = self.fnn(last_states)
+
+        #output = self.fnn(last_states)
+
         output = self.m(output)
+
         #output = self.fnn(output)
 
         return output
@@ -446,10 +464,12 @@ class Optimization:
                     #batch_predictions.append(y_hat)
                     #batch_values.append(y_val)
 
-                    accuracy, precision, recall, F1_score, cm = F_score(y_hat, y_val.float())
+                    #accuracy, precision, recall, F1_score, cm = F_score(y_hat, y_val.float())
+
+                    accuracy, f1_score_macro, cm = calculate_metrics(y_hat, y_val.float())
 
                     acc_list.append(accuracy)
-                    f1_score_list.append(F1_score)
+                    f1_score_list.append(f1_score_macro)
 
                 #batch_values = np.concatenate(batch_values).ravel()
                 #batch_predictions = np.concatenate(batch_predictions).ravel()
@@ -542,22 +562,22 @@ class Optimization:
         values = np.concatenate(values).ravel()
         predictions = np.concatenate(predictions).ravel()
 
-        #print(predictions.shape)
         values_tensor = (torch.Tensor(values))
         predictions_tensor = (torch.Tensor(predictions))
 
         print('\nClassification Report:')
-        accuracy, precision, recall, F1_score, cm = F_score(predictions_tensor, values_tensor)
+        #accuracy, precision, recall, F1_score, cm = F_score(predictions_tensor, values_tensor)
+        #print(cm)
+        # print("accuracy: {:0.2f}%,".format(accuracy*100),
+        #       "precision: {:0.2f}%,".format(precision*100),
+        #       "recall: {:0.2f}%,".format(recall*100),
+        #       "F1_score: {:0.2f}%".format(F1_score*100))
+
+        accuracy, f1_score_macro, cm = calculate_metrics(predictions_tensor, values_tensor.float())
+        print("accuracy: {:0.2f}%,".format(accuracy * 100),
+              "f1_score (macro): {:0.2f}%".format(f1_score_macro * 100))
         print(cm)
-        print("accuracy: {:0.2f}%,".format(accuracy*100),
-              "precision: {:0.2f}%,".format(precision*100),
-              "recall: {:0.2f}%,".format(recall*100),
-              "F1_score: {:0.2f}%".format(F1_score*100))
 
-        #print('Classification Report:')
-        #print(classification_report(values, predictions, labels=[1, 0], digits=4))
-
-        #cm = confusion_matrix(values, predictions, labels=[1, 0])
         return predictions, values
 
 
@@ -578,16 +598,16 @@ if __name__ == "__main__":
     videos_path = args.videos_path
 
     # parameters
-    input_size = 88 # num of features
-    #input_size = 43  # num of features
+    #input_size = 88 # num of features
+    input_size = 43  # num of features
     output_size = 1
     hidden_size = 32
     num_layers = 1
     batch_size = 64
-    dropout = 0.5
-    n_epochs = 100
-    learning_rate = 1e-3
-    weight_decay = 1e-1
+    dropout = 0.2
+    n_epochs = 150
+    learning_rate = 1e-4
+    weight_decay = 1e-3
 
     model_params = {'input_size': input_size,
                     'hidden_size': hidden_size,
@@ -597,7 +617,7 @@ if __name__ == "__main__":
 
     videos_path = [item for sublist in videos_path for item in sublist]
 
-    seed_all(41)
+    #seed_all(42)
     dataset = create_dataset(videos_path)
     train_loader, val_loader, test_loader = data_preparation(
         dataset, batch_size=batch_size)

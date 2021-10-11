@@ -25,11 +25,8 @@ matplotlib.use('Agg')
 
 
 """
-RUN:
-apo seagate:
-python3 LSTM_pytorch.py -v /media/ubuntu/Seagate/test/t/Non_Static_5 /media/ubuntu/Seagate/test/t/Static_5
-
-big dataset:
+RUN (binary classification):
+big dataset (941 Static VS 583 Non Static):
 python3 LSTM_pytorch.py -v /home/ubuntu/LSTM/binary_data/data/Non_Static_4 /home/ubuntu/LSTM/binary_data/data/Static_4
 """
 
@@ -113,8 +110,11 @@ def load_data(X, y, check_train, scaler):
     X = []
     labels = []
     for index, data in enumerate(split_dataset):
-        # data[0] corresponds to .npy names
-        # data[1] corresponds to y labels
+        """
+        data[0] corresponds to ---> .npy names
+        data[1] corresponds to ---> y labels
+        """
+
         X_to_tensor = np.load(data[0])
 
         # keep only specific features
@@ -157,7 +157,7 @@ def data_preparation(videos_dataset, batch_size):
     y = [x[1] for x in videos_dataset]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        test_size=0.2, stratify=y)
+                                                        test_size=0.1, stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
                                                       test_size=0.15, stratify=y_train)
 
@@ -200,9 +200,6 @@ def calculate_metrics(predicted_values, actual_values, threshold=0.5):
 
 def F_score(logit, label, threshold=0.5, beta=2):
 
-    #prob = torch.sigmoid(logit)
-    #prob = prob > threshold
-
     prob = logit > threshold
     label = label > threshold
 
@@ -236,6 +233,7 @@ class LSTMModel(nn.Module):
         self.drop = nn.Dropout(p=dropout_prob)
         self.fc = nn.Linear(hidden_size, output_size)
         self.m = nn.Sigmoid()
+
         # self.fnn = nn.Sequential(OrderedDict([
         #     ('gelu1', nn.LeakyReLU()),
         #     ('fc1', nn.Linear(self.hidden_size, 512)),
@@ -274,29 +272,29 @@ class LSTMModel(nn.Module):
         # ]))
 
         # self.fnn = nn.Sequential(OrderedDict([
-        #     ('relu1', nn.GELU()),
+        #     ('relu1', nn.ReLU()),
         #     ('fc1', nn.Linear(self.hidden_size, 64)),
         #     ('bn1', nn.BatchNorm1d(64)),
-        #     ('relu2', nn.GELU()),
+        #     ('relu2', nn.ReLU()),
         #     ('fc2', nn.Linear(64, 64)),
         #     ('bn2', nn.BatchNorm1d(64)),
-        #     ('relu3', nn.GELU()),
+        #     ('relu3', nn.ReLU()),
         #     ('fc3', nn.Linear(64, 32)),
         #     ('bn3', nn.BatchNorm1d(32)),
-        #     ('relu4', nn.GELU()),
+        #     ('relu4', nn.ReLU()),
         #     ('fc4', nn.Linear(32, 1))
         # ]))
 
-        # self.fnn = nn.Sequential(OrderedDict([
-        #     ('relu1', nn.LeakyReLU()),
-        #     ('fc1', nn.Linear(self.hidden_size, 32)),
-        #     ('bn1', nn.BatchNorm1d(32)),
-        #     ('relu2', nn.LeakyReLU()),
-        #     ('fc2', nn.Linear(32, 32)),
-        #     ('bn2', nn.BatchNorm1d(32)),
-        #     ('relu3', nn.LeakyReLU()),
-        #     ('fc3', nn.Linear(32, 1))
-        # ]))
+        self.fnn = nn.Sequential(OrderedDict([
+            ('relu1', nn.LeakyReLU()),
+            ('fc1', nn.Linear(self.hidden_size, 32)),
+            ('bn1', nn.BatchNorm1d(32)),
+            ('relu2', nn.LeakyReLU()),
+            ('fc2', nn.Linear(32, 32)),
+            ('bn2', nn.BatchNorm1d(32)),
+            ('relu3', nn.LeakyReLU()),
+            ('fc3', nn.Linear(32, 1))
+        ]))
 
     def forward(self, X, lengths):
         """
@@ -324,15 +322,13 @@ class LSTMModel(nn.Module):
 
         # output shape: (batch_size, seq_length, hidden_size)
 
-        output = self.fc(last_states)
+        #output = self.fc(last_states)
 
         #last_states = self.drop(last_states)
 
-        #output = self.fnn(last_states)
+        output = self.fnn(last_states)
 
         output = self.m(output)
-
-        #output = self.fnn(output)
 
         return output
 
@@ -399,17 +395,17 @@ class Optimization:
             train_losses = []
             val_losses = []
 
-            acc_list = []
-            f1_score_list = []
-            #batch_predictions = []
-            #batch_values = []
+            val_predictions = []
+            val_values = []
 
             # enumerate mini batches
             for batch_idx, batch_info in enumerate(train_loader):
-                # batch_idx -------> batch id
-                # batch_info[0] ---> padded arrays in each batch
-                # batch_info[1] ---> labels (y) in each batch
-                # batch_info[2] ---> original length of each sequence
+                """
+                batch_idx -------> batch id
+                batch_info[0] ---> padded arrays in each batch
+                batch_info[1] ---> labels (y) in each batch
+                batch_info[2] ---> original length of each sequence
+                """
 
                 self.optimizer.zero_grad()
 
@@ -461,24 +457,16 @@ class Optimization:
                     val_loss = self.loss_fn(y_hat, y_val.float())
                     val_losses.append(val_loss)
 
-                    #batch_predictions.append(y_hat)
-                    #batch_values.append(y_val)
+                    val_predictions.append(y_hat)
+                    val_values.append((y_val.float()))
 
-                    #accuracy, precision, recall, F1_score, cm = F_score(y_hat, y_val.float())
+                val_values = np.concatenate(val_values).ravel()
+                val_predictions = np.concatenate(val_predictions).ravel()
 
-                    accuracy, f1_score_macro, cm = calculate_metrics(y_hat, y_val.float())
+                val_values_tensor = (torch.Tensor(val_values))
+                val_predictions_tensor = (torch.Tensor(val_predictions))
 
-                    acc_list.append(accuracy)
-                    f1_score_list.append(f1_score_macro)
-
-                #batch_values = np.concatenate(batch_values).ravel()
-                #batch_predictions = np.concatenate(batch_predictions).ravel()
-                #values_tens = (torch.Tensor(batch_values))
-                #predictions_tens = (torch.Tensor(batch_predictions))
-                #accuracy, precision, recall, f1_score = F_score(predictions_tens, values_tens.float())
-
-                accuracy = np.mean(acc_list)
-                f1_score = np.mean(f1_score_list)
+                accuracy, f1_score_macro, cm = calculate_metrics(val_predictions_tensor, val_values_tensor)
 
                 validation_loss = np.mean(val_losses)
                 self.val_loss.append(validation_loss)
@@ -494,29 +482,25 @@ class Optimization:
             print(
                 f"[{epoch}/{n_epochs}] Training loss: {train_step_loss:.4f}\t Validation loss: {validation_loss:.4f}"
             )
-            print("accuracy: {:0.2f}%,".format(accuracy * 100), "f1_score: {:0.2f}%".format(f1_score * 100))
+            print("accuracy: {:0.2f}%,".format(accuracy * 100), "f1_score: {:0.2f}%".format(f1_score_macro * 100))
             # save checkpoint
             check_path = Path('checkpoint.pt')
             best_check_path = Path('best_checkpoint.pt')
 
             save_ckp(checkpoint, False, check_path, best_check_path)
 
-            if f1_score >= f1_max:
+            if f1_score_macro >= f1_max:
                 counter_epoch = 0
-                print('f1_score increased({:.6f} --> {:.6f}).'.format(f1_max, f1_score))
+                print('f1_score increased({:.6f} --> {:.6f}).'.format(f1_max, f1_score_macro))
                 # save checkpoint as best model
                 save_ckp(checkpoint, True, check_path, best_check_path)
-                f1_max = f1_score
+                f1_max = f1_score_macro
 
-            if (epoch > 20) & (counter_epoch >= 15):
+            if (epoch > 20) & (counter_epoch >= 5):
                 break
+            # if counter_epoch >= 7:
+            #     break
 
-            # if validation_loss <= validation_min_loss:
-            #     print('Validation loss decreased ({:.6f} --> {:.6f}).'.format(validation_min_loss,
-            #                                                                   validation_loss))
-            #     # save checkpoint as best model
-            #     save_ckp(checkpoint, True, check_path, best_check_path)
-            #     validation_min_loss = validation_loss
             print("\n")
 
     def plot_losses(self):
@@ -566,8 +550,6 @@ class Optimization:
         predictions_tensor = (torch.Tensor(predictions))
 
         print('\nClassification Report:')
-        #accuracy, precision, recall, F1_score, cm = F_score(predictions_tensor, values_tensor)
-        #print(cm)
         # print("accuracy: {:0.2f}%,".format(accuracy*100),
         #       "precision: {:0.2f}%,".format(precision*100),
         #       "recall: {:0.2f}%,".format(recall*100),
@@ -601,13 +583,13 @@ if __name__ == "__main__":
     #input_size = 88 # num of features
     input_size = 43  # num of features
     output_size = 1
-    hidden_size = 32
+    hidden_size = 128
     num_layers = 1
     batch_size = 64
     dropout = 0.2
-    n_epochs = 150
+    n_epochs = 100
     learning_rate = 1e-4
-    weight_decay = 1e-3
+    weight_decay = 1e-6
 
     model_params = {'input_size': input_size,
                     'hidden_size': hidden_size,

@@ -9,6 +9,7 @@ import shutil
 import torch.nn as nn
 from pathlib import Path
 from collections import OrderedDict
+from torch.nn import init
 from torch.nn.utils.rnn import pack_padded_sequence as pack
 from torch.nn.utils.rnn import pad_packed_sequence as unpack
 from sklearn.metrics import f1_score, accuracy_score
@@ -42,7 +43,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def seed_all(seed):
+def seed_all(seed=42):
     torch.cuda.empty_cache()
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
@@ -157,9 +158,9 @@ def data_preparation(videos_dataset, batch_size):
     y = [x[1] for x in videos_dataset]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        test_size=0.1, stratify=y)
+                                                        test_size=0.2, random_state=42, stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
-                                                      test_size=0.15, stratify=y_train)
+                                                      test_size=0.15, random_state=42, stratify=y_train)
 
     # Define Scaler
     min_max_scaler = MinMaxScaler()
@@ -186,7 +187,7 @@ def data_preparation(videos_dataset, batch_size):
 
 def calculate_metrics(predicted_values, actual_values, threshold=0.5):
 
-    y_pred = predicted_values > threshold
+    y_pred = predicted_values >= threshold
     y = actual_values
 
     y_pred = y_pred.float()
@@ -198,25 +199,27 @@ def calculate_metrics(predicted_values, actual_values, threshold=0.5):
     return acc, f1_score_macro, cm
 
 
-def F_score(logit, label, threshold=0.5, beta=2):
-
-    prob = logit > threshold
-    label = label > threshold
-
-    TP = (prob & label).sum().float()
-    TN = ((~prob) & (~label)).sum().float()
-    FP = (prob & (~label)).sum().float()
-    FN = ((~prob) & label).sum().float()
-
-    accuracy = (TP+TN)/(TP+TN+FP+FN)
-    precision = torch.mean(TP / (TP + FP + 1e-12))
-    recall = torch.mean(TP / (TP + FN + 1e-12))
-    #F2 = (1 + beta**2) * precision * recall / (beta**2 * precision + recall + 1e-12)
-    F2 = (2 * precision * recall) / (precision + recall + 1e-12)
-    cm = np.array([[TP, FP], [FN, TN]])
-    #print(cm)
-
-    return accuracy, precision, recall, F2.mean(0), cm
+def weight_init(m):
+    if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.Linear):
+        #print("m: ", m.weight)
+        #init.normal_(m.weight.data, 0.0, 0.02)
+        init.xavier_uniform(m.weight)
+        #init.zeros_(m.bias)
+        m.bias.data.fill_(0.01)
+        #print("VS m: ", m.weight, "\n")
+    # elif isinstance(m, nn.Conv2d):
+    #     init.normal_(m.weight.data, 0.0, 0.02)
+    else:
+        #print("else m: ", m)
+        for name, param in m.named_parameters():
+            if 'weight_ih' in name:
+                init.xavier_uniform_(param.data)
+            elif 'weight_hh' in name:
+                # for LSTM layer
+                init.orthogonal_(param.data)
+            elif 'bias' in name:
+                #print("bias")
+                param.data.fill_(0)
 
 
 class LSTMModel(nn.Module):
@@ -236,65 +239,31 @@ class LSTMModel(nn.Module):
 
         # self.fnn = nn.Sequential(OrderedDict([
         #     ('gelu1', nn.LeakyReLU()),
-        #     ('fc1', nn.Linear(self.hidden_size, 512)),
-        #     ('bn1', nn.BatchNorm1d(512)),
+        #     ('fc1', nn.Linear(self.hidden_size, 256)),
+        #     ('bn1', nn.BatchNorm1d(256)),
         #     ('gelu2', nn.LeakyReLU()),
-        #     ('fc2', nn.Linear(512, 512)),
-        #     ('bn2', nn.BatchNorm1d(512)),
-        #     ('gelu3', nn.LeakyReLU()),
-        #     ('fc3', nn.Linear(512, 128)),
-        #     ('bn3', nn.BatchNorm1d(128)),
-        #     ('gelu4', nn.LeakyReLU()),
-        #     ('fc4', nn.Linear(128, 64)),
-        #     ('bn4', nn.BatchNorm1d(64)),
-        #     ('gelu5', nn.LeakyReLU()),
-        #     ('fc5', nn.Linear(64, 32)),
-        #     ('bn5', nn.BatchNorm1d(32)),
-        #     ('gelu6', nn.LeakyReLU()),
-        #     ('fc6', nn.Linear(32, 1))
-        # ]))
-
-        # self.fnn = nn.Sequential(OrderedDict([
-        #     ('gelu1', nn.ReLU()),
-        #     ('fc1', nn.Linear(self.hidden_size, 128)),
-        #     ('bn1', nn.BatchNorm1d(128)),
-        #     ('gelu2', nn.ReLU()),
-        #     ('fc2', nn.Linear(128, 128)),
+        #     ('fc2', nn.Linear(256, 128)),
         #     ('bn2', nn.BatchNorm1d(128)),
-        #     ('gelu3', nn.ReLU()),
+        #     ('gelu3', nn.LeakyReLU()),
         #     ('fc3', nn.Linear(128, 64)),
         #     ('bn3', nn.BatchNorm1d(64)),
-        #     ('gelu4', nn.ReLU()),
+        #     ('gelu4', nn.LeakyReLU()),
         #     ('fc4', nn.Linear(64, 32)),
         #     ('bn4', nn.BatchNorm1d(32)),
-        #     ('gelu5', nn.ReLU()),
+        #     ('gelu5', nn.LeakyReLU()),
         #     ('fc5', nn.Linear(32, 1))
         # ]))
-
-        # self.fnn = nn.Sequential(OrderedDict([
-        #     ('relu1', nn.ReLU()),
-        #     ('fc1', nn.Linear(self.hidden_size, 64)),
-        #     ('bn1', nn.BatchNorm1d(64)),
-        #     ('relu2', nn.ReLU()),
-        #     ('fc2', nn.Linear(64, 64)),
-        #     ('bn2', nn.BatchNorm1d(64)),
-        #     ('relu3', nn.ReLU()),
-        #     ('fc3', nn.Linear(64, 32)),
-        #     ('bn3', nn.BatchNorm1d(32)),
-        #     ('relu4', nn.ReLU()),
-        #     ('fc4', nn.Linear(32, 1))
-        # ]))
-
         self.fnn = nn.Sequential(OrderedDict([
-            ('relu1', nn.LeakyReLU()),
-            ('fc1', nn.Linear(self.hidden_size, 32)),
-            ('bn1', nn.BatchNorm1d(32)),
-            ('relu2', nn.LeakyReLU()),
-            ('fc2', nn.Linear(32, 32)),
-            ('bn2', nn.BatchNorm1d(32)),
-            ('relu3', nn.LeakyReLU()),
-            ('fc3', nn.Linear(32, 1))
-        ]))
+                    ('gelu1', nn.LeakyReLU()),
+                    ('fc1', nn.Linear(self.hidden_size, 64)),
+                    ('bn1', nn.BatchNorm1d(64)),
+                    ('gelu2', nn.LeakyReLU()),
+                    ('fc2', nn.Linear(64, 32)),
+                    ('bn2', nn.BatchNorm1d(32)),
+                    ('gelu3', nn.LeakyReLU()),
+                    ('fc3', nn.Linear(32, 1))
+                ]))
+
 
     def forward(self, X, lengths):
         """
@@ -316,7 +285,6 @@ class LSTMModel(nn.Module):
 
         # Forward propagate LSTM
         output, (hn, cn) = self.lstm(X, (h0.detach(), c0.detach()))
-        #output, _ = self.lstm(X)
 
         last_states = self.last_by_index(output, lengths)
 
@@ -376,16 +344,15 @@ def load_ckp(checkpoint_path, model, optimizer):
 
 
 class Optimization:
-    def __init__(self, model, loss_fn, optimizer):
+    def __init__(self, model, loss_fn, optimizer, scheduler):
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
+        self.scheduler = scheduler
         self.train_loss = []
         self.val_loss = []
 
     def train(self, train_loader, val_loader, n_epochs):
-
-        #validation_min_loss = float('inf')
         f1_max = -1.0
         counter_epoch = 0
 
@@ -397,6 +364,7 @@ class Optimization:
 
             val_predictions = []
             val_values = []
+            scheduler.step(epoch)
 
             # enumerate mini batches
             for batch_idx, batch_info in enumerate(train_loader):
@@ -496,7 +464,7 @@ class Optimization:
                 save_ckp(checkpoint, True, check_path, best_check_path)
                 f1_max = f1_score_macro
 
-            if (epoch > 20) & (counter_epoch >= 5):
+            if (epoch > 20) & (counter_epoch >= 10):
                 break
             # if counter_epoch >= 7:
             #     break
@@ -583,12 +551,12 @@ if __name__ == "__main__":
     #input_size = 88 # num of features
     input_size = 43  # num of features
     output_size = 1
-    hidden_size = 128
+    hidden_size = 32
     num_layers = 1
     batch_size = 64
     dropout = 0.2
     n_epochs = 100
-    learning_rate = 1e-4
+    learning_rate = 1e-3
     weight_decay = 1e-6
 
     model_params = {'input_size': input_size,
@@ -599,18 +567,23 @@ if __name__ == "__main__":
 
     videos_path = [item for sublist in videos_path for item in sublist]
 
-    #seed_all(42)
+    seed_all(42)
     dataset = create_dataset(videos_path)
     train_loader, val_loader, test_loader = data_preparation(
         dataset, batch_size=batch_size)
 
     model = get_model('lstm', model_params)
 
+    model.lstm.apply(weight_init)
+    for submodule in model.fnn:
+        submodule.apply(weight_init)
+
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(),
                            lr=learning_rate, weight_decay=weight_decay)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
 
-    opt = Optimization(model=model, loss_fn=criterion, optimizer=optimizer)
+    opt = Optimization(model=model, loss_fn=criterion, optimizer=optimizer, scheduler=scheduler)
 
     opt.train(train_loader, val_loader, n_epochs=n_epochs)
     opt.plot_losses()

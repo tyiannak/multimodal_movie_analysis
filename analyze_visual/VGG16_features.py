@@ -13,6 +13,12 @@ from torch import Tensor
 from torchvision import transforms, models
 from collections import OrderedDict
 
+"""
+non_static: 583 shots VS Static: 985 shots
+
+RUN: 
+python3 VGG16_features.py -v /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/non_static /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/Static
+"""
 
 def parse_arguments():
     """
@@ -55,10 +61,6 @@ if __name__ == "__main__":
         video_files_list = sorted(video_files_list)
 
         for movieFile in video_files_list:
-
-
-            #if len(window_file_exists) <= 0:
-
             h = model.classifier[0].register_forward_hook(get_features('feats'))
 
             preprocess = transforms.Compose([

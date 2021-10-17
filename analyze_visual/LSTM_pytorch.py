@@ -10,6 +10,7 @@ import torch.nn as nn
 from pathlib import Path
 from torch.nn import init
 import torch.optim as optim
+import sklearn.metrics as metrics
 from collections import OrderedDict
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import MinMaxScaler
@@ -17,9 +18,11 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import classification_report
 from torch.nn.utils.rnn import pad_sequence as pad
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import f1_score, accuracy_score
 from torch.nn.utils.rnn import pack_padded_sequence as pack
 from torch.nn.utils.rnn import pad_packed_sequence as unpack
+from matplotlib import pyplot
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
@@ -186,6 +189,32 @@ def data_preparation(videos_dataset, batch_size):
     return train_loader, val_loader, test_loader
 
 
+def plot_roc_curve(fpr, tpr, roc_auc):
+    plt.title('Receiver Operating Characteristic')
+    plt.plot(fpr, tpr, 'b', label='AUC = %0.2f' % roc_auc)
+    plt.legend(loc='lower right')
+    plt.plot([0, 1], [0, 1], 'r--')
+    plt.xlim([-0.05, 1])
+    plt.ylim([0, 1.05])
+    plt.ylabel('True Positive Rate')
+    plt.xlabel('False Positive Rate')
+    plt.show()
+    plt.savefig("ROC Curve - Binary Classification.png")
+    plt.close()
+
+
+def plot_precision_recall_curve(precision, recall, y_test):
+    no_skill = len(y_test[y_test == 1]) / len(y_test)
+    pyplot.plot([0, 1], [no_skill, no_skill], linestyle='--', label='No Skill')
+    pyplot.plot(recall, precision, marker='.', label='LSTM')
+    pyplot.xlabel('Recall')
+    pyplot.ylabel('Precision')
+    pyplot.legend()
+    pyplot.show()
+    plt.savefig("Precision-Recall Curve - Binary Classification.png")
+    plt.close()
+
+
 def calculate_metrics(predicted_values, actual_values, threshold=0.5):
 
     y_pred = predicted_values >= threshold
@@ -196,8 +225,19 @@ def calculate_metrics(predicted_values, actual_values, threshold=0.5):
     cm = confusion_matrix(y, y_pred)
     f1_score_macro = f1_score(y, y_pred, average='macro')
     acc = accuracy_score(y, y_pred)
+    precision_recall_fscore = precision_recall_fscore_support(y, y_pred, average='macro')
 
-    return acc, f1_score_macro, cm
+    # ROC Curve
+    fpr, tpr, threshold = metrics.roc_curve(actual_values, predicted_values)
+    precision, recall, thresholds = metrics.precision_recall_curve(actual_values, predicted_values)
+    roc_auc = metrics.auc(fpr, tpr)
+
+    # print("fpr", fpr, "tpr", tpr, "threshold", threshold)
+
+    plot_roc_curve(fpr, tpr, roc_auc)
+    plot_precision_recall_curve(precision, recall, actual_values)
+
+    return acc, f1_score_macro, cm, precision_recall_fscore
 
 
 def weight_init(m):
@@ -437,7 +477,7 @@ class Optimization:
                 val_values_tensor = (torch.Tensor(val_values))
                 val_predictions_tensor = (torch.Tensor(val_predictions))
 
-                accuracy, f1_score_macro, cm = calculate_metrics(val_predictions_tensor, val_values_tensor)
+                accuracy, f1_score_macro, cm, _ = calculate_metrics(val_predictions_tensor, val_values_tensor)
 
                 validation_loss = np.mean(val_losses)
                 self.val_loss.append(validation_loss)
@@ -468,8 +508,6 @@ class Optimization:
                 save_ckp(checkpoint, True, check_path, best_check_path)
                 f1_max = f1_score_macro
 
-            # if (epoch > 20) & (counter_epoch >= 10):
-            #     break
             if counter_epoch >= 10:
                 break
 
@@ -523,16 +561,14 @@ class Optimization:
         values_tensor = (torch.Tensor(values))
         predictions_tensor = (torch.Tensor(predictions))
 
-        print('\nClassification Report:')
-        # print("accuracy: {:0.2f}%,".format(accuracy*100),
-        #       "precision: {:0.2f}%,".format(precision*100),
-        #       "recall: {:0.2f}%,".format(recall*100),
-        #       "F1_score: {:0.2f}%".format(F1_score*100))
+        accuracy, f1_score_macro, cm, precision_recall = calculate_metrics(predictions_tensor, values_tensor.float())
 
-        accuracy, f1_score_macro, cm = calculate_metrics(predictions_tensor, values_tensor.float())
-        print("accuracy: {:0.2f}%,".format(accuracy * 100),
+        print("\nClassification Report:\n"
+              "accuracy: {:0.2f}%,".format(accuracy * 100),
+              "precision: {:0.2f}%,".format(precision_recall[0] * 100),
+              "recall: {:0.2f}%,".format(precision_recall[1]*100),
               "f1_score (macro): {:0.2f}%".format(f1_score_macro * 100))
-        print(cm)
+        print("\nConfusion matrix\n", cm)
 
         return predictions, values, cm
 
@@ -612,14 +648,14 @@ if __name__ == "__main__":
 
     ckp_path = "best_checkpoint.pt"
     best_model, optimizer, start_epoch, \
-    validation_min_loss = load_ckp(ckp_path, model, optimizer)
+    best_f1_score = load_ckp(ckp_path, model, optimizer)
 
-    # print("\nAfter validation:")
+    # print("\nAfter training and validation process:")
     # print("model = ", model)
     # print("optimizer = ", optimizer)
     # print("start_epoch = ", start_epoch)
-    # print("validation_min_loss = ", validation_min_loss)
-    # print("validation_min_loss = {:.6f}".format(validation_min_loss), "\n")
+    # print("best_f1_score = ", best_f1_score)
+    # print("best_f1_score = {:.6f}".format(best_f1_score), "\n")
 
-    predictions, values, bin_confusion_matrix = opt.evaluate(test_loader, best_model)
-    plot_binary_cm(bin_confusion_matrix)
+    predictions, values, binary_confusion_matrix = opt.evaluate(test_loader, best_model)
+    plot_binary_cm(binary_confusion_matrix)

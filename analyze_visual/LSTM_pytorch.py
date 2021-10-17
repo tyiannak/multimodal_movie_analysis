@@ -1,25 +1,25 @@
-import warnings
-import argparse
 import os
-import numpy as np
 import sys
 import torch
 import random
 import shutil
+import warnings
+import argparse
+import numpy as np
 import torch.nn as nn
 from pathlib import Path
-from collections import OrderedDict
 from torch.nn import init
+import torch.optim as optim
+from collections import OrderedDict
+from sklearn.metrics import confusion_matrix
+from sklearn.preprocessing import MinMaxScaler
+from torch.utils.data import Dataset, DataLoader
+from sklearn.metrics import classification_report
+from torch.nn.utils.rnn import pad_sequence as pad
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import f1_score, accuracy_score
 from torch.nn.utils.rnn import pack_padded_sequence as pack
 from torch.nn.utils.rnn import pad_packed_sequence as unpack
-from sklearn.metrics import f1_score, accuracy_score
-from torch.nn.utils.rnn import pad_sequence as pad
-from torch.utils.data import Dataset, DataLoader
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import classification_report
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
-import torch.optim as optim
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
@@ -159,9 +159,9 @@ def data_preparation(videos_dataset, batch_size):
     y = [x[1] for x in videos_dataset]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        test_size=0.2, random_state=42, stratify=y)
+                                                        test_size=0.2, random_state=30, stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
-                                                      test_size=0.13, random_state=42, stratify=y_train)
+                                                      test_size=0.13, random_state=30, stratify=y_train)
 
     # Define Scaler
     min_max_scaler = MinMaxScaler()
@@ -227,28 +227,28 @@ class LSTMModel(nn.Module):
         self.num_layers = num_layers
 
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers,
-                            batch_first=True, dropout=dropout_prob)
+                            batch_first=True)#, dropout=dropout_prob)
 
         self.drop = nn.Dropout(p=dropout_prob)
         self.fc = nn.Linear(hidden_size, output_size)
 
         self.fnn = nn.Sequential(OrderedDict([
-            ('gelu1', nn.ReLU()),
+            ('relu1', nn.ReLU()),
             ('fc1', nn.Linear(self.hidden_size, 512)),
             ('bn1', nn.BatchNorm1d(512)),
-            ('gelu2', nn.ReLU()),
+            ('relu2', nn.ReLU()),
             ('fc2', nn.Linear(512, 256)),
             ('bn2', nn.BatchNorm1d(256)),
-            ('gelu3', nn.ReLU()),
+            ('relu3', nn.ReLU()),
             ('fc3', nn.Linear(256, 128)),
             ('bn3', nn.BatchNorm1d(128)),
-            ('gelu4', nn.ReLU()),
+            ('relu4', nn.ReLU()),
             ('fc4', nn.Linear(128, 64)),
             ('bn4', nn.BatchNorm1d(64)),
-            ('gelu5', nn.ReLU()),
+            ('relu5', nn.ReLU()),
             ('fc5', nn.Linear(64, 32)),
             ('bn5', nn.BatchNorm1d(32)),
-            ('gelu6', nn.ReLU()),
+            ('relu6', nn.ReLU()),
             ('fc6', nn.Linear(32, 1))
         ]))
 
@@ -461,7 +461,7 @@ class Optimization:
 
             save_ckp(checkpoint, False, check_path, best_check_path)
 
-            if f1_score_macro >= f1_max:
+            if f1_score_macro > f1_max:
                 counter_epoch = 0
                 print('f1_score increased({:.6f} --> {:.6f}).'.format(f1_max, f1_score_macro))
                 # save checkpoint as best model
@@ -476,13 +476,15 @@ class Optimization:
             print("\n")
 
     def plot_losses(self):
+        #plt.figure(figsize=(10, 10))
+        plt.title("LSTM Training and Validation Loss")
         plt.plot(self.train_loss, label="Training loss")
         plt.plot(self.val_loss, label="Validation loss")
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
         #plt.margins(1, 1)
         plt.legend()
-        plt.title("LSTM Losses")
+        #plt.title("LSTM Losses")
         plt.show()
         plt.savefig("LSTM_binary_class_losses.png")
         plt.close()
@@ -532,7 +534,21 @@ class Optimization:
               "f1_score (macro): {:0.2f}%".format(f1_score_macro * 100))
         print(cm)
 
-        return predictions, values
+        return predictions, values, cm
+
+
+def plot_binary_cm(conf_matrix):
+    fig, ax = plt.subplots(figsize=(7.5, 7.5))
+    ax.matshow(conf_matrix, cmap=plt.cm.Blues, alpha=0.3)
+    for i in range(conf_matrix.shape[0]):
+        for j in range(conf_matrix.shape[1]):
+            ax.text(x=j, y=i, s=conf_matrix[i, j], va='center', ha='center', size='xx-large')
+
+    plt.xlabel('Predictions', fontsize=18)
+    plt.ylabel('Actuals', fontsize=18)
+    plt.title('Confusion Matrix', fontsize=18)
+    plt.show()
+    plt.savefig('binary_confusion_matrix.png')
 
 
 def get_model(model, model_params):
@@ -561,7 +577,7 @@ if __name__ == "__main__":
     dropout = 0.2
     n_epochs = 100
     learning_rate = 1e-2
-    weight_decay = 1e-5
+    weight_decay = 1e-4
 
     model_params = {'input_size': input_size,
                     'hidden_size': hidden_size,
@@ -605,5 +621,5 @@ if __name__ == "__main__":
     # print("validation_min_loss = ", validation_min_loss)
     # print("validation_min_loss = {:.6f}".format(validation_min_loss), "\n")
 
-    predictions, values = opt.evaluate(test_loader, best_model)
-
+    predictions, values, bin_confusion_matrix = opt.evaluate(test_loader, best_model)
+    plot_binary_cm(bin_confusion_matrix)

@@ -76,6 +76,12 @@ def create_dataset(videos_path):
             if filename.endswith(".mp4.npy"):
                 full_path_name = folder + "/" + filename
                 videos_dataset.append(tuple((full_path_name, label_int)))
+
+            #VGG
+            # if filename.endswith("_VGG.npy"):
+            #     full_path_name = folder + "/" + filename
+            #     videos_dataset.append(tuple((full_path_name, label_int)))
+
     print("\n")
 
     return videos_dataset
@@ -274,21 +280,27 @@ class LSTMModel(nn.Module):
 
         self.fnn = nn.Sequential(OrderedDict([
             ('relu1', nn.ReLU()),
+            ('drop1', nn.Dropout(0.4)),
             ('fc1', nn.Linear(self.hidden_size, 512)),
             ('bn1', nn.BatchNorm1d(512)),
             ('relu2', nn.ReLU()),
+            ('drop2', nn.Dropout(0.4)),
             ('fc2', nn.Linear(512, 256)),
             ('bn2', nn.BatchNorm1d(256)),
             ('relu3', nn.ReLU()),
+            ('drop3', nn.Dropout(0.3)),
             ('fc3', nn.Linear(256, 128)),
             ('bn3', nn.BatchNorm1d(128)),
             ('relu4', nn.ReLU()),
+            ('drop4', nn.Dropout(0.3)),
             ('fc4', nn.Linear(128, 64)),
             ('bn4', nn.BatchNorm1d(64)),
             ('relu5', nn.ReLU()),
+            ('drop5', nn.Dropout(0.2)),
             ('fc5', nn.Linear(64, 32)),
             ('bn5', nn.BatchNorm1d(32)),
             ('relu6', nn.ReLU()),
+            ('drop6', nn.Dropout(0.2)),
             ('fc6', nn.Linear(32, 1))
         ]))
 
@@ -335,7 +347,7 @@ class LSTMModel(nn.Module):
 
         #output = self.fc(last_states)
 
-        last_states = self.drop(last_states)
+        #last_states = self.drop(last_states)
 
         output = self.fnn(last_states)
         output = self.m(output)
@@ -508,7 +520,7 @@ class Optimization:
                 save_ckp(checkpoint, True, check_path, best_check_path)
                 f1_max = f1_score_macro
 
-            if counter_epoch >= 10:
+            if counter_epoch >= 20:
                 break
 
             print("\n")
@@ -605,7 +617,10 @@ if __name__ == "__main__":
 
     # parameters
     #input_size = 88 # num of features
+
     input_size = 43  # num of features
+
+    #input_size = 4096
     output_size = 1
     hidden_size = 256
     num_layers = 1

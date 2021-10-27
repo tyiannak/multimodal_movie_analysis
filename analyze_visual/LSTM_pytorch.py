@@ -32,6 +32,9 @@ matplotlib.use('Agg')
 RUN (binary classification):
 big dataset (941 Static VS 583 Non Static):
 python3 LSTM_pytorch.py -v /home/ubuntu/LSTM/binary_data/data/Non_Static_4 /home/ubuntu/LSTM/binary_data/data/Static_4
+
+#VGG binary
+python3 LSTM_pytorch.py -v /media/ubuntu/Seagate/ChromeDownloads/VGG_Non_Static /media/ubuntu/Seagate/ChromeDownloads/VGG_Static
 """
 
 
@@ -47,7 +50,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def seed_all(seed=42):
+def seed_all(seed):
     torch.cuda.empty_cache()
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
@@ -73,14 +76,15 @@ def create_dataset(videos_path):
         print(label, "=", label_int)
 
         for filename in os.listdir(folder):
-            if filename.endswith(".mp4.npy"):
-                full_path_name = folder + "/" + filename
-                videos_dataset.append(tuple((full_path_name, label_int)))
-
-            #VGG
-            # if filename.endswith("_VGG.npy"):
+            # if filename.endswith(".mp4.npy"):
             #     full_path_name = folder + "/" + filename
             #     videos_dataset.append(tuple((full_path_name, label_int)))
+
+            #VGG
+            #if filename.endswith("LAST_VGG.npy"): # last fc VGG layer
+            if filename.endswith("FEATS_VGG.npy"):  # 6th fc VGG layer
+                full_path_name = folder + "/" + filename
+                videos_dataset.append(tuple((full_path_name, label_int)))
 
     print("\n")
 
@@ -129,7 +133,7 @@ def load_data(X, y, check_train, scaler):
         X_to_tensor = np.load(data[0])
 
         # keep only specific features
-        X_to_tensor = X_to_tensor[:, 45:89]
+        #X_to_tensor = X_to_tensor[:, 45:89]
 
         y = data[1]
         labels.append(y)
@@ -616,11 +620,11 @@ if __name__ == "__main__":
     videos_path = args.videos_path
 
     # parameters
-    #input_size = 88 # num of features
+    #input_size = 43  # num of features
 
-    input_size = 43  # num of features
+    #input_size = 1000
+    input_size = 4096
 
-    #input_size = 4096
     output_size = 1
     hidden_size = 256
     num_layers = 1
@@ -638,7 +642,7 @@ if __name__ == "__main__":
 
     videos_path = [item for sublist in videos_path for item in sublist]
 
-    seed_all(42)
+    seed_all(38)
 
     dataset = create_dataset(videos_path)
     train_loader, val_loader, test_loader = data_preparation(

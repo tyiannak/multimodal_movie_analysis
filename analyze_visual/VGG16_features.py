@@ -15,7 +15,7 @@ from torchvision import transforms, models
 from collections import OrderedDict
 
 """
-non_static: 583 shots VS Static: 985 shots
+non_static: 583 shots VS Static: 941 shots
 
 RUN: 
 python3 VGG16_features.py -v /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/non_static /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/Static

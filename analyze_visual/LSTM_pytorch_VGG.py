@@ -30,6 +30,7 @@ matplotlib.use('Agg')
 
 """
 RUN (binary classification):
+
 big dataset (941 Static VS 583 Non Static):
 python3 LSTM_pytorch.py -v /home/ubuntu/LSTM/binary_data/data/Non_Static_4 /home/ubuntu/LSTM/binary_data/data/Static_4
 """

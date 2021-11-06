@@ -12,8 +12,11 @@ from torch.nn import init
 import torch.optim as optim
 import sklearn.metrics as metrics
 from collections import OrderedDict
+from sklearn.decomposition import PCA
+from sklearn.base import TransformerMixin
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import classification_report
 from torch.nn.utils.rnn import pad_sequence as pad
@@ -30,9 +33,9 @@ matplotlib.use('Agg')
 
 """
 RUN (binary classification):
+big dataset (941 Static VS 583 Non Static)
 
-big dataset (941 Static VS 583 Non Static):
-python3 LSTM_pytorch.py -v /home/ubuntu/LSTM/binary_data/data/Non_Static_4 /home/ubuntu/LSTM/binary_data/data/Static_4
+python3 LSTM_pytorch_VGG.py -v /home/ubuntu/LSTM/binary_data/data/Non_Static_4 /home/ubuntu/LSTM/binary_data/data/Static_4
 """
 
 
@@ -74,14 +77,9 @@ def create_dataset(videos_path):
         print(label, "=", label_int)
 
         for filename in os.listdir(folder):
-            if filename.endswith(".mp4.npy"):
+            if filename.endswith("LAST_VGG.npy"):
                 full_path_name = folder + "/" + filename
                 videos_dataset.append(tuple((full_path_name, label_int)))
-
-            #VGG
-            # if filename.endswith("_VGG.npy"):
-            #     full_path_name = folder + "/" + filename
-            #     videos_dataset.append(tuple((full_path_name, label_int)))
 
     print("\n")
 
@@ -112,7 +110,38 @@ def my_collate(batch):
     return sequences_padded, labels, lengths
 
 
-def load_data(X, y, check_train, scaler):
+class TimeSeriesScaling():
+    def __init__(self):
+        pass
+
+    def fit(self, X):
+        self.X = X
+        k = 0
+        mean_std_tuples = []
+        while k < self.X[0].shape[1]:
+            temp = np.concatenate([i[:, k] for i in self.X])
+            mean_std_tuples.append(
+                tuple((np.mean(temp), np.std(temp))))
+            k += 1
+        self.scale_params = mean_std_tuples
+
+    def transform(self, X):
+        X_scaled = []
+        tmp = list(zip(*self.scale_params))
+        mu = torch.Tensor(list(tmp[0]))
+        std = torch.Tensor(list(tmp[1]))
+        for inst in X:
+            v = (inst - mu) / std
+            X_scaled.append(v)
+        self.X_scaled = X_scaled
+        return X_scaled
+
+    def fit_transform(self, X):
+        self.fit(X)
+        self.transform(self.X)
+        return self.X_scaled
+
+def load_data(X, y, check_train, scaler, pca=None):
     # for train/val/test sets
     split_dataset = []
     for i, j in zip(X, y):
@@ -121,6 +150,11 @@ def load_data(X, y, check_train, scaler):
     x_len = []
     X = []
     labels = []
+    features_count = True
+
+    if pca is None:
+        pca = PCA(n_components=0.96)
+
     for index, data in enumerate(split_dataset):
         """
         data[0] corresponds to ---> .npy names
@@ -129,22 +163,28 @@ def load_data(X, y, check_train, scaler):
 
         X_to_tensor = np.load(data[0])
 
-        # keep only specific features
-        X_to_tensor = X_to_tensor[:, 45:89]
+        if features_count == True:
+            features_count = False
+            features = X_to_tensor.shape[1]
 
         y = data[1]
         labels.append(y)
         x_len.append(X_to_tensor.shape[0])
 
-        # data normalization
-        if check_train == True:
-            X_to_tensor = scaler.fit_transform(X_to_tensor)
-        else:
-            X_to_tensor = scaler.transform(X_to_tensor)
-
+        #X.append(X_to_tensor)
         X.append(torch.Tensor(X_to_tensor))
 
-    return X, labels, x_len
+
+
+    #mean_std = standard_fit(X, x_len, features)
+    #standard_transform(X, x_len, mean_std)
+
+    if check_train == True:
+        X_scaled = scaler.fit_transform(X)
+    else:
+        X_scaled = scaler.transform(X)
+
+    return X_scaled, labels, x_len
 
 
 class LSTMDataset(Dataset):
@@ -174,15 +214,16 @@ def data_preparation(videos_dataset, batch_size):
                                                       test_size=0.13, random_state=30, stratify=y_train)
 
     # Define Scaler
-    min_max_scaler = MinMaxScaler()
+    #min_max_scaler = MinMaxScaler()
+    scaler = TimeSeriesScaling()
 
-    X_train, y_train, train_lengths = load_data(X_train, y_train, True, scaler=min_max_scaler)
+    X_train, y_train, train_lengths = load_data(X_train, y_train, True, scaler=scaler)
     train_dataset = LSTMDataset(X_train, y_train, train_lengths)
 
-    X_val, y_val, val_lengths = load_data(X_val, y_val, False, scaler=min_max_scaler)
+    X_val, y_val, val_lengths = load_data(X_val, y_val, False, scaler=scaler)
     val_dataset = LSTMDataset(X_val, y_val, val_lengths)
 
-    X_test, y_test, test_lengths = load_data(X_test, y_test, False, scaler=min_max_scaler)
+    X_test, y_test, test_lengths = load_data(X_test, y_test, False, scaler=scaler)
     test_dataset = LSTMDataset(X_test, y_test, test_lengths)
 
     # Define a DataLoader for each set
@@ -281,29 +322,59 @@ class LSTMModel(nn.Module):
 
         self.fnn = nn.Sequential(OrderedDict([
             ('relu1', nn.ReLU()),
-            ('drop1', nn.Dropout(0.4)),
-            ('fc1', nn.Linear(self.hidden_size, 512)),
-            ('bn1', nn.BatchNorm1d(512)),
+            ('drop1', nn.Dropout(0.6)),
+            ('fc1', nn.Linear(self.hidden_size, 1024)),
+            ('bn1', nn.BatchNorm1d(1024)),
             ('relu2', nn.ReLU()),
-            ('drop2', nn.Dropout(0.4)),
-            ('fc2', nn.Linear(512, 256)),
-            ('bn2', nn.BatchNorm1d(256)),
+            ('drop2', nn.Dropout(0.5)),
+            ('fc2', nn.Linear(1024, 512)),
+            ('bn2', nn.BatchNorm1d(512)),
             ('relu3', nn.ReLU()),
-            ('drop3', nn.Dropout(0.3)),
-            ('fc3', nn.Linear(256, 128)),
-            ('bn3', nn.BatchNorm1d(128)),
+            ('drop3', nn.Dropout(0.4)),
+            ('fc3', nn.Linear(512, 256)),
+            ('bn3', nn.BatchNorm1d(256)),
             ('relu4', nn.ReLU()),
             ('drop4', nn.Dropout(0.3)),
-            ('fc4', nn.Linear(128, 64)),
-            ('bn4', nn.BatchNorm1d(64)),
+            ('fc4', nn.Linear(256, 128)),
+            ('bn4', nn.BatchNorm1d(128)),
             ('relu5', nn.ReLU()),
-            ('drop5', nn.Dropout(0.2)),
-            ('fc5', nn.Linear(64, 32)),
-            ('bn5', nn.BatchNorm1d(32)),
+            ('drop5', nn.Dropout(0.3)),
+            ('fc5', nn.Linear(128, 64)),
+            ('bn5', nn.BatchNorm1d(64)),
             ('relu6', nn.ReLU()),
             ('drop6', nn.Dropout(0.2)),
-            ('fc6', nn.Linear(32, 1))
+            ('fc6', nn.Linear(64, 32)),
+            ('bn6', nn.BatchNorm1d(32)),
+            ('relu7', nn.ReLU()),
+            ('drop7', nn.Dropout(0.2)),
+            ('fc7', nn.Linear(32, 1))
         ]))
+
+        # self.fnn = nn.Sequential(OrderedDict([
+        #     ('relu1', nn.ReLU()),
+        #     #('drop1', nn.Dropout(0.4)),
+        #     ('fc1', nn.Linear(self.hidden_size, 512)),
+        #     ('bn1', nn.BatchNorm1d(512)),
+        #     ('relu2', nn.ReLU()),
+        #     #('drop2', nn.Dropout(0.4)),
+        #     ('fc2', nn.Linear(512, 256)),
+        #     ('bn2', nn.BatchNorm1d(256)),
+        #     ('relu3', nn.ReLU()),
+        #     #('drop3', nn.Dropout(0.3)),
+        #     ('fc3', nn.Linear(256, 128)),
+        #     ('bn3', nn.BatchNorm1d(128)),
+        #     ('relu4', nn.ReLU()),
+        #     #('drop4', nn.Dropout(0.3)),
+        #     ('fc4', nn.Linear(128, 64)),
+        #     ('bn4', nn.BatchNorm1d(64)),
+        #     ('relu5', nn.ReLU()),
+        #     #('drop5', nn.Dropout(0.2)),
+        #     ('fc5', nn.Linear(64, 32)),
+        #     ('bn5', nn.BatchNorm1d(32)),
+        #     ('relu6', nn.ReLU()),
+        #     #('drop6', nn.Dropout(0.2)),
+        #     ('fc6', nn.Linear(32, 1))
+        # ]))
 
         # self.fnn = nn.Sequential(OrderedDict([
         #     ('gelu1', nn.ReLU()),
@@ -617,11 +688,9 @@ if __name__ == "__main__":
     videos_path = args.videos_path
 
     # parameters
-
     input_size = 1000
-
     output_size = 1
-    hidden_size = 256
+    hidden_size = 512
     num_layers = 1
     batch_size = 64
     dropout = 0.2

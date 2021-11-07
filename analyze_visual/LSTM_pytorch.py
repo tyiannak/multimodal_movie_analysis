@@ -31,10 +31,7 @@ matplotlib.use('Agg')
 """
 RUN (binary classification):
 big dataset (941 Static VS 583 Non Static):
-python3 LSTM_pytorch.py -v /home/ubuntu/LSTM/binary_data/data/Non_Static_4 /home/ubuntu/LSTM/binary_data/data/Static_4
-
-#VGG binary
-python3 LSTM_pytorch.py -v /media/ubuntu/Seagate/ChromeDownloads/VGG_Non_Static /media/ubuntu/Seagate/ChromeDownloads/VGG_Static
+python3 LSTM_pytorch.py -v /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/Non_Static_88_feat /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/Static_88_feat
 """
 
 
@@ -76,13 +73,7 @@ def create_dataset(videos_path):
         print(label, "=", label_int)
 
         for filename in os.listdir(folder):
-            # if filename.endswith(".mp4.npy"):
-            #     full_path_name = folder + "/" + filename
-            #     videos_dataset.append(tuple((full_path_name, label_int)))
-
-            #VGG
-            #if filename.endswith("LAST_VGG.npy"): # last fc VGG layer
-            if filename.endswith("FEATS_VGG.npy"):  # 6th fc VGG layer
+            if filename.endswith(".mp4.npy"):
                 full_path_name = folder + "/" + filename
                 videos_dataset.append(tuple((full_path_name, label_int)))
 
@@ -115,6 +106,76 @@ def my_collate(batch):
     return sequences_padded, labels, lengths
 
 
+class TimeSeriesStandardScaling():
+    def __init__(self):
+        pass
+
+    def fit(self, X):
+        self.X = X
+        k = 0
+        mean_std_tuples = []
+        while k < self.X[0].shape[1]:
+            temp = np.concatenate([i[:, k] for i in self.X])
+            mean_std_tuples.append(
+                tuple((np.mean(temp), np.std(temp))))
+            k += 1
+
+        self.scale_params = mean_std_tuples
+
+    def transform(self, X):
+        X_scaled = []
+        tmp = list(zip(*self.scale_params))
+        mu = torch.Tensor(list(tmp[0]))
+        std = torch.Tensor(list(tmp[1]))
+
+        for inst in X:
+            v = (inst - mu) / std
+            X_scaled.append(v)
+        self.X_scaled = X_scaled
+
+        return X_scaled
+
+    def fit_transform(self, X):
+        self.fit(X)
+        self.transform(self.X)
+        return self.X_scaled
+
+
+class TimeSeriesMinMaxScaling():
+    def __init__(self):
+        pass
+
+    def fit(self, X):
+        self.X = X
+        k = 0
+        min_max_tuples = []
+        while k < self.X[0].shape[1]:
+            temp = np.concatenate([i[:, k] for i in self.X])
+            min_max_tuples.append(
+                tuple((np.min(temp), np.max(temp))))
+            k += 1
+
+        self.scale_params = min_max_tuples
+
+    def transform(self, X):
+        X_scaled = []
+        tmp = list(zip(*self.scale_params))
+        min_feature = torch.Tensor(list(tmp[0]))
+        max_feature = torch.Tensor(list(tmp[1]))
+
+        for inst in X:
+            v = (inst - min_feature) / max_feature - min_feature
+            X_scaled.append(v)
+        self.X_scaled = X_scaled
+
+        return X_scaled
+
+    def fit_transform(self, X):
+        self.fit(X)
+        self.transform(self.X)
+        return self.X_scaled
+
+
 def load_data(X, y, check_train, scaler):
     # for train/val/test sets
     split_dataset = []
@@ -124,6 +185,7 @@ def load_data(X, y, check_train, scaler):
     x_len = []
     X = []
     labels = []
+
     for index, data in enumerate(split_dataset):
         """
         data[0] corresponds to ---> .npy names
@@ -133,21 +195,20 @@ def load_data(X, y, check_train, scaler):
         X_to_tensor = np.load(data[0])
 
         # keep only specific features
-        #X_to_tensor = X_to_tensor[:, 45:89]
+        X_to_tensor = X_to_tensor[:, 45:89]
 
         y = data[1]
         labels.append(y)
         x_len.append(X_to_tensor.shape[0])
-
-        # data normalization
-        if check_train == True:
-            X_to_tensor = scaler.fit_transform(X_to_tensor)
-        else:
-            X_to_tensor = scaler.transform(X_to_tensor)
-
         X.append(torch.Tensor(X_to_tensor))
 
-    return X, labels, x_len
+    # data normalization
+    if check_train == True:
+        X_scaled = scaler.fit_transform(X)
+    else:
+        X_scaled = scaler.transform(X)
+
+    return X_scaled, labels, x_len
 
 
 class LSTMDataset(Dataset):
@@ -172,20 +233,21 @@ def data_preparation(videos_dataset, batch_size):
     y = [x[1] for x in videos_dataset]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        test_size=0.2, random_state=30, stratify=y)
+                                                        test_size=0.2, stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
-                                                      test_size=0.13, random_state=30, stratify=y_train)
+                                                      test_size=0.13, stratify=y_train)
 
     # Define Scaler
-    min_max_scaler = MinMaxScaler()
+    scaler = TimeSeriesStandardScaling()
+    #scaler = TimeSeriesMinMaxScaling()
 
-    X_train, y_train, train_lengths = load_data(X_train, y_train, True, scaler=min_max_scaler)
+    X_train, y_train, train_lengths = load_data(X_train, y_train, True, scaler=scaler)
     train_dataset = LSTMDataset(X_train, y_train, train_lengths)
 
-    X_val, y_val, val_lengths = load_data(X_val, y_val, False, scaler=min_max_scaler)
+    X_val, y_val, val_lengths = load_data(X_val, y_val, False, scaler=scaler)
     val_dataset = LSTMDataset(X_val, y_val, val_lengths)
 
-    X_test, y_test, test_lengths = load_data(X_test, y_test, False, scaler=min_max_scaler)
+    X_test, y_test, test_lengths = load_data(X_test, y_test, False, scaler=scaler)
     test_dataset = LSTMDataset(X_test, y_test, test_lengths)
 
     # Define a DataLoader for each set
@@ -244,8 +306,8 @@ def calculate_metrics(predicted_values, actual_values, threshold=0.5):
 
     # print("fpr", fpr, "tpr", tpr, "threshold", threshold)
 
-    plot_roc_curve(fpr, tpr, roc_auc)
-    plot_precision_recall_curve(precision, recall, actual_values)
+    #plot_roc_curve(fpr, tpr, roc_auc)
+    #plot_precision_recall_curve(precision, recall, actual_values)
 
     return acc, f1_score_macro, cm, precision_recall_fscore
 
@@ -307,23 +369,6 @@ class LSTMModel(nn.Module):
             ('drop6', nn.Dropout(0.2)),
             ('fc6', nn.Linear(32, 1))
         ]))
-
-        # self.fnn = nn.Sequential(OrderedDict([
-        #     ('gelu1', nn.ReLU()),
-        #     ('fc1', nn.Linear(self.hidden_size, 256)),
-        #     ('bn1', nn.BatchNorm1d(256)),
-        #     ('gelu2', nn.ReLU()),
-        #     ('fc2', nn.Linear(256, 128)),
-        #     ('bn2', nn.BatchNorm1d(128)),
-        #     ('gelu3', nn.ReLU()),
-        #     ('fc3', nn.Linear(128, 64)),
-        #     ('bn3', nn.BatchNorm1d(64)),
-        #     ('gelu4', nn.ReLU()),
-        #     ('fc4', nn.Linear(64, 32)),
-        #     ('bn4', nn.BatchNorm1d(32)),
-        #     ('gelu5', nn.ReLU()),
-        #     ('fc5', nn.Linear(32, 1))
-        # ]))
 
         self.m = nn.Sigmoid()
 
@@ -563,9 +608,6 @@ class Optimization:
                 # retrieve numpy array
                 y_pred = y_pred.detach().numpy()
 
-                # round to class values
-                #y_pred = y_pred.round()
-
                 predictions.append(y_pred)
 
                 y_test = y_test.detach().numpy()
@@ -585,6 +627,9 @@ class Optimization:
               "recall: {:0.2f}%,".format(precision_recall[1]*100),
               "f1_score (macro): {:0.2f}%".format(f1_score_macro * 100))
         print("\nConfusion matrix\n", cm)
+
+        print("y_test: ", values_tensor)
+        print("y_pred: ", predictions_tensor)
 
         return predictions, values, cm
 
@@ -620,10 +665,7 @@ if __name__ == "__main__":
     videos_path = args.videos_path
 
     # parameters
-    #input_size = 43  # num of features
-
-    #input_size = 1000
-    input_size = 4096
+    input_size = 43  # num of features
 
     output_size = 1
     hidden_size = 256
@@ -642,7 +684,7 @@ if __name__ == "__main__":
 
     videos_path = [item for sublist in videos_path for item in sublist]
 
-    seed_all(38)
+    seed_all(42)
 
     dataset = create_dataset(videos_path)
     train_loader, val_loader, test_loader = data_preparation(
@@ -669,12 +711,5 @@ if __name__ == "__main__":
     best_model, optimizer, start_epoch, \
     best_f1_score = load_ckp(ckp_path, model, optimizer)
 
-    # print("\nAfter training and validation process:")
-    # print("model = ", model)
-    # print("optimizer = ", optimizer)
-    # print("start_epoch = ", start_epoch)
-    # print("best_f1_score = ", best_f1_score)
-    # print("best_f1_score = {:.6f}".format(best_f1_score), "\n")
-
     predictions, values, binary_confusion_matrix = opt.evaluate(test_loader, best_model)
-    plot_binary_cm(binary_confusion_matrix)
+    #plot_binary_cm(binary_confusion_matrix)

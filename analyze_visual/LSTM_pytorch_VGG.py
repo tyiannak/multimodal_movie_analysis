@@ -35,7 +35,13 @@ matplotlib.use('Agg')
 RUN (binary classification):
 big dataset (941 Static VS 583 Non Static)
 
-python3 LSTM_pytorch_VGG.py -v /home/ubuntu/LSTM/binary_data/data/Non_Static_4 /home/ubuntu/LSTM/binary_data/data/Static_4
+python3 LSTM_pytorch_VGG.py -v /media/ubuntu/Seagate/ChromeDownloads/VGG_Non_Static /media/ubuntu/Seagate/ChromeDownloads/VGG_Static
+
+#512 from avg max pooling
+python3 LSTM_pytorch_VGG.py -v /media/ubuntu/Seagate/ChromeDownloads/VGG_AVG_POOL/Non_Static /media/ubuntu/Seagate/ChromeDownloads/VGG_AVG_POOL/Static
+
+#4096 from first fc linear layer
+python3 LSTM_pytorch_VGG.py -v /media/ubuntu/Seagate/ChromeDownloads/ONLY_ZERO/VGG_Non_Static /media/ubuntu/Seagate/ChromeDownloads/ONLY_ZERO/VGG_Static
 """
 
 
@@ -77,7 +83,7 @@ def create_dataset(videos_path):
         print(label, "=", label_int)
 
         for filename in os.listdir(folder):
-            if filename.endswith("LAST_VGG.npy"):
+            if filename.endswith("_VGG.npy"):
                 full_path_name = folder + "/" + filename
                 videos_dataset.append(tuple((full_path_name, label_int)))
 
@@ -110,7 +116,54 @@ def my_collate(batch):
     return sequences_padded, labels, lengths
 
 
-class TimeSeriesScaling():
+def zip_time(X):
+    X_extended = []
+    lengths = []
+    for x in X:
+        lengths.append(x.shape[0])
+        for row in x.cpu().detach().numpy():
+            X_extended.append(row)
+    return X_extended, lengths
+
+
+def reconstruct_time_dataset(X, lengths):
+    X_reconstructed = []
+    X_rest = X
+    for length in lengths:
+        X_current = X_rest[:length, :]
+        X_rest = X_rest[length:, :]
+        X_current = torch.Tensor(X_current)
+        X_reconstructed.append(X_current)
+
+    return X_reconstructed
+
+
+class TimeSeriesPCA():
+    def __init__(self, n_components):
+        self.pca = PCA(n_components=n_components)
+
+    def fit(self, X):
+        self.X = X
+        X_extended, _ = zip_time(X)
+        self.pca.fit(X_extended)
+        print("variance: ", self.pca.explained_variance_ratio_.sum())
+        print("n_componenets: ", self.pca.components_.shape[0])
+
+    def transform(self, X):
+        X_extended, lengths = zip_time(X)
+        X_extended_dec = self.pca.transform(X_extended)
+
+        X_dec = reconstruct_time_dataset(X_extended_dec, lengths)
+        return X_dec
+
+    def fit_transform(self, X):
+        self.fit(X)
+        X_dec = self.transform(self.X)
+
+        return X_dec
+
+
+class TimeSeriesStandardScaling():
     def __init__(self):
         pass
 
@@ -123,6 +176,7 @@ class TimeSeriesScaling():
             mean_std_tuples.append(
                 tuple((np.mean(temp), np.std(temp))))
             k += 1
+
         self.scale_params = mean_std_tuples
 
     def transform(self, X):
@@ -133,13 +187,48 @@ class TimeSeriesScaling():
         for inst in X:
             v = (inst - mu) / std
             X_scaled.append(v)
+        return X_scaled
+
+    def fit_transform(self, X):
+        self.fit(X)
+        X_scaled = self.transform(self.X)
+        return X_scaled
+
+
+class TimeSeriesMinMaxScaling():
+    def __init__(self):
+        pass
+
+    def fit(self, X):
+        self.X = X
+        k = 0
+        min_max_tuples = []
+        while k < self.X[0].shape[1]:
+            temp = np.concatenate([i[:, k] for i in self.X])
+            min_max_tuples.append(
+                tuple((np.min(temp), np.max(temp))))
+            k += 1
+
+        self.scale_params = min_max_tuples
+
+    def transform(self, X):
+        X_scaled = []
+        tmp = list(zip(*self.scale_params))
+        min_feature = torch.Tensor(list(tmp[0]))
+        max_feature = torch.Tensor(list(tmp[1]))
+
+        for inst in X:
+            v = (inst - min_feature) / max_feature - min_feature
+            X_scaled.append(v)
         self.X_scaled = X_scaled
+
         return X_scaled
 
     def fit_transform(self, X):
         self.fit(X)
         self.transform(self.X)
         return self.X_scaled
+
 
 def load_data(X, y, check_train, scaler, pca=None):
     # for train/val/test sets
@@ -150,10 +239,9 @@ def load_data(X, y, check_train, scaler, pca=None):
     x_len = []
     X = []
     labels = []
-    features_count = True
 
     if pca is None:
-        pca = PCA(n_components=0.96)
+        pca = TimeSeriesPCA(n_components=0.93)
 
     for index, data in enumerate(split_dataset):
         """
@@ -162,29 +250,23 @@ def load_data(X, y, check_train, scaler, pca=None):
         """
 
         X_to_tensor = np.load(data[0])
-
-        if features_count == True:
-            features_count = False
-            features = X_to_tensor.shape[1]
-
         y = data[1]
         labels.append(y)
         x_len.append(X_to_tensor.shape[0])
-
-        #X.append(X_to_tensor)
         X.append(torch.Tensor(X_to_tensor))
-
-
-
-    #mean_std = standard_fit(X, x_len, features)
-    #standard_transform(X, x_len, mean_std)
 
     if check_train == True:
         X_scaled = scaler.fit_transform(X)
+        #print("X_scaled before pca: ", X_scaled)
+        #X_scaled = pca.fit_transform(X_scaled)
+        #print("X_scaled after pca: ", X_scaled)
+        num_of_features = X_scaled[0].size(1)
+        return X_scaled, labels, x_len, pca, num_of_features
     else:
         X_scaled = scaler.transform(X)
+        #X_scaled = pca.transform(X_scaled)
 
-    return X_scaled, labels, x_len
+        return X_scaled, labels, x_len
 
 
 class LSTMDataset(Dataset):
@@ -192,7 +274,6 @@ class LSTMDataset(Dataset):
         self.X = X
         self.y = y
         self.lengths = lengths
-        #self.max_length = max(lengths)
 
     def __len__(self):
         return len(self.y)
@@ -203,27 +284,25 @@ class LSTMDataset(Dataset):
 
 def data_preparation(videos_dataset, batch_size):
 
-    # TODO: train/test split with StratifiedKFold ?
-
     X = [x[0] for x in videos_dataset]
     y = [x[1] for x in videos_dataset]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        test_size=0.2, random_state=30, stratify=y)
+                                                        test_size=0.2, random_state=42, stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
-                                                      test_size=0.13, random_state=30, stratify=y_train)
+                                                      test_size=0.13, random_state=42, stratify=y_train)
 
     # Define Scaler
-    #min_max_scaler = MinMaxScaler()
-    scaler = TimeSeriesScaling()
+    scaler = TimeSeriesStandardScaling()
+    #scaler = TimeSeriesMinMaxScaling()
 
-    X_train, y_train, train_lengths = load_data(X_train, y_train, True, scaler=scaler)
+    X_train, y_train, train_lengths, pca, features = load_data(X_train, y_train, check_train=True, scaler=scaler, pca=None)
     train_dataset = LSTMDataset(X_train, y_train, train_lengths)
 
-    X_val, y_val, val_lengths = load_data(X_val, y_val, False, scaler=scaler)
+    X_val, y_val, val_lengths = load_data(X_val, y_val, check_train=False, scaler=scaler, pca=pca)
     val_dataset = LSTMDataset(X_val, y_val, val_lengths)
 
-    X_test, y_test, test_lengths = load_data(X_test, y_test, False, scaler=scaler)
+    X_test, y_test, test_lengths = load_data(X_test, y_test, check_train=False, scaler=scaler, pca=pca)
     test_dataset = LSTMDataset(X_test, y_test, test_lengths)
 
     # Define a DataLoader for each set
@@ -234,7 +313,7 @@ def data_preparation(videos_dataset, batch_size):
     test_loader = DataLoader(test_dataset, batch_size=batch_size,
                               collate_fn=my_collate, shuffle=True)
 
-    return train_loader, val_loader, test_loader
+    return train_loader, val_loader, test_loader, features
 
 
 def plot_roc_curve(fpr, tpr, roc_auc):
@@ -276,14 +355,12 @@ def calculate_metrics(predicted_values, actual_values, threshold=0.5):
     precision_recall_fscore = precision_recall_fscore_support(y, y_pred, average='macro')
 
     # ROC Curve
-    fpr, tpr, threshold = metrics.roc_curve(actual_values, predicted_values)
-    precision, recall, thresholds = metrics.precision_recall_curve(actual_values, predicted_values)
-    roc_auc = metrics.auc(fpr, tpr)
+    #fpr, tpr, threshold = metrics.roc_curve(actual_values, predicted_values)
+    #precision, recall, thresholds = metrics.precision_recall_curve(actual_values, predicted_values)
+    #roc_auc = metrics.auc(fpr, tpr)
 
-    # print("fpr", fpr, "tpr", tpr, "threshold", threshold)
-
-    plot_roc_curve(fpr, tpr, roc_auc)
-    plot_precision_recall_curve(precision, recall, actual_values)
+    #plot_roc_curve(fpr, tpr, roc_auc)
+    #plot_precision_recall_curve(precision, recall, actual_values)
 
     return acc, f1_score_macro, cm, precision_recall_fscore
 
@@ -293,7 +370,6 @@ def weight_init(m):
         #init.normal_(m.weight.data, 0.0, 0.02)
         init.xavier_uniform(m.weight)
         m.bias.data.fill_(0.01) # or 0
-        #print("VS m: ", m.weight, "\n")
     else:
         for name, param in m.named_parameters():
             if 'weight_ih' in name:
@@ -313,42 +389,113 @@ class LSTMModel(nn.Module):
 
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers,
-                            batch_first=True)#, dropout=dropout_prob)
+                            batch_first=True)
 
         self.drop = nn.Dropout(p=dropout_prob)
         self.fc = nn.Linear(hidden_size, output_size)
 
-        self.fnn = nn.Sequential(OrderedDict([
-            ('relu1', nn.ReLU()),
-            ('drop1', nn.Dropout(0.6)),
-            ('fc1', nn.Linear(self.hidden_size, 1024)),
-            ('bn1', nn.BatchNorm1d(1024)),
-            ('relu2', nn.ReLU()),
-            ('drop2', nn.Dropout(0.5)),
-            ('fc2', nn.Linear(1024, 512)),
-            ('bn2', nn.BatchNorm1d(512)),
-            ('relu3', nn.ReLU()),
-            ('drop3', nn.Dropout(0.4)),
-            ('fc3', nn.Linear(512, 256)),
-            ('bn3', nn.BatchNorm1d(256)),
-            ('relu4', nn.ReLU()),
-            ('drop4', nn.Dropout(0.3)),
-            ('fc4', nn.Linear(256, 128)),
-            ('bn4', nn.BatchNorm1d(128)),
-            ('relu5', nn.ReLU()),
-            ('drop5', nn.Dropout(0.3)),
-            ('fc5', nn.Linear(128, 64)),
-            ('bn5', nn.BatchNorm1d(64)),
-            ('relu6', nn.ReLU()),
-            ('drop6', nn.Dropout(0.2)),
-            ('fc6', nn.Linear(64, 32)),
-            ('bn6', nn.BatchNorm1d(32)),
-            ('relu7', nn.ReLU()),
-            ('drop7', nn.Dropout(0.2)),
-            ('fc7', nn.Linear(32, 1))
-        ]))
+        # self.fnn = nn.Sequential(OrderedDict([
+        #     ('relu1', nn.ReLU()),
+        #     ('drop1', nn.Dropout(0.7)),
+        #     ('fc1', nn.Linear(self.hidden_size, 4096)),
+        #     ('bn1', nn.BatchNorm1d(4096)),
+        #     ('relu2', nn.ReLU()),
+        #     ('drop2', nn.Dropout(0.6)),
+        #     ('fc2', nn.Linear(4096, 2048)),
+        #     ('bn2', nn.BatchNorm1d(2048)),
+        #     ('relu3', nn.ReLU()),
+        #     ('drop3', nn.Dropout(0.6)),
+        #     ('fc3', nn.Linear(2048, 1024)),
+        #     ('bn3', nn.BatchNorm1d(1024)),
+        #     ('relu4', nn.ReLU()),
+        #     ('drop4', nn.Dropout(0.5)),
+        #     ('fc4', nn.Linear(1024, 512)),
+        #     ('bn4', nn.BatchNorm1d(512)),
+        #     ('relu5', nn.ReLU()),
+        #     ('drop5', nn.Dropout(0.5)),
+        #     ('fc5', nn.Linear(512, 256)),
+        #     ('bn5', nn.BatchNorm1d(256)),
+        #     ('relu6', nn.ReLU()),
+        #     ('drop6', nn.Dropout(0.4)),
+        #     ('fc6', nn.Linear(256, 128)),
+        #     ('bn6', nn.BatchNorm1d(128)),
+        #     ('relu7', nn.ReLU()),
+        #     ('drop7', nn.Dropout(0.4)),
+        #     ('fc7', nn.Linear(128, 64)),
+        #     ('bn7', nn.BatchNorm1d(64)),
+        #     ('relu8', nn.ReLU()),
+        #     ('drop8', nn.Dropout(0.3)),
+        #     ('fc8', nn.Linear(64, 32)),
+        #     ('bn8', nn.BatchNorm1d(32)),
+        #     ('relu9', nn.ReLU()),
+        #     ('drop9', nn.Dropout(0.2)),
+        #     ('fc9', nn.Linear(32, 1))
+        # ]))
+
+        # self.fnn = nn.Sequential(OrderedDict([
+        #     ('relu0', nn.ReLU()),
+        #     ('drop0', nn.Dropout(0.7)),
+        #     ('fc0', nn.Linear(self.hidden_size, 2048)),
+        #     ('bn0', nn.BatchNorm1d(2048)),
+        #     ('relu1', nn.ReLU()),
+        #     ('drop1', nn.Dropout(0.6)),
+        #     ('fc1', nn.Linear(2048, 1024)),
+        #     ('bn1', nn.BatchNorm1d(1024)),
+        #     ('relu2', nn.ReLU()),
+        #     ('drop2', nn.Dropout(0.6)),
+        #     ('fc2', nn.Linear(1024, 512)),
+        #     ('bn2', nn.BatchNorm1d(512)),
+        #     ('relu3', nn.ReLU()),
+        #     ('drop3', nn.Dropout(0.5)),
+        #     ('fc3', nn.Linear(512, 256)),
+        #     ('bn3', nn.BatchNorm1d(256)),
+        #     ('relu4', nn.ReLU()),
+        #     ('drop4', nn.Dropout(0.5)),
+        #     ('fc4', nn.Linear(256, 128)),
+        #     ('bn4', nn.BatchNorm1d(128)),
+        #     ('relu5', nn.ReLU()),
+        #     ('drop5', nn.Dropout(0.4)),
+        #     ('fc5', nn.Linear(128, 64)),
+        #     ('bn5', nn.BatchNorm1d(64)),
+        #     ('relu6', nn.ReLU()),
+        #     ('drop6', nn.Dropout(0.3)),
+        #     ('fc6', nn.Linear(64, 32)),
+        #     ('bn6', nn.BatchNorm1d(32)),
+        #     ('relu7', nn.ReLU()),
+        #     ('drop7', nn.Dropout(0.2)),
+        #     ('fc7', nn.Linear(32, 1))
+        # ]))
+
+        # self.fnn = nn.Sequential(OrderedDict([
+        #     ('relu1', nn.ReLU()),
+        #     ('drop1', nn.Dropout(0.6)),
+        #     ('fc1', nn.Linear(self.hidden_size, 1024)),
+        #     ('bn1', nn.BatchNorm1d(1024)),
+        #     ('relu2', nn.ReLU()),
+        #     ('drop2', nn.Dropout(0.6)),
+        #     ('fc2', nn.Linear(1024, 512)),
+        #     ('bn2', nn.BatchNorm1d(512)),
+        #     ('relu3', nn.ReLU()),
+        #     ('drop3', nn.Dropout(0.5)),
+        #     ('fc3', nn.Linear(512, 256)),
+        #     ('bn3', nn.BatchNorm1d(256)),
+        #     ('relu4', nn.ReLU()),
+        #     ('drop4', nn.Dropout(0.4)),
+        #     ('fc4', nn.Linear(256, 128)),
+        #     ('bn4', nn.BatchNorm1d(128)),
+        #     ('relu5', nn.ReLU()),
+        #     ('drop5', nn.Dropout(0.3)),
+        #     ('fc5', nn.Linear(128, 64)),
+        #     ('bn5', nn.BatchNorm1d(64)),
+        #     ('relu6', nn.ReLU()),
+        #     ('drop6', nn.Dropout(0.3)),
+        #     ('fc6', nn.Linear(64, 32)),
+        #     ('bn6', nn.BatchNorm1d(32)),
+        #     ('relu7', nn.ReLU()),
+        #     ('drop7', nn.Dropout(0.2)),
+        #     ('fc7', nn.Linear(32, 1))
+        # ]))
 
         # self.fnn = nn.Sequential(OrderedDict([
         #     ('relu1', nn.ReLU()),
@@ -378,20 +525,61 @@ class LSTMModel(nn.Module):
 
         # self.fnn = nn.Sequential(OrderedDict([
         #     ('gelu1', nn.ReLU()),
+        #     ('drop1', nn.Dropout(0.4)),
         #     ('fc1', nn.Linear(self.hidden_size, 256)),
         #     ('bn1', nn.BatchNorm1d(256)),
         #     ('gelu2', nn.ReLU()),
+        #     ('drop2', nn.Dropout(0.3)),
         #     ('fc2', nn.Linear(256, 128)),
         #     ('bn2', nn.BatchNorm1d(128)),
         #     ('gelu3', nn.ReLU()),
+        #     ('drop3', nn.Dropout(0.3)),
         #     ('fc3', nn.Linear(128, 64)),
         #     ('bn3', nn.BatchNorm1d(64)),
         #     ('gelu4', nn.ReLU()),
+        #     ('drop4', nn.Dropout(0.2)),
         #     ('fc4', nn.Linear(64, 32)),
         #     ('bn4', nn.BatchNorm1d(32)),
         #     ('gelu5', nn.ReLU()),
+        #     ('drop5', nn.Dropout(0.2)),
         #     ('fc5', nn.Linear(32, 1))
         # ]))
+
+        # self.fnn = nn.Sequential(OrderedDict([
+        #     ('gelu1', nn.LeakyReLU()),
+        #     #('drop1', nn.Dropout(0.2)),
+        #     ('fc1', nn.Linear(self.hidden_size, 128)),
+        #     ('bn1', nn.BatchNorm1d(128)),
+        #     ('gelu3', nn.LeakyReLU()),
+        #     #('drop3', nn.Dropout(0.2)),
+        #     ('fc3', nn.Linear(128, 64)),
+        #     ('bn3', nn.BatchNorm1d(64)),
+        #     ('gelu4', nn.LeakyReLU()),
+        #     #('drop4', nn.Dropout(0.2)),
+        #     ('fc4', nn.Linear(64, 32)),
+        #     ('bn4', nn.BatchNorm1d(32)),
+        #     ('gelu5', nn.LeakyReLU()),
+        #     #('drop5', nn.Dropout(0.1)),
+        #     ('fc5', nn.Linear(32, 1))
+        # ]))
+
+        self.fnn = nn.Sequential(OrderedDict([
+            ('gelu1', nn.ReLU()),
+            ('drop1', nn.Dropout(0.4)),
+            ('fc1', nn.Linear(self.hidden_size, 1024)),
+            ('bn1', nn.BatchNorm1d(1024)),
+            ('gelu3', nn.ReLU()),
+            ('drop3', nn.Dropout(0.4)),
+            ('fc3', nn.Linear(1024, 128)),
+            ('bn3', nn.BatchNorm1d(128)),
+            ('gelu4', nn.ReLU()),
+            ('drop4', nn.Dropout(0.3)),
+            ('fc4', nn.Linear(128, 32)),
+            ('bn4', nn.BatchNorm1d(32)),
+            ('gelu5', nn.ReLU()),
+            ('drop5', nn.Dropout(0.2)),
+            ('fc5', nn.Linear(32, 1))
+        ]))
 
         self.m = nn.Sigmoid()
 
@@ -416,8 +604,6 @@ class LSTMModel(nn.Module):
         # Forward propagate LSTM
         output, (hn, cn) = self.lstm(X, (h0.detach(), c0.detach()))  # output shape:(batch_size,seq_length,hidden_size)
         last_states = self.last_by_index(output, lengths)
-
-        #output = self.fc(last_states)
 
         #last_states = self.drop(last_states)
 
@@ -487,9 +673,10 @@ class Optimization:
 
             train_losses = []
             val_losses = []
-
             val_predictions = []
             val_values = []
+            # l2_lambda = 0.01
+            #l1_lambda = 0.1
 
             scheduler.step(epoch)
 
@@ -508,6 +695,7 @@ class Optimization:
                 y_train = batch_info[1]
                 X_train_original_len = batch_info[2]
 
+
                 #X_train_packed = pack(X_train, X_train_original_len, batch_first=True)
 
                 # print(X_train_packed[0].shape)
@@ -524,6 +712,15 @@ class Optimization:
 
                     #print("output: ", output)
                     loss = self.loss_fn(output, y_train.float())
+
+                    # L1 Regularization
+                    # l1_norm = sum(p.abs().sum() for p in self.model.parameters())
+                    # loss = loss + l1_lambda * l1_norm
+
+                    # L2 Regularization (corresponds to weight decay)
+                    # l2_norm = sum(p.pow(2.0).sum()
+                    #               for p in self.model.parameters())
+                    # loss += l2_lambda * l2_norm
 
                     # Computes the gradients
                     loss.backward()
@@ -592,13 +789,12 @@ class Optimization:
                 save_ckp(checkpoint, True, check_path, best_check_path)
                 f1_max = f1_score_macro
 
-            if counter_epoch >= 20:
+            if counter_epoch >= 12:
                 break
 
             print("\n")
 
     def plot_losses(self):
-        #plt.figure(figsize=(10, 10))
         plt.title("LSTM Training and Validation Loss")
         plt.plot(self.train_loss, label="Training loss")
         plt.plot(self.val_loss, label="Validation loss")
@@ -606,9 +802,8 @@ class Optimization:
         plt.ylabel('Loss')
         #plt.margins(1, 1)
         plt.legend()
-        #plt.title("LSTM Losses")
         plt.show()
-        plt.savefig("LSTM_binary_class_losses.png")
+        plt.savefig("LSTM_VGG_binary_class_losses.png")
         plt.close()
 
     def evaluate(self, test_loader, best_model):
@@ -630,10 +825,6 @@ class Optimization:
 
                 # retrieve numpy array
                 y_pred = y_pred.detach().numpy()
-
-                # round to class values
-                #y_pred = y_pred.round()
-
                 predictions.append(y_pred)
 
                 y_test = y_test.detach().numpy()
@@ -686,31 +877,33 @@ if __name__ == "__main__":
 
     args = parse_arguments()
     videos_path = args.videos_path
+    videos_path = [item for sublist in videos_path for item in sublist]
+
+    seed_all(42)
 
     # parameters
-    input_size = 1000
     output_size = 1
-    hidden_size = 512
     num_layers = 1
     batch_size = 64
     dropout = 0.2
+
     n_epochs = 100
+    hidden_size = 512
     learning_rate = 1e-2
     weight_decay = 1e-4
+
+    dataset = create_dataset(videos_path)
+    train_loader, val_loader, test_loader, num_of_features = data_preparation(
+        dataset, batch_size=batch_size)
+
+    input_size = num_of_features
+    print("Number of features: ", num_of_features)
 
     model_params = {'input_size': input_size,
                     'hidden_size': hidden_size,
                     'num_layers': num_layers,
                     'output_size': output_size,
                     'dropout_prob': dropout}
-
-    videos_path = [item for sublist in videos_path for item in sublist]
-
-    seed_all(42)
-
-    dataset = create_dataset(videos_path)
-    train_loader, val_loader, test_loader = data_preparation(
-        dataset, batch_size=batch_size)
 
     model = get_model('lstm', model_params)
 
@@ -732,13 +925,5 @@ if __name__ == "__main__":
     ckp_path = "best_checkpoint.pt"
     best_model, optimizer, start_epoch, \
     best_f1_score = load_ckp(ckp_path, model, optimizer)
-
-    # print("\nAfter training and validation process:")
-    # print("model = ", model)
-    # print("optimizer = ", optimizer)
-    # print("start_epoch = ", start_epoch)
-    # print("best_f1_score = ", best_f1_score)
-    # print("best_f1_score = {:.6f}".format(best_f1_score), "\n")
-
     predictions, values, binary_confusion_matrix = opt.evaluate(test_loader, best_model)
-    plot_binary_cm(binary_confusion_matrix)
+    #plot_binary_cm(binary_confusion_matrix)

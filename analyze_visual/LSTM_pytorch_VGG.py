@@ -35,13 +35,7 @@ matplotlib.use('Agg')
 RUN (binary classification):
 big dataset (941 Static VS 583 Non Static)
 
-python3 LSTM_pytorch_VGG.py -v /media/ubuntu/Seagate/ChromeDownloads/VGG_Non_Static /media/ubuntu/Seagate/ChromeDownloads/VGG_Static
-
-#512 from avg max pooling
-python3 LSTM_pytorch_VGG.py -v /media/ubuntu/Seagate/ChromeDownloads/VGG_AVG_POOL/Non_Static /media/ubuntu/Seagate/ChromeDownloads/VGG_AVG_POOL/Static
-
-#4096 from first fc linear layer
-python3 LSTM_pytorch_VGG.py -v /media/ubuntu/Seagate/ChromeDownloads/ONLY_ZERO/VGG_Non_Static /media/ubuntu/Seagate/ChromeDownloads/ONLY_ZERO/VGG_Static
+python3 LSTM_pytorch_VGG.py -v /home/tonia/FEATURES/ONLY_ZERO/VGG_Non_Static /home/tonia/FEATURES/ONLY_ZERO/VGG_Static
 """
 
 
@@ -241,7 +235,7 @@ def load_data(X, y, check_train, scaler, pca=None):
     labels = []
 
     if pca is None:
-        pca = TimeSeriesPCA(n_components=0.93)
+        pca = TimeSeriesPCA(n_components=0.85)
 
     for index, data in enumerate(split_dataset):
         """
@@ -257,14 +251,14 @@ def load_data(X, y, check_train, scaler, pca=None):
 
     if check_train == True:
         X_scaled = scaler.fit_transform(X)
-        #print("X_scaled before pca: ", X_scaled)
-        #X_scaled = pca.fit_transform(X_scaled)
-        #print("X_scaled after pca: ", X_scaled)
+        # print("X_scaled before pca: ", X_scaled)
+        X_scaled = pca.fit_transform(X_scaled)
+        # print("X_scaled after pca: ", X_scaled)
         num_of_features = X_scaled[0].size(1)
         return X_scaled, labels, x_len, pca, num_of_features
     else:
         X_scaled = scaler.transform(X)
-        #X_scaled = pca.transform(X_scaled)
+        X_scaled = pca.transform(X_scaled)
 
         return X_scaled, labels, x_len
 
@@ -274,6 +268,7 @@ class LSTMDataset(Dataset):
         self.X = X
         self.y = y
         self.lengths = lengths
+        #self.max_length = max(lengths)
 
     def __len__(self):
         return len(self.y)
@@ -288,9 +283,9 @@ def data_preparation(videos_dataset, batch_size):
     y = [x[1] for x in videos_dataset]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        test_size=0.2, random_state=42, stratify=y)
+                                                        test_size=0.2, random_state=7, stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
-                                                      test_size=0.13, random_state=42, stratify=y_train)
+                                                      test_size=0.13, random_state=7, stratify=y_train)
 
     # Define Scaler
     scaler = TimeSeriesStandardScaling()
@@ -355,12 +350,14 @@ def calculate_metrics(predicted_values, actual_values, threshold=0.5):
     precision_recall_fscore = precision_recall_fscore_support(y, y_pred, average='macro')
 
     # ROC Curve
-    #fpr, tpr, threshold = metrics.roc_curve(actual_values, predicted_values)
-    #precision, recall, thresholds = metrics.precision_recall_curve(actual_values, predicted_values)
-    #roc_auc = metrics.auc(fpr, tpr)
+    fpr, tpr, threshold = metrics.roc_curve(actual_values, predicted_values)
+    precision, recall, thresholds = metrics.precision_recall_curve(actual_values, predicted_values)
+    roc_auc = metrics.auc(fpr, tpr)
 
-    #plot_roc_curve(fpr, tpr, roc_auc)
-    #plot_precision_recall_curve(precision, recall, actual_values)
+    # print("fpr", fpr, "tpr", tpr, "threshold", threshold)
+
+    plot_roc_curve(fpr, tpr, roc_auc)
+    plot_precision_recall_curve(precision, recall, actual_values)
 
     return acc, f1_score_macro, cm, precision_recall_fscore
 
@@ -370,6 +367,7 @@ def weight_init(m):
         #init.normal_(m.weight.data, 0.0, 0.02)
         init.xavier_uniform(m.weight)
         m.bias.data.fill_(0.01) # or 0
+        #print("VS m: ", m.weight, "\n")
     else:
         for name, param in m.named_parameters():
             if 'weight_ih' in name:
@@ -389,195 +387,32 @@ class LSTMModel(nn.Module):
 
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers,
                             batch_first=True)
 
         self.drop = nn.Dropout(p=dropout_prob)
         self.fc = nn.Linear(hidden_size, output_size)
 
-        # self.fnn = nn.Sequential(OrderedDict([
-        #     ('relu1', nn.ReLU()),
-        #     ('drop1', nn.Dropout(0.7)),
-        #     ('fc1', nn.Linear(self.hidden_size, 4096)),
-        #     ('bn1', nn.BatchNorm1d(4096)),
-        #     ('relu2', nn.ReLU()),
-        #     ('drop2', nn.Dropout(0.6)),
-        #     ('fc2', nn.Linear(4096, 2048)),
-        #     ('bn2', nn.BatchNorm1d(2048)),
-        #     ('relu3', nn.ReLU()),
-        #     ('drop3', nn.Dropout(0.6)),
-        #     ('fc3', nn.Linear(2048, 1024)),
-        #     ('bn3', nn.BatchNorm1d(1024)),
-        #     ('relu4', nn.ReLU()),
-        #     ('drop4', nn.Dropout(0.5)),
-        #     ('fc4', nn.Linear(1024, 512)),
-        #     ('bn4', nn.BatchNorm1d(512)),
-        #     ('relu5', nn.ReLU()),
-        #     ('drop5', nn.Dropout(0.5)),
-        #     ('fc5', nn.Linear(512, 256)),
-        #     ('bn5', nn.BatchNorm1d(256)),
-        #     ('relu6', nn.ReLU()),
-        #     ('drop6', nn.Dropout(0.4)),
-        #     ('fc6', nn.Linear(256, 128)),
-        #     ('bn6', nn.BatchNorm1d(128)),
-        #     ('relu7', nn.ReLU()),
-        #     ('drop7', nn.Dropout(0.4)),
-        #     ('fc7', nn.Linear(128, 64)),
-        #     ('bn7', nn.BatchNorm1d(64)),
-        #     ('relu8', nn.ReLU()),
-        #     ('drop8', nn.Dropout(0.3)),
-        #     ('fc8', nn.Linear(64, 32)),
-        #     ('bn8', nn.BatchNorm1d(32)),
-        #     ('relu9', nn.ReLU()),
-        #     ('drop9', nn.Dropout(0.2)),
-        #     ('fc9', nn.Linear(32, 1))
-        # ]))
-
-        # self.fnn = nn.Sequential(OrderedDict([
-        #     ('relu0', nn.ReLU()),
-        #     ('drop0', nn.Dropout(0.7)),
-        #     ('fc0', nn.Linear(self.hidden_size, 2048)),
-        #     ('bn0', nn.BatchNorm1d(2048)),
-        #     ('relu1', nn.ReLU()),
-        #     ('drop1', nn.Dropout(0.6)),
-        #     ('fc1', nn.Linear(2048, 1024)),
-        #     ('bn1', nn.BatchNorm1d(1024)),
-        #     ('relu2', nn.ReLU()),
-        #     ('drop2', nn.Dropout(0.6)),
-        #     ('fc2', nn.Linear(1024, 512)),
-        #     ('bn2', nn.BatchNorm1d(512)),
-        #     ('relu3', nn.ReLU()),
-        #     ('drop3', nn.Dropout(0.5)),
-        #     ('fc3', nn.Linear(512, 256)),
-        #     ('bn3', nn.BatchNorm1d(256)),
-        #     ('relu4', nn.ReLU()),
-        #     ('drop4', nn.Dropout(0.5)),
-        #     ('fc4', nn.Linear(256, 128)),
-        #     ('bn4', nn.BatchNorm1d(128)),
-        #     ('relu5', nn.ReLU()),
-        #     ('drop5', nn.Dropout(0.4)),
-        #     ('fc5', nn.Linear(128, 64)),
-        #     ('bn5', nn.BatchNorm1d(64)),
-        #     ('relu6', nn.ReLU()),
-        #     ('drop6', nn.Dropout(0.3)),
-        #     ('fc6', nn.Linear(64, 32)),
-        #     ('bn6', nn.BatchNorm1d(32)),
-        #     ('relu7', nn.ReLU()),
-        #     ('drop7', nn.Dropout(0.2)),
-        #     ('fc7', nn.Linear(32, 1))
-        # ]))
-
-        # self.fnn = nn.Sequential(OrderedDict([
-        #     ('relu1', nn.ReLU()),
-        #     ('drop1', nn.Dropout(0.6)),
-        #     ('fc1', nn.Linear(self.hidden_size, 1024)),
-        #     ('bn1', nn.BatchNorm1d(1024)),
-        #     ('relu2', nn.ReLU()),
-        #     ('drop2', nn.Dropout(0.6)),
-        #     ('fc2', nn.Linear(1024, 512)),
-        #     ('bn2', nn.BatchNorm1d(512)),
-        #     ('relu3', nn.ReLU()),
-        #     ('drop3', nn.Dropout(0.5)),
-        #     ('fc3', nn.Linear(512, 256)),
-        #     ('bn3', nn.BatchNorm1d(256)),
-        #     ('relu4', nn.ReLU()),
-        #     ('drop4', nn.Dropout(0.4)),
-        #     ('fc4', nn.Linear(256, 128)),
-        #     ('bn4', nn.BatchNorm1d(128)),
-        #     ('relu5', nn.ReLU()),
-        #     ('drop5', nn.Dropout(0.3)),
-        #     ('fc5', nn.Linear(128, 64)),
-        #     ('bn5', nn.BatchNorm1d(64)),
-        #     ('relu6', nn.ReLU()),
-        #     ('drop6', nn.Dropout(0.3)),
-        #     ('fc6', nn.Linear(64, 32)),
-        #     ('bn6', nn.BatchNorm1d(32)),
-        #     ('relu7', nn.ReLU()),
-        #     ('drop7', nn.Dropout(0.2)),
-        #     ('fc7', nn.Linear(32, 1))
-        # ]))
-
-        # self.fnn = nn.Sequential(OrderedDict([
-        #     ('relu1', nn.ReLU()),
-        #     #('drop1', nn.Dropout(0.4)),
-        #     ('fc1', nn.Linear(self.hidden_size, 512)),
-        #     ('bn1', nn.BatchNorm1d(512)),
-        #     ('relu2', nn.ReLU()),
-        #     #('drop2', nn.Dropout(0.4)),
-        #     ('fc2', nn.Linear(512, 256)),
-        #     ('bn2', nn.BatchNorm1d(256)),
-        #     ('relu3', nn.ReLU()),
-        #     #('drop3', nn.Dropout(0.3)),
-        #     ('fc3', nn.Linear(256, 128)),
-        #     ('bn3', nn.BatchNorm1d(128)),
-        #     ('relu4', nn.ReLU()),
-        #     #('drop4', nn.Dropout(0.3)),
-        #     ('fc4', nn.Linear(128, 64)),
-        #     ('bn4', nn.BatchNorm1d(64)),
-        #     ('relu5', nn.ReLU()),
-        #     #('drop5', nn.Dropout(0.2)),
-        #     ('fc5', nn.Linear(64, 32)),
-        #     ('bn5', nn.BatchNorm1d(32)),
-        #     ('relu6', nn.ReLU()),
-        #     #('drop6', nn.Dropout(0.2)),
-        #     ('fc6', nn.Linear(32, 1))
-        # ]))
-
-        # self.fnn = nn.Sequential(OrderedDict([
-        #     ('gelu1', nn.ReLU()),
-        #     ('drop1', nn.Dropout(0.4)),
-        #     ('fc1', nn.Linear(self.hidden_size, 256)),
-        #     ('bn1', nn.BatchNorm1d(256)),
-        #     ('gelu2', nn.ReLU()),
-        #     ('drop2', nn.Dropout(0.3)),
-        #     ('fc2', nn.Linear(256, 128)),
-        #     ('bn2', nn.BatchNorm1d(128)),
-        #     ('gelu3', nn.ReLU()),
-        #     ('drop3', nn.Dropout(0.3)),
-        #     ('fc3', nn.Linear(128, 64)),
-        #     ('bn3', nn.BatchNorm1d(64)),
-        #     ('gelu4', nn.ReLU()),
-        #     ('drop4', nn.Dropout(0.2)),
-        #     ('fc4', nn.Linear(64, 32)),
-        #     ('bn4', nn.BatchNorm1d(32)),
-        #     ('gelu5', nn.ReLU()),
-        #     ('drop5', nn.Dropout(0.2)),
-        #     ('fc5', nn.Linear(32, 1))
-        # ]))
-
-        # self.fnn = nn.Sequential(OrderedDict([
-        #     ('gelu1', nn.LeakyReLU()),
-        #     #('drop1', nn.Dropout(0.2)),
-        #     ('fc1', nn.Linear(self.hidden_size, 128)),
-        #     ('bn1', nn.BatchNorm1d(128)),
-        #     ('gelu3', nn.LeakyReLU()),
-        #     #('drop3', nn.Dropout(0.2)),
-        #     ('fc3', nn.Linear(128, 64)),
-        #     ('bn3', nn.BatchNorm1d(64)),
-        #     ('gelu4', nn.LeakyReLU()),
-        #     #('drop4', nn.Dropout(0.2)),
-        #     ('fc4', nn.Linear(64, 32)),
-        #     ('bn4', nn.BatchNorm1d(32)),
-        #     ('gelu5', nn.LeakyReLU()),
-        #     #('drop5', nn.Dropout(0.1)),
-        #     ('fc5', nn.Linear(32, 1))
-        # ]))
-
         self.fnn = nn.Sequential(OrderedDict([
-            ('gelu1', nn.ReLU()),
-            ('drop1', nn.Dropout(0.4)),
-            ('fc1', nn.Linear(self.hidden_size, 1024)),
-            ('bn1', nn.BatchNorm1d(1024)),
-            ('gelu3', nn.ReLU()),
-            ('drop3', nn.Dropout(0.4)),
-            ('fc3', nn.Linear(1024, 128)),
-            ('bn3', nn.BatchNorm1d(128)),
-            ('gelu4', nn.ReLU()),
-            ('drop4', nn.Dropout(0.3)),
-            ('fc4', nn.Linear(128, 32)),
+            ('relu1', nn.ReLU()),
+            ('drop1', nn.Dropout(0.6)),
+            ('fc1', nn.Linear(self.hidden_size, 4096)),
+            ('bn1', nn.BatchNorm1d(4096)),
+            ('relu2', nn.ReLU()),
+            ('drop2', nn.Dropout(0.5)),
+            ('fc2', nn.Linear(4096, 1024)),
+            ('bn2', nn.BatchNorm1d(1024)),
+            ('relu3', nn.ReLU()),
+            ('drop3', nn.Dropout(0.5)),
+            ('fc3', nn.Linear(1024, 256)),
+            ('bn3', nn.BatchNorm1d(256)),
+            ('relu4', nn.ReLU()),
+            ('drop4', nn.Dropout(0.4)),
+            ('fc4', nn.Linear(256, 32)),
             ('bn4', nn.BatchNorm1d(32)),
-            ('gelu5', nn.ReLU()),
-            ('drop5', nn.Dropout(0.2)),
+            ('relu5', nn.ReLU()),
+            ('drop5', nn.Dropout(0.4)),
             ('fc5', nn.Linear(32, 1))
         ]))
 
@@ -605,7 +440,7 @@ class LSTMModel(nn.Module):
         output, (hn, cn) = self.lstm(X, (h0.detach(), c0.detach()))  # output shape:(batch_size,seq_length,hidden_size)
         last_states = self.last_by_index(output, lengths)
 
-        #last_states = self.drop(last_states)
+        last_states = self.drop(last_states)
 
         output = self.fnn(last_states)
         output = self.m(output)
@@ -673,10 +508,9 @@ class Optimization:
 
             train_losses = []
             val_losses = []
+
             val_predictions = []
             val_values = []
-            # l2_lambda = 0.01
-            #l1_lambda = 0.1
 
             scheduler.step(epoch)
 
@@ -695,7 +529,6 @@ class Optimization:
                 y_train = batch_info[1]
                 X_train_original_len = batch_info[2]
 
-
                 #X_train_packed = pack(X_train, X_train_original_len, batch_first=True)
 
                 # print(X_train_packed[0].shape)
@@ -712,15 +545,6 @@ class Optimization:
 
                     #print("output: ", output)
                     loss = self.loss_fn(output, y_train.float())
-
-                    # L1 Regularization
-                    # l1_norm = sum(p.abs().sum() for p in self.model.parameters())
-                    # loss = loss + l1_lambda * l1_norm
-
-                    # L2 Regularization (corresponds to weight decay)
-                    # l2_norm = sum(p.pow(2.0).sum()
-                    #               for p in self.model.parameters())
-                    # loss += l2_lambda * l2_norm
 
                     # Computes the gradients
                     loss.backward()
@@ -789,12 +613,13 @@ class Optimization:
                 save_ckp(checkpoint, True, check_path, best_check_path)
                 f1_max = f1_score_macro
 
-            if counter_epoch >= 12:
+            if counter_epoch >= 20:
                 break
 
             print("\n")
 
     def plot_losses(self):
+        #plt.figure(figsize=(10, 10))
         plt.title("LSTM Training and Validation Loss")
         plt.plot(self.train_loss, label="Training loss")
         plt.plot(self.val_loss, label="Validation loss")
@@ -802,8 +627,9 @@ class Optimization:
         plt.ylabel('Loss')
         #plt.margins(1, 1)
         plt.legend()
+        #plt.title("LSTM Losses")
         plt.show()
-        plt.savefig("LSTM_VGG_binary_class_losses.png")
+        plt.savefig("LSTM_binary_class_losses.png")
         plt.close()
 
     def evaluate(self, test_loader, best_model):
@@ -825,6 +651,10 @@ class Optimization:
 
                 # retrieve numpy array
                 y_pred = y_pred.detach().numpy()
+
+                # round to class values
+                #y_pred = y_pred.round()
+
                 predictions.append(y_pred)
 
                 y_test = y_test.detach().numpy()
@@ -835,6 +665,9 @@ class Optimization:
 
         values_tensor = (torch.Tensor(values))
         predictions_tensor = (torch.Tensor(predictions))
+
+        print("y_test: ", values_tensor)
+        print("y_pred: ", predictions_tensor)
 
         accuracy, f1_score_macro, cm, precision_recall = calculate_metrics(predictions_tensor, values_tensor.float())
 
@@ -885,9 +718,9 @@ if __name__ == "__main__":
     output_size = 1
     num_layers = 1
     batch_size = 64
-    dropout = 0.2
-
     n_epochs = 100
+
+    dropout = 0.5
     hidden_size = 512
     learning_rate = 1e-2
     weight_decay = 1e-4

@@ -31,7 +31,7 @@ matplotlib.use('Agg')
 """
 RUN (binary classification):
 big dataset (941 Static VS 583 Non Static):
-python3 LSTM_pytorch.py -v /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/Non_Static_88_feat /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/Static_88_feat
+python3 LSTM_pytorch.py -v /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/Non_Static_88_feat /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/Static_88_feat /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/Handled
 """
 
 
@@ -188,13 +188,12 @@ def load_data(X, y, check_train, scaler):
 
     for index, data in enumerate(split_dataset):
         """
-        data[0] corresponds to ---> .npy names
+        data[0] corresponds to ---> .npy shot names
         data[1] corresponds to ---> y labels
         """
 
         X_to_tensor = np.load(data[0])
-
-        # keep only specific features
+        # keep only specific features (remove RGB histogram-based features)
         X_to_tensor = X_to_tensor[:, 45:89]
 
         y = data[1]
@@ -227,14 +226,12 @@ class LSTMDataset(Dataset):
 
 def data_preparation(videos_dataset, batch_size):
 
-    # TODO: train/test split with StratifiedKFold ?
-
     X = [x[0] for x in videos_dataset]
     y = [x[1] for x in videos_dataset]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y,
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42,
                                                         test_size=0.2, stratify=y)
-    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, random_state=42,
                                                       test_size=0.13, stratify=y_train)
 
     # Define Scaler
@@ -287,27 +284,28 @@ def plot_precision_recall_curve(precision, recall, y_test):
     plt.close()
 
 
-def calculate_metrics(predicted_values, actual_values, threshold=0.5):
+def calculate_metrics(y_pred, y_test):
 
-    y_pred = predicted_values >= threshold
-    y = actual_values
 
-    y_pred = y_pred.float()
 
-    cm = confusion_matrix(y, y_pred)
-    f1_score_macro = f1_score(y, y_pred, average='macro')
-    acc = accuracy_score(y, y_pred)
-    precision_recall_fscore = precision_recall_fscore_support(y, y_pred, average='macro')
+    y_pred_softmax = torch.log_softmax(y_pred, dim=1)
+    _, y_pred_tags = torch.max(y_pred_softmax, dim=1)
 
-    # ROC Curve
-    fpr, tpr, threshold = metrics.roc_curve(actual_values, predicted_values)
-    precision, recall, thresholds = metrics.precision_recall_curve(actual_values, predicted_values)
-    roc_auc = metrics.auc(fpr, tpr)
+    y_pred = y_pred_tags.float()
 
-    # print("fpr", fpr, "tpr", tpr, "threshold", threshold)
+    cm = confusion_matrix(y_test, y_pred)
+    f1_score_macro = f1_score(y_test, y_pred, average='macro')
+    acc = accuracy_score(y_test, y_pred)
+    precision_recall_fscore = precision_recall_fscore_support(y_test, y_pred, average='macro')
 
-    #plot_roc_curve(fpr, tpr, roc_auc)
-    #plot_precision_recall_curve(precision, recall, actual_values)
+    # # ROC Curve
+    # fpr, tpr, threshold = metrics.roc_curve(actual_values, predicted_values)
+    # precision, recall, thresholds = metrics.precision_recall_curve(actual_values, predicted_values)
+    # roc_auc = metrics.auc(fpr, tpr)
+    #
+    # # print("fpr", fpr, "tpr", tpr, "threshold", threshold)
+    # plot_roc_curve(fpr, tpr, roc_auc)
+    # plot_precision_recall_curve(precision, recall, actual_values)
 
     return acc, f1_score_macro, cm, precision_recall_fscore
 
@@ -342,7 +340,6 @@ class LSTMModel(nn.Module):
                             batch_first=True)#, dropout=dropout_prob)
 
         self.drop = nn.Dropout(p=dropout_prob)
-        self.fc = nn.Linear(hidden_size, output_size)
 
         self.fnn = nn.Sequential(OrderedDict([
             ('relu1', nn.ReLU()),
@@ -367,10 +364,8 @@ class LSTMModel(nn.Module):
             ('bn5', nn.BatchNorm1d(32)),
             ('relu6', nn.ReLU()),
             ('drop6', nn.Dropout(0.2)),
-            ('fc6', nn.Linear(32, 1))
+            ('fc6', nn.Linear(32, output_size))
         ]))
-
-        self.m = nn.Sigmoid()
 
     def forward(self, X, lengths):
         """
@@ -394,12 +389,9 @@ class LSTMModel(nn.Module):
         output, (hn, cn) = self.lstm(X, (h0.detach(), c0.detach()))  # output shape:(batch_size,seq_length,hidden_size)
         last_states = self.last_by_index(output, lengths)
 
-        #output = self.fc(last_states)
-
         #last_states = self.drop(last_states)
 
         output = self.fnn(last_states)
-        output = self.m(output)
 
         return output
 
@@ -495,12 +487,10 @@ class Optimization:
 
                     # Compute the model output
                     out = self.model(X_train.float(), X_train_original_len)
-
-                    # Calculate loss
                     output = out.squeeze().float()
 
-                    #print("output: ", output)
-                    loss = self.loss_fn(output, y_train.float())
+                    # Calculate loss
+                    loss = self.loss_fn(output, y_train.type(torch.LongTensor))
 
                     # Computes the gradients
                     loss.backward()
@@ -526,14 +516,14 @@ class Optimization:
                     y_hat = self.model(X_val.float(), X_val_original_len)
                     y_hat = y_hat.squeeze().float()
 
-                    val_loss = self.loss_fn(y_hat, y_val.float())
+                    val_loss = self.loss_fn(y_hat, y_val.type(torch.LongTensor))
                     val_losses.append(val_loss)
 
                     val_predictions.append(y_hat)
                     val_values.append((y_val.float()))
 
                 val_values = np.concatenate(val_values).ravel()
-                val_predictions = np.concatenate(val_predictions).ravel()
+                val_predictions = np.concatenate(val_predictions)
 
                 val_values_tensor = (torch.Tensor(val_values))
                 val_predictions_tensor = (torch.Tensor(val_predictions))
@@ -600,36 +590,37 @@ class Optimization:
                 y_test = test_batch_info[1] # actual values
                 X_test_original_len = test_batch_info[2]
 
-                class_labels = list(set(y_test))
-
                 y_pred = best_model(X_test.float(), X_test_original_len)
                 y_pred = y_pred.squeeze().float()
 
                 # retrieve numpy array
                 y_pred = y_pred.detach().numpy()
-
                 predictions.append(y_pred)
 
                 y_test = y_test.detach().numpy()
                 values.append(y_test)
 
+
         values = np.concatenate(values).ravel()
-        predictions = np.concatenate(predictions).ravel()
+        predictions = np.concatenate(predictions)
+
+        print("VALUES: ", len(values))
+        print("VS PREDICTIONS: ", len(predictions))
 
         values_tensor = (torch.Tensor(values))
         predictions_tensor = (torch.Tensor(predictions))
 
-        accuracy, f1_score_macro, cm, precision_recall = calculate_metrics(predictions_tensor, values_tensor.float())
+        accuracy, f1_score_macro, cm, _ = calculate_metrics(predictions_tensor, values_tensor)
 
         print("\nClassification Report:\n"
               "accuracy: {:0.2f}%,".format(accuracy * 100),
-              "precision: {:0.2f}%,".format(precision_recall[0] * 100),
-              "recall: {:0.2f}%,".format(precision_recall[1]*100),
+              #"precision: {:0.2f}%,".format(precision_recall[0] * 100),
+              #"recall: {:0.2f}%,".format(precision_recall[1]*100),
               "f1_score (macro): {:0.2f}%".format(f1_score_macro * 100))
         print("\nConfusion matrix\n", cm)
-
-        print("y_test: ", values_tensor)
-        print("y_pred: ", predictions_tensor)
+        #
+        # print("y_test: ", values_tensor)
+        # print("y_pred: ", predictions_tensor)
 
         return predictions, values, cm
 
@@ -660,19 +651,21 @@ def get_model(model, model_params):
 
 if __name__ == "__main__":
     warnings.filterwarnings('ignore')
-
     args = parse_arguments()
     videos_path = args.videos_path
+    seed_all(42)
 
-    # parameters
-    input_size = 43  # num of features
-
-    output_size = 1
-    hidden_size = 256
+    # LSTM parameters
+    n_epochs = 1
     num_layers = 1
     batch_size = 64
+
+    # for 3-class classification
+    output_size = 3
+
+    input_size = 43
+    hidden_size = 256
     dropout = 0.2
-    n_epochs = 100
     learning_rate = 1e-2
     weight_decay = 1e-4
 
@@ -684,20 +677,19 @@ if __name__ == "__main__":
 
     videos_path = [item for sublist in videos_path for item in sublist]
 
-    seed_all(42)
-
     dataset = create_dataset(videos_path)
     train_loader, val_loader, test_loader = data_preparation(
         dataset, batch_size=batch_size)
 
     model = get_model('lstm', model_params)
 
-    # initialize weights for both LSTM and Sequential
+    #initialize weights for both LSTM and Sequential
+
     model.lstm.apply(weight_init)
     for submodule in model.fnn:
         submodule.apply(weight_init)
 
-    criterion = nn.BCELoss()
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(),
                            lr=learning_rate, weight_decay=weight_decay)
 

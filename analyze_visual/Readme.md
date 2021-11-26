@@ -21,7 +21,7 @@ Generally
 
 In ```main```, there is a dropout parameter for the LSTM. It can be used by removing the [line 392](https://github.com/tyiannak/multimodal_movie_analysis/blob/0f513f8427f67dd9bdb8797b368d78384db7e5f4/analyze_visual/LSTM_pytorch.py#L392/) from comments.
 
-There is a random_state parameter for both "train_test_split" processes in ```data_preparation```.
+There is a random_state parameter for both "train_test_split" processes in ```data_preparation()``` function.
 
 For each epoch, training and validation losses are calculated, along with a confusion matrix, the accuracy and the f1 (macro averaged). At the end there is a classification report for the test set.
 

@@ -12,6 +12,7 @@ Extratrees, RandomForest
 
 import warnings
 import argparse
+import shutil
 import os
 import numpy as np
 import sys
@@ -25,7 +26,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import AdaBoostClassifier, ExtraTreesClassifier, \
     RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, \
-    recall_score, f1_score, plot_confusion_matrix, confusion_matrix
+    recall_score, f1_score, plot_confusion_matrix, confusion_matrix, \
+    roc_curve, auc, precision_recall_curve, average_precision_score    
 import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV, train_test_split
 import json
@@ -108,6 +110,45 @@ def data_preparation(x):
         y[i] = label
     return x_all, y
 
+def prep_roc_pr_curves(gd_sr, y_score, y_test):
+    """
+    Prepate data and plot roc and precision-recall curves.
+    :param gd_sr: grid search
+    :y_score: predicted labels
+    :y_test: labels
+    """
+    #Create directories to save plots
+    path = 'Roc_curves'
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.mkdir(path)
+
+    path = 'Precision-Recall_curves'
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.mkdir(path)
+
+    #Save the number of classes
+    classes_names = list(set(y_test))
+    n_classes = len(classes_names)
+
+    y_pos_label = []
+
+    #One hot encoding
+    p = 0
+    for name in gd_sr.classes_:
+        for i in y_test:
+            if i == name:
+                y_pos_label.append(1)
+            else:
+                y_pos_label.append(0)
+        #Plot roc curves
+        plot_roc_curve(y_score[:,p], y_pos_label, n_classes, name)
+        #Plot Precision-Recall curves
+        prec_rec_curve(y_score[:,p], y_pos_label, n_classes, name)  
+        
+        y_pos_label.clear()
+        p+=1
 
 def plot_confusion_matrix(name, cm, classes):
     """
@@ -136,6 +177,49 @@ def plot_confusion_matrix(name, cm, classes):
     plt.xlabel('Predicted label')
     plt.savefig("shot_classifier_conf_mat_" + str(name) + ".jpg")
 
+def plot_roc_curve(y_score, y_test, n_classes, name):
+    """
+    Plot ROC curve
+    :y_score: Predicted labels
+    :y_test: labels of test set 
+    :n_classes: Number of classes   
+    """
+    # Compute ROC curve
+    fpr, tpr, _ = roc_curve(y_test, y_score)
+    roc_auc = auc(fpr, tpr)
+
+    # Plot of a ROC curve
+    plt.figure()
+    plt.plot(fpr, tpr, label='ROC curve (area = %0.2f)' % roc_auc)
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Roc curve for '+str(name)+' class')
+    plt.legend(loc="lower right")
+    plt.savefig('Roc_curves/Roc_curve_'+str(name)+'.png')
+
+def prec_rec_curve(y_score, y_test, n_classes, name):
+    """
+    Plot Precision-Recall curve
+    :y_score: Predicted labels
+    :y_test: labels of set y
+    :n_classes: Number of classes   
+    """
+    # Compute Precision-Recall curve
+    precision, recall, _ = precision_recall_curve(y_test, y_score)
+
+    #Plot PRecision-Recall curve
+    plt.figure()
+    plt.step(recall, precision, where='post')
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.ylim([0.0, 1.05])
+    plt.xlim([0.0, 1.0])
+    plt.title('Precision-Recall curve for '+str(name)+' class')
+
+    plt.savefig('Precision-Recall_curves/Precision-Recall-curve_'+str(name)+'.png')
 
 def Grid_Search_Process(classifier, grid_param, x_all, y):
     """
@@ -187,6 +271,11 @@ def Grid_Search_Process(classifier, grid_param, x_all, y):
     np.set_printoptions(precision=2)
 
     plot_confusion_matrix(str(classifier), conf_mat, classes=class_labels)
+
+    y_pred_proba = gd_sr.best_estimator_.predict_proba(X_test_scaled)
+
+    #Prepare data and plot roc, precision-recall cruves
+    prep_roc_pr_curves(gd_sr, y_pred_proba, y_test)
  
     return y_test, y_pred   
     

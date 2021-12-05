@@ -4,10 +4,12 @@ import torch
 import random
 import shutil
 import warnings
+import itertools
 import argparse
 import numpy as np
 import torch.nn as nn
 from pathlib import Path
+from scipy import ndimage
 from torch.nn import init
 import torch.optim as optim
 import sklearn.metrics as metrics
@@ -233,7 +235,7 @@ def data_preparation(videos_dataset, batch_size):
     y = [x[1] for x in videos_dataset]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        test_size=0.21, stratify=y)
+                                                        test_size=0.20, stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
                                                       test_size=0.12, stratify=y_train)
 
@@ -288,14 +290,14 @@ def plot_precision_recall_curve(precision, recall, y_test):
     plt.close()
 
 
-def calculate_aggregated_metrics(predicted_values, actual_values, threshold=0.5):
+def calculate_aggregated_metrics(predicted_values, actual_values, class_labels, threshold=0.5):
 
     y_pred = predicted_values >= threshold
     y = actual_values
 
     y_pred = y_pred.float()
 
-    cm = confusion_matrix(y, y_pred)
+    cm = confusion_matrix(y, y_pred, labels=class_labels)
     f1_score_macro = f1_score(y, y_pred, average='macro')
     acc = accuracy_score(y, y_pred)
     precision_recall_fscore = precision_recall_fscore_support(y, y_pred, average='macro')
@@ -305,26 +307,10 @@ def calculate_aggregated_metrics(predicted_values, actual_values, threshold=0.5)
     precision, recall, thresholds = metrics.precision_recall_curve(actual_values, predicted_values)
     roc_auc = metrics.auc(fpr, tpr)
 
-    # print("fpr", fpr, "tpr", tpr, "threshold", threshold)
-
     plot_roc_curve(fpr, tpr, roc_auc)
     plot_precision_recall_curve(precision, recall, actual_values)
 
-    return acc, f1_score_macro, cm, precision_recall_fscore
-
-
-def plot_binary_cm(conf_matrix):
-    fig, ax = plt.subplots(figsize=(7.5, 7.5))
-    ax.matshow(conf_matrix, cmap=plt.cm.Blues, alpha=0.3)
-    for i in range(conf_matrix.shape[0]):
-        for j in range(conf_matrix.shape[1]):
-            ax.text(x=j, y=i, s=conf_matrix[i, j], va='center', ha='center', size='xx-large')
-
-    plt.xlabel('Predictions', fontsize=18)
-    plt.ylabel('Actuals', fontsize=18)
-    plt.title('Confusion Matrix', fontsize=18)
-    #plt.show()
-    plt.savefig('binary_confusion_matrix.png')
+    return acc, f1_score_macro, cm, class_labels, precision_recall_fscore
 
 
 def calculate_metrics(predicted_values, actual_values, threshold=0.5):
@@ -338,14 +324,6 @@ def calculate_metrics(predicted_values, actual_values, threshold=0.5):
     f1_score_macro = f1_score(y, y_pred, average='macro')
     acc = accuracy_score(y, y_pred)
     precision_recall_fscore = precision_recall_fscore_support(y, y_pred, average='macro')
-
-    # # ROC Curve
-    # fpr, tpr, threshold = metrics.roc_curve(actual_values, predicted_values)
-    # precision, recall, thresholds = metrics.precision_recall_curve(actual_values, predicted_values)
-    # roc_auc = metrics.auc(fpr, tpr)
-    # print("fpr", fpr, "tpr", tpr, "threshold", threshold)
-    #plot_roc_curve(fpr, tpr, roc_auc)
-    #plot_precision_recall_curve(precision, recall, actual_values)
 
     return acc, f1_score_macro, cm, precision_recall_fscore
 
@@ -383,19 +361,22 @@ class LSTMModel(nn.Module):
         self.fc = nn.Linear(hidden_size, output_size)
 
         self.fnn = nn.Sequential(OrderedDict([
-            #('relu1', nn.ReLU()),
-            ('bn1', nn.BatchNorm1d(self.hidden_size)),
-            # ('drop1', nn.Dropout(0.6)),
-            ('fc1', nn.Linear(self.hidden_size, output_size)),
             # ('relu1', nn.ReLU()),
-            # ('bn1', nn.BatchNorm1d(64)),
-            # ('drop1', nn.Dropout(0.6)),
-            # ('fc2', nn.Linear(64, 32)),
-            # ('bn2', nn.BatchNorm1d(32)),
-            # ('relu2', nn.ReLU()),
-            # ('drop2', nn.Dropout(0.6)),
-            # ('fc3', nn.Linear(32, output_size))
+            ('bn1', nn.BatchNorm1d(self.hidden_size)),
+            ('fc1', nn.Linear(self.hidden_size, output_size)),
         ]))
+
+        # self.fnn = nn.Sequential(OrderedDict([
+        #     ('fc1', nn.Linear(self.hidden_size, 128)),
+        #     ('relu1', nn.ReLU()),
+        #     ('bn1', nn.BatchNorm1d(128)),
+        #     #('drop1', nn.Dropout(0.6)),
+        #     ('fc2', nn.Linear(128, 32)),
+        #     ('bn2', nn.BatchNorm1d(32)),
+        #     ('relu2', nn.ReLU()),
+        #     #('drop2', nn.Dropout(0.6)),
+        #     ('fc3', nn.Linear(32, output_size))
+        # ]))
 
         self.m = nn.Sigmoid()
 
@@ -652,25 +633,50 @@ class Optimization:
         print("\nConfusion matrix\n", cm)
         print("------------------------------------")
 
-        #print("y_test: ", values_tensor)
-        #print("y_pred: ", predictions_tensor)
-
         return predictions_tensor, values_tensor, cm
 
 
-def plot_binary_cm(conf_matrix):
-    fig, ax = plt.subplots(figsize=(7.5, 7.5))
-    ax.matshow(conf_matrix, cmap=plt.cm.Blues, alpha=0.3)
-    for i in range(conf_matrix.shape[0]):
-        for j in range(conf_matrix.shape[1]):
-            ax.text(x=j, y=i, s=conf_matrix[i, j], va='center', ha='center', size='xx-large')
+# def plot_binary_cm(conf_matrix):
+#     fig, ax = plt.subplots(figsize=(7.5, 7.5))
+#     ax.matshow(conf_matrix, cmap=plt.cm.Blues, alpha=0.3)
+#     for i in range(conf_matrix.shape[0]):
+#         for j in range(conf_matrix.shape[1]):
+#             ax.text(x=j, y=i, s=conf_matrix[i, j], va='center', ha='center', size='xx-large')
+#
+#     plt.xlabel('Predictions', fontsize=18)
+#     plt.ylabel('Actuals', fontsize=18)
+#     plt.title('Confusion Matrix', fontsize=18)
+#     plt.show()
+#     plt.savefig('LSTM_binary_conf_mat.eps', format='eps')
+#     #plt.savefig('binary_confusion_matrix.png')
 
-    plt.xlabel('Predictions', fontsize=18)
-    plt.ylabel('Actuals', fontsize=18)
-    plt.title('Confusion Matrix', fontsize=18)
-    plt.show()
-    plt.savefig('LSTM_binary_conf_mat.eps', format='eps')
-    #plt.savefig('binary_confusion_matrix.png')
+def plot_confusion_matrix(name, cm, classes):
+    """
+    Plot confusion matrix
+    :name: name of classifier
+    :cm: estimates of confusion matrix
+    :classes: all the classes
+    """
+    plt.figure()
+    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title('Confusion matrix')
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    fmt = 'd'
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+
+    plt.savefig(str(len(videos_path)) + '_shot_classifier_conf_mat_' + str(name) + '.eps', format='eps')
 
 
 def get_model(model, model_params):
@@ -702,12 +708,12 @@ if __name__ == "__main__":
         output_size = 1
         input_size = 43  # num of features
 
-        hidden_size = 128
+        hidden_size = 64
         num_layers = 2
         batch_size = 64
         dropout = 0.2
 
-        learning_rate = 1e-3
+        learning_rate = 1e-2
         weight_decay = 1e-4
 
         model_params = {'input_size': input_size,
@@ -722,11 +728,12 @@ if __name__ == "__main__":
                                lr=learning_rate, weight_decay=weight_decay)
 
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
-        opt = Optimization(model=model, loss_fn=criterion, optimizer=optimizer, scheduler=scheduler)
+        opt = Optimization(model=model, loss_fn=criterion,
+                           optimizer=optimizer, scheduler=scheduler)
 
         dataset = create_dataset(videos_path)
-        train_loader, val_loader, test_loader = data_preparation(
-            dataset, batch_size=batch_size)
+        train_loader, val_loader, test_loader = \
+            data_preparation(dataset, batch_size=batch_size)
 
         # initialize weights for both LSTM and Sequential
         model.lstm.apply(weight_init)
@@ -737,22 +744,28 @@ if __name__ == "__main__":
         opt.plot_losses()
 
         ckp_path = "best_checkpoint.pt"
-        best_model, optimizer, start_epoch, \
-        best_f1_score = load_ckp(ckp_path, model, optimizer)
+        best_model, optimizer, start_epoch, best_f1_score = \
+            load_ckp(ckp_path, model, optimizer)
 
-        predictions, values, binary_confusion_matrix = opt.evaluate(test_loader, best_model)
+        predictions, values, binary_confusion_matrix = \
+            opt.evaluate(test_loader, best_model)
 
         preds.append(predictions)
         vals.append(values)
-        #plot_binary_cm(binary_confusion_matrix)
 
     preds = np.concatenate(preds).ravel()
     vals = np.concatenate(vals).ravel()
+
+    class_labels = list(set(vals))
+
     preds = torch.Tensor(preds)
     vals = torch.Tensor(vals)
-    # print(preds)
 
-    accuracy, f1_score_macro, cm, precision_recall = calculate_aggregated_metrics(preds, vals.float())
+    np.save("binary_LSTM_handcrafted_y_test.npy", vals)
+    np.save("binary_LSTM_handcrafted_y_pred.npy", preds)
+
+    accuracy, f1_score_macro, cm, class_labels, precision_recall = \
+        calculate_aggregated_metrics(preds, vals.float(), class_labels)
 
     print("\n10-Fold Classification Report:\n"
           "accuracy: {:0.2f}%,".format(accuracy * 100),
@@ -760,4 +773,6 @@ if __name__ == "__main__":
           "recall: {:0.2f}%,".format(precision_recall[1] * 100),
           "f1_score (macro): {:0.2f}%".format(f1_score_macro * 100))
     print("\nConfusion matrix\n", cm)
-    plot_binary_cm(cm)
+
+    np.set_printoptions(precision=2)
+    plot_confusion_matrix('LSTM', cm, classes=class_labels)

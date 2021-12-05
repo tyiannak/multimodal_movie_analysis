@@ -12,6 +12,7 @@ from torch.nn import init
 import torch.optim as optim
 import sklearn.metrics as metrics
 from collections import OrderedDict
+from scipy import ndimage
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import MinMaxScaler
 from torch.utils.data import Dataset, DataLoader
@@ -164,7 +165,7 @@ class TimeSeriesMinMaxScaling():
         max_feature = torch.Tensor(list(tmp[1]))
 
         for inst in X:
-            v = (inst - min_feature) / max_feature - min_feature
+            v = (inst - min_feature) / (max_feature - min_feature)
             X_scaled.append(v)
         self.X_scaled = X_scaled
 
@@ -196,6 +197,7 @@ def load_data(X, y, check_train, scaler):
 
         # keep only specific features
         X_to_tensor = X_to_tensor[:, 45:89]
+        X_to_tensor = np.array([ndimage.median_filter(s, 4) for s in X_to_tensor.T]).T
 
         y = data[1]
         labels.append(y)
@@ -233,9 +235,9 @@ def data_preparation(videos_dataset, batch_size):
     y = [x[1] for x in videos_dataset]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                        test_size=0.2, stratify=y)
+                                                        test_size=0.21, stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
-                                                      test_size=0.13, stratify=y_train)
+                                                      test_size=0.12, stratify=y_train)
 
     # Define Scaler
     scaler = TimeSeriesStandardScaling()
@@ -270,7 +272,7 @@ def plot_roc_curve(fpr, tpr, roc_auc):
     plt.ylim([0, 1.05])
     plt.ylabel('True Positive Rate')
     plt.xlabel('False Positive Rate')
-    plt.show()
+    #plt.show()
     plt.savefig("ROC Curve - Binary Classification.png")
     plt.close()
 
@@ -282,12 +284,13 @@ def plot_precision_recall_curve(precision, recall, y_test):
     pyplot.xlabel('Recall')
     pyplot.ylabel('Precision')
     pyplot.legend()
-    pyplot.show()
-    plt.savefig("Precision-Recall Curve - Binary Classification.png")
+    #pyplot.show()
+    plt.savefig("Precision-Recall Curve - Bi"
+                "nary Classification.png")
     plt.close()
 
 
-def calculate_metrics(predicted_values, actual_values, threshold=0.5):
+def calculate_aggregated_metrics(predicted_values, actual_values, threshold=0.5):
 
     y_pred = predicted_values >= threshold
     y = actual_values
@@ -306,6 +309,43 @@ def calculate_metrics(predicted_values, actual_values, threshold=0.5):
 
     # print("fpr", fpr, "tpr", tpr, "threshold", threshold)
 
+    plot_roc_curve(fpr, tpr, roc_auc)
+    plot_precision_recall_curve(precision, recall, actual_values)
+
+    return acc, f1_score_macro, cm, precision_recall_fscore
+
+
+def plot_binary_cm(conf_matrix):
+    fig, ax = plt.subplots(figsize=(7.5, 7.5))
+    ax.matshow(conf_matrix, cmap=plt.cm.Blues, alpha=0.3)
+    for i in range(conf_matrix.shape[0]):
+        for j in range(conf_matrix.shape[1]):
+            ax.text(x=j, y=i, s=conf_matrix[i, j], va='center', ha='center', size='xx-large')
+
+    plt.xlabel('Predictions', fontsize=18)
+    plt.ylabel('Actuals', fontsize=18)
+    plt.title('Confusion Matrix', fontsize=18)
+    #plt.show()
+    plt.savefig('binary_confusion_matrix.png')
+
+
+def calculate_metrics(predicted_values, actual_values, threshold=0.5):
+
+    y_pred = predicted_values >= threshold
+    y = actual_values
+
+    y_pred = y_pred.float()
+
+    cm = confusion_matrix(y, y_pred)
+    f1_score_macro = f1_score(y, y_pred, average='macro')
+    acc = accuracy_score(y, y_pred)
+    precision_recall_fscore = precision_recall_fscore_support(y, y_pred, average='macro')
+
+    # # ROC Curve
+    # fpr, tpr, threshold = metrics.roc_curve(actual_values, predicted_values)
+    # precision, recall, thresholds = metrics.precision_recall_curve(actual_values, predicted_values)
+    # roc_auc = metrics.auc(fpr, tpr)
+    # print("fpr", fpr, "tpr", tpr, "threshold", threshold)
     #plot_roc_curve(fpr, tpr, roc_auc)
     #plot_precision_recall_curve(precision, recall, actual_values)
 
@@ -339,35 +379,21 @@ class LSTMModel(nn.Module):
         self.num_layers = num_layers
 
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers,
-                            batch_first=True)#, dropout=dropout_prob)
+                            batch_first=True)#, bidirectional=True)
 
         self.drop = nn.Dropout(p=dropout_prob)
         self.fc = nn.Linear(hidden_size, output_size)
 
         self.fnn = nn.Sequential(OrderedDict([
-            ('relu1', nn.ReLU()),
-            ('drop1', nn.Dropout(0.4)),
-            ('fc1', nn.Linear(self.hidden_size, 512)),
-            ('bn1', nn.BatchNorm1d(512)),
-            ('relu2', nn.ReLU()),
-            ('drop2', nn.Dropout(0.4)),
-            ('fc2', nn.Linear(512, 256)),
-            ('bn2', nn.BatchNorm1d(256)),
-            ('relu3', nn.ReLU()),
-            ('drop3', nn.Dropout(0.3)),
-            ('fc3', nn.Linear(256, 128)),
-            ('bn3', nn.BatchNorm1d(128)),
-            ('relu4', nn.ReLU()),
-            ('drop4', nn.Dropout(0.3)),
-            ('fc4', nn.Linear(128, 64)),
-            ('bn4', nn.BatchNorm1d(64)),
-            ('relu5', nn.ReLU()),
-            ('drop5', nn.Dropout(0.2)),
-            ('fc5', nn.Linear(64, 32)),
-            ('bn5', nn.BatchNorm1d(32)),
-            ('relu6', nn.ReLU()),
-            ('drop6', nn.Dropout(0.2)),
-            ('fc6', nn.Linear(32, 1))
+            ('fc1', nn.Linear(self.hidden_size, output_size)),
+            # ('relu1', nn.ReLU()),
+            # ('bn1', nn.BatchNorm1d(64)),
+            # ('drop1', nn.Dropout(0.6)),
+            # ('fc2', nn.Linear(64, 32)),
+            # ('bn2', nn.BatchNorm1d(32)),
+            # ('relu2', nn.ReLU()),
+            # ('drop2', nn.Dropout(0.6)),
+            # ('fc3', nn.Linear(32, output_size))
         ]))
 
         self.m = nn.Sigmoid()
@@ -380,24 +406,24 @@ class LSTMModel(nn.Module):
         and it computes the backpropagation.
         """
 
-        # Initialize (with zeros) both hidden and cell state
-        # for the first input
-        h0 = torch.zeros(self.num_layers, X.size(0),
-                         self.hidden_size).requires_grad_()
-
-        # The cell state determines which information is relevant or not
-        # through input and forget gates respectively
-        c0 = torch.zeros(self.num_layers, X.size(0),
-                         self.hidden_size).requires_grad_()
+        # # Initialize (with zeros) both hidden and cell state
+        # # for the first input
+        # h0 = torch.zeros(self.num_layers, X.data.size(0),
+        #                  self.hidden_size).requires_grad_()
+        #
+        # # The cell state determines which information is relevant or not
+        # # through input and forget gates respectively
+        # c0 = torch.zeros(self.num_layers, X.data.size(0),
+        #                  self.hidden_size).requires_grad_()
 
         # Forward propagate LSTM
-        output, (hn, cn) = self.lstm(X, (h0.detach(), c0.detach()))  # output shape:(batch_size,seq_length,hidden_size)
+        # output, (hn, cn) = self.lstm(X, (h0.detach(), c0.detach()))  # output shape:(batch_size,seq_length,hidden_size)
+
+        packed_output, _ = self.lstm(X)  # output shape:(batch_size,seq_length,hidden_size)
+        output, _ = unpack(packed_output, batch_first=True)
         last_states = self.last_by_index(output, lengths)
 
-        #output = self.fc(last_states)
-
-        #last_states = self.drop(last_states)
-
+        last_states = self.drop(last_states)
         output = self.fnn(last_states)
         output = self.m(output)
 
@@ -485,21 +511,16 @@ class Optimization:
                 y_train = batch_info[1]
                 X_train_original_len = batch_info[2]
 
-                #X_train_packed = pack(X_train, X_train_original_len, batch_first=True)
+                X_train_packed = pack(X_train.float(), X_train_original_len, batch_first=True)
 
-                # print(X_train_packed[0].shape)
-                # print(X_train_packed.data)
-                # print(X_train_packed.batch_sizes)
                 with torch.set_grad_enabled(True):
                     self.model.train()
 
                     # Compute the model output
-                    out = self.model(X_train.float(), X_train_original_len)
+                    out = self.model(X_train_packed, X_train_original_len)
 
                     # Calculate loss
                     output = out.squeeze().float()
-
-                    #print("output: ", output)
                     loss = self.loss_fn(output, y_train.float())
 
                     # Computes the gradients
@@ -520,10 +541,10 @@ class Optimization:
                     y_val = val_batch_info[1]
                     X_val_original_len = val_batch_info[2]
 
-                    #X_val_packed = pack(X_val, X_val_original_len, batch_first=True)
+                    X_val_packed = pack(X_val.float(), X_val_original_len, batch_first=True)
 
                     self.model.eval()
-                    y_hat = self.model(X_val.float(), X_val_original_len)
+                    y_hat = self.model(X_val_packed, X_val_original_len)
                     y_hat = y_hat.squeeze().float()
 
                     val_loss = self.loss_fn(y_hat, y_val.float())
@@ -601,8 +622,9 @@ class Optimization:
                 X_test_original_len = test_batch_info[2]
 
                 class_labels = list(set(y_test))
+                X_test_packed = pack(X_test.float(), X_test_original_len, batch_first=True)
 
-                y_pred = best_model(X_test.float(), X_test_original_len)
+                y_pred = best_model(X_test_packed, X_test_original_len)
                 y_pred = y_pred.squeeze().float()
 
                 # retrieve numpy array
@@ -627,11 +649,12 @@ class Optimization:
               "recall: {:0.2f}%,".format(precision_recall[1]*100),
               "f1_score (macro): {:0.2f}%".format(f1_score_macro * 100))
         print("\nConfusion matrix\n", cm)
+        print("------------------------------------")
 
-        print("y_test: ", values_tensor)
-        print("y_pred: ", predictions_tensor)
+        #print("y_test: ", values_tensor)
+        #print("y_pred: ", predictions_tensor)
 
-        return predictions, values, cm
+        return predictions_tensor, values_tensor, cm
 
 
 def plot_binary_cm(conf_matrix):
@@ -645,7 +668,8 @@ def plot_binary_cm(conf_matrix):
     plt.ylabel('Actuals', fontsize=18)
     plt.title('Confusion Matrix', fontsize=18)
     plt.show()
-    plt.savefig('binary_confusion_matrix.png')
+    plt.savefig('LSTM_binary_conf_mat.eps', format='eps')
+    #plt.savefig('binary_confusion_matrix.png')
 
 
 def get_model(model, model_params):
@@ -664,52 +688,75 @@ if __name__ == "__main__":
     args = parse_arguments()
     videos_path = args.videos_path
 
-    # parameters
-    input_size = 43  # num of features
-
-    output_size = 1
-    hidden_size = 256
-    num_layers = 1
-    batch_size = 64
-    dropout = 0.2
-    n_epochs = 100
-    learning_rate = 1e-2
-    weight_decay = 1e-4
-
-    model_params = {'input_size': input_size,
-                    'hidden_size': hidden_size,
-                    'num_layers': num_layers,
-                    'output_size': output_size,
-                    'dropout_prob': dropout}
-
     videos_path = [item for sublist in videos_path for item in sublist]
 
     seed_all(42)
 
-    dataset = create_dataset(videos_path)
-    train_loader, val_loader, test_loader = data_preparation(
-        dataset, batch_size=batch_size)
+    preds = []
+    vals = []
 
-    model = get_model('lstm', model_params)
+    for i in range(0, 10):
+        # parameters
+        n_epochs = 100
+        output_size = 1
+        input_size = 43  # num of features
 
-    # initialize weights for both LSTM and Sequential
-    model.lstm.apply(weight_init)
-    for submodule in model.fnn:
-        submodule.apply(weight_init)
+        hidden_size = 128
+        num_layers = 2
+        batch_size = 64
+        dropout = 0.2
 
-    criterion = nn.BCELoss()
-    optimizer = optim.Adam(model.parameters(),
-                           lr=learning_rate, weight_decay=weight_decay)
+        learning_rate = 1e-3
+        weight_decay = 1e-4
 
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
-    opt = Optimization(model=model, loss_fn=criterion, optimizer=optimizer, scheduler=scheduler)
+        model_params = {'input_size': input_size,
+                        'hidden_size': hidden_size,
+                        'num_layers': num_layers,
+                        'output_size': output_size,
+                        'dropout_prob': dropout}
 
-    opt.train(train_loader, val_loader, n_epochs=n_epochs)
-    opt.plot_losses()
+        criterion = nn.BCELoss()
+        model = get_model('lstm', model_params)
+        optimizer = optim.Adam(model.parameters(),
+                               lr=learning_rate, weight_decay=weight_decay)
 
-    ckp_path = "best_checkpoint.pt"
-    best_model, optimizer, start_epoch, \
-    best_f1_score = load_ckp(ckp_path, model, optimizer)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
+        opt = Optimization(model=model, loss_fn=criterion, optimizer=optimizer, scheduler=scheduler)
 
-    predictions, values, binary_confusion_matrix = opt.evaluate(test_loader, best_model)
-    #plot_binary_cm(binary_confusion_matrix)
+        dataset = create_dataset(videos_path)
+        train_loader, val_loader, test_loader = data_preparation(
+            dataset, batch_size=batch_size)
+
+        # initialize weights for both LSTM and Sequential
+        model.lstm.apply(weight_init)
+        for submodule in model.fnn:
+            submodule.apply(weight_init)
+
+        opt.train(train_loader, val_loader, n_epochs=n_epochs)
+        opt.plot_losses()
+
+        ckp_path = "best_checkpoint.pt"
+        best_model, optimizer, start_epoch, \
+        best_f1_score = load_ckp(ckp_path, model, optimizer)
+
+        predictions, values, binary_confusion_matrix = opt.evaluate(test_loader, best_model)
+
+        preds.append(predictions)
+        vals.append(values)
+        #plot_binary_cm(binary_confusion_matrix)
+
+    preds = np.concatenate(preds).ravel()
+    vals = np.concatenate(vals).ravel()
+    preds = torch.Tensor(preds)
+    vals = torch.Tensor(vals)
+    # print(preds)
+
+    accuracy, f1_score_macro, cm, precision_recall = calculate_aggregated_metrics(preds, vals.float())
+
+    print("\n10-Fold Classification Report:\n"
+          "accuracy: {:0.2f}%,".format(accuracy * 100),
+          "precision: {:0.2f}%,".format(precision_recall[0] * 100),
+          "recall: {:0.2f}%,".format(precision_recall[1] * 100),
+          "f1_score (macro): {:0.2f}%".format(f1_score_macro * 100))
+    print("\nConfusion matrix\n", cm)
+    plot_binary_cm(cm)

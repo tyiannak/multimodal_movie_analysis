@@ -117,7 +117,7 @@ def data_preparation(x):
     return x_all, y
 
 
-def plot_confusion_matrix(name, cm, classes, id):
+def plot_confusion_matrix(name, cm, classes):
     """
     Plot confusion matrix
     :name: name of classifier
@@ -142,14 +142,12 @@ def plot_confusion_matrix(name, cm, classes, id):
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
-    if id == 0:
-        #plt.savefig(len(videos_path) + "_shot_classifier_conf_mat_" + str(name) + ".jpg")
-        plt.savefig(str(len(videos_path)) + '_shot_classifier_conf_mat_' + str(name) + '.eps', format='eps')
-    elif id == 1:
-        plt.savefig("shot_classifier_conf_mat_window_" + str(name) + ".jpg")
+
+    plt.savefig(str(len(videos_path)) + '_shot_classifier_conf_mat_' + str(name) + '.eps', format='eps')
 
 
-def grid_search_process(classifier, grid_param, x_all, y):
+
+def Grid_Search_Process(classifier, grid_param, x_all, y):
     """
     Hyperparameter tuning process and fit the model
     (for aggregated features).
@@ -159,42 +157,52 @@ def grid_search_process(classifier, grid_param, x_all, y):
     :y: labels
     """
 
-    smt = SMOTE(random_state=0)
-    scaler = MinMaxScaler()
-    #scaler = StandardScaler()
-
-    # create pipeline
-    pipe = Pipeline(steps=[('smote', smt), ('scaler', scaler), ('clf', classifier)])
-
-    splits = 5
-    repeats = 10
-    rskf = RepeatedStratifiedKFold(n_splits=splits, n_repeats=repeats)
-
-    gd_sr = GridSearchCV(pipe, param_grid=grid_param, scoring='f1_macro',
-                         cv=rskf, n_jobs=-1)
-
     y_test_aggr = []
     y_pred_aggr = []
 
-    print("\nRepeated Stratified KFold (for aggregated features) has started! Please wait... \n")
-    for train, test in gd_sr.cv.split(x_all, y):
-        X_train, X_test = x_all[train], x_all[test]
-        X_train = np.asmatrix(X_train)
-        X_test = np.asmatrix(X_test)
+    X_train, X_test, y_train, y_test = train_test_split(x_all, y,
+                                                        test_size=0.2, stratify=y)
+    #print(X_train.shape, X_test.shape)
 
-        y_train = []
-        y_test = []
+    # Define scaler
+    scaler = StandardScaler()
 
-        for i in train:
-            y_train.append(y[i])
+    # Fit scaler on the training dataset
+    # and transform both datasets
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
 
-        for j in test:
-            y_test.append(y[j])
+    gd_sr = GridSearchCV(estimator=classifier,
+                         param_grid=grid_param,
+                         scoring='f1_macro',
+                         cv=5, n_jobs=-1)
 
-        gd_sr.fit(X_train, y_train)
-        class_labels = list(set(y_test))
+    gd_sr.fit(X_train_scaled, y_train)
 
-        y_pred = gd_sr.best_estimator_.predict(X_test)
+    # # Save model
+    # dump(gd_sr, open('shot_classifier_' + str(algorithm) + '.pkl', 'wb'))
+    #
+    # # Save the scaler
+    # dump(scaler, open('shot_classifier_' + str(algorithm) +
+    #                   '_scaler.pkl', 'wb'))
+    # print("gd_sr params: ", gd_sr.best_params_)
+
+    y_pred = gd_sr.best_estimator_.predict(X_test_scaled)
+
+    y_test_aggr.append(y_test)
+    y_pred_aggr.append(y_pred)
+
+    classifier.set_params(**gd_sr.best_params_)
+
+    for i in range(0, 9):
+        X_train, X_test, y_train, y_test = train_test_split(x_all, y,
+                                                            test_size=0.2)
+
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+
+        classifier.fit(X_train_scaled, y_train)
+        y_pred = classifier.predict(X_test_scaled)
 
         y_test_aggr.append(y_test)
         y_pred_aggr.append(y_pred)
@@ -203,7 +211,8 @@ def grid_search_process(classifier, grid_param, x_all, y):
     y_test_aggr_flattened = np.concatenate(y_test_aggr).ravel()
     y_pred_aggr_flattened = np.concatenate(y_pred_aggr).ravel()
 
-    cm = confusion_matrix(y_test_aggr_flattened, y_pred_aggr_flattened)
+    class_labels = list(set(y_test_aggr_flattened))
+    cm = confusion_matrix(y_test_aggr_flattened, y_pred_aggr_flattened, labels=class_labels)
     f1_score_macro = f1_score(y_test_aggr_flattened, y_pred_aggr_flattened, average='macro')
     acc = accuracy_score(y_test_aggr_flattened, y_pred_aggr_flattened)
     precision_recall_fscore = precision_recall_fscore_support(y_test_aggr_flattened, y_pred_aggr_flattened, average='macro')
@@ -215,13 +224,14 @@ def grid_search_process(classifier, grid_param, x_all, y):
           "f1_score (macro): {:0.2f}%".format(f1_score_macro * 100))
     print("\nConfusion matrix\n", cm)
 
-    agg_id = 0
-    np.set_printoptions(precision=2)
-    plot_confusion_matrix(str(classifier), cm, classes=class_labels, id=agg_id)
 
-    #num_of_classes = len(videos_path)
-    #np.save(str(num_of_classes) + "_class_y_test.npy", y_test_aggr_flattened)
-    #np.save(str(num_of_classes) + "_class_y_pred.npy", y_pred_aggr_flattened)
+    np.set_printoptions(precision=2)
+    plot_confusion_matrix(str(classifier), cm, classes=class_labels)
+
+    num_of_classes = len(videos_path)
+    np.save(str(num_of_classes) + "_class_y_test.npy", y_test_aggr_flattened)
+    np.save(str(num_of_classes) + "_class_y_pred.npy", y_pred_aggr_flattened)
+
 
 
 def train_models(x, training_algorithms):
@@ -237,39 +247,40 @@ def train_models(x, training_algorithms):
 
     for algorithm in training_algorithms:
         if algorithm == 'SVM':
-            classifier = SVC()
+            classifier = SVC(probability=True)
             grid_param = {
-              'clf__C': [0.1, 0.5, 1, 2, 5, 10, 100],
-              'clf__kernel': ['rbf']}
+              'C': [0.1, 0.5, 1, 2, 5, 10, 100],
+              'kernel': ['rbf']}
         elif algorithm == 'Decision_Trees':
             classifier = DecisionTreeClassifier()
             grid_param = {
-                'clf__criterion': ['gini', 'entropy'],
-                'clf__max_depth': range(1, 10)}
+                'criterion': ['gini', 'entropy'],
+                'max_depth': range(1, 10)}
         elif algorithm == 'KNN':
             classifier = KNeighborsClassifier()
             grid_param = {
-                'clf__n_neighbors': [3, 5, 7],
-                'clf__weights': ['uniform','distance']}
+                'n_neighbors': [3, 5, 7],
+                'weights': ['uniform','distance']}
 
         elif algorithm == 'Adaboost':
             classifier = AdaBoostClassifier()
             grid_param = {
-                 'clf__n_estimators': np.arange(100, 250, 50),
-                 'clf__learning_rate': [0.01, 0.05, 0.1, 1]}
+                 'n_estimators': np.arange(100, 250, 50),
+                 'learning_rate': [0.01, 0.05, 0.1, 1]}
         elif algorithm == 'Extratrees':
             classifier = ExtraTreesClassifier()
             grid_param = {
-                'clf__n_estimators': range(25, 126, 25),
-                'clf__max_features': range(25, 401, 25)}
+                'n_estimators': range(25, 126, 25),
+                'max_features': range(25, 401, 25)}
         else:
             classifier = RandomForestClassifier()
             grid_param = {
-            'clf__n_estimators': [100, 300],
-            'clf__criterion': ['gini', 'entropy']}
+            'n_estimators': [100, 300],
+            'criterion': ['gini', 'entropy']}
 
-        # Grid Search Process for aggregated features
-        grid_search_process(classifier, grid_param, x_all, y)
+        # y_test,y_pred = \
+        Grid_Search_Process(classifier, grid_param, x_all, y)
+        #save_results(algorithm, y_test, y_pred)
 
 
 if __name__ == "__main__":

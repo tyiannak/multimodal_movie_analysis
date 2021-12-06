@@ -361,7 +361,7 @@ class LSTMModel(nn.Module):
         self.fc = nn.Linear(hidden_size, output_size)
 
         self.fnn = nn.Sequential(OrderedDict([
-            # ('relu1', nn.ReLU()),
+            ('relu1', nn.ReLU()),
             ('bn1', nn.BatchNorm1d(self.hidden_size)),
             ('fc1', nn.Linear(self.hidden_size, output_size)),
         ]))
@@ -708,13 +708,13 @@ if __name__ == "__main__":
         output_size = 1
         input_size = 43  # num of features
 
-        hidden_size = 64
+        hidden_size = 80
         num_layers = 2
         batch_size = 64
-        dropout = 0.2
+        dropout = 0.4
 
-        learning_rate = 1e-2
-        weight_decay = 1e-4
+        learning_rate = 1e-3
+        weight_decay = 1e-8
 
         model_params = {'input_size': input_size,
                         'hidden_size': hidden_size,

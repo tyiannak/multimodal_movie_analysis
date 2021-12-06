@@ -4,11 +4,13 @@ import torch
 import random
 import shutil
 import warnings
+import itertools
 import argparse
 import numpy as np
 import torch.nn as nn
 from pathlib import Path
 from torch.nn import init
+from scipy import ndimage
 import torch.optim as optim
 import sklearn.metrics as metrics
 from collections import OrderedDict
@@ -31,7 +33,7 @@ matplotlib.use('Agg')
 """
 RUN (binary classification):
 big dataset (941 Static VS 583 Non Static):
-python3 LSTM_pytorch.py -v /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/Non_Static_88_feat /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/Static_88_feat /media/ubuntu/Seagate/ChromeDownloads/dataset_annotated_4/Handled
+python3 LSTM_pytorch.py -v /media/ubuntu/Seagate/datasets/dataset_annotated_29_11_2021/dataset_annotated_5/3_class/Static /media/ubuntu/Seagate/datasets/dataset_annotated_29_11_2021/dataset_annotated_5/3_class/Zoom /media/ubuntu/Seagate/datasets/dataset_annotated_29_11_2021/dataset_annotated_5/3_class/Vertical_and_horizontal_movements
 """
 
 
@@ -196,6 +198,8 @@ def load_data(X, y, check_train, scaler):
         # keep only specific features (remove RGB histogram-based features)
         X_to_tensor = X_to_tensor[:, 45:89]
 
+        # X_to_tensor = np.array([ndimage.median_filter(s, 4) for s in X_to_tensor.T]).T
+
         y = data[1]
         labels.append(y)
         x_len.append(X_to_tensor.shape[0])
@@ -229,9 +233,9 @@ def data_preparation(videos_dataset, batch_size):
     X = [x[0] for x in videos_dataset]
     y = [x[1] for x in videos_dataset]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42,
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=2,
                                                         test_size=0.2, stratify=y)
-    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, random_state=42,
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, random_state=2,
                                                       test_size=0.13, stratify=y_train)
 
     # Define Scaler
@@ -284,9 +288,7 @@ def plot_precision_recall_curve(precision, recall, y_test):
     plt.close()
 
 
-def calculate_metrics(y_pred, y_test):
-
-
+def calculate_metrics(y_pred, y_test, id=0):
 
     y_pred_softmax = torch.log_softmax(y_pred, dim=1)
     _, y_pred_tags = torch.max(y_pred_softmax, dim=1)
@@ -298,17 +300,23 @@ def calculate_metrics(y_pred, y_test):
     acc = accuracy_score(y_test, y_pred)
     precision_recall_fscore = precision_recall_fscore_support(y_test, y_pred, average='macro')
 
-    # # ROC Curve
-    # fpr, tpr, threshold = metrics.roc_curve(actual_values, predicted_values)
-    # precision, recall, thresholds = metrics.precision_recall_curve(actual_values, predicted_values)
-    # roc_auc = metrics.auc(fpr, tpr)
-    #
-    # # print("fpr", fpr, "tpr", tpr, "threshold", threshold)
-    # plot_roc_curve(fpr, tpr, roc_auc)
-    # plot_precision_recall_curve(precision, recall, actual_values)
-
     return acc, f1_score_macro, cm, precision_recall_fscore
 
+def calculate_aggregated_metrics(y_pred, y_test, class_labels):
+
+    y_pred_softmax = torch.log_softmax(y_pred, dim=1)
+    _, y_pred_tags = torch.max(y_pred_softmax, dim=1)
+
+    y_pred = y_pred_tags.float()
+
+    print(class_labels)
+
+    conf_mat = confusion_matrix(y_test, y_pred)
+    f1_score_macro = f1_score(y_test, y_pred, average='macro')
+    acc = accuracy_score(y_test, y_pred)
+    #precision_recall_fscore = precision_recall_fscore_support(y_test, y_pred, average='macro')
+
+    return acc, f1_score_macro, conf_mat, class_labels#, precision_recall_fscore
 
 def weight_init(m):
     if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.Linear):
@@ -339,33 +347,14 @@ class LSTMModel(nn.Module):
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers,
                             batch_first=True)#, dropout=dropout_prob)
 
-        self.drop = nn.Dropout(p=dropout_prob)
-
         self.fnn = nn.Sequential(OrderedDict([
             ('relu1', nn.ReLU()),
-            ('drop1', nn.Dropout(0.4)),
-            ('fc1', nn.Linear(self.hidden_size, 512)),
-            ('bn1', nn.BatchNorm1d(512)),
-            ('relu2', nn.ReLU()),
-            ('drop2', nn.Dropout(0.4)),
-            ('fc2', nn.Linear(512, 256)),
-            ('bn2', nn.BatchNorm1d(256)),
-            ('relu3', nn.ReLU()),
-            ('drop3', nn.Dropout(0.3)),
-            ('fc3', nn.Linear(256, 128)),
-            ('bn3', nn.BatchNorm1d(128)),
-            ('relu4', nn.ReLU()),
-            ('drop4', nn.Dropout(0.3)),
-            ('fc4', nn.Linear(128, 64)),
-            ('bn4', nn.BatchNorm1d(64)),
-            ('relu5', nn.ReLU()),
-            ('drop5', nn.Dropout(0.2)),
-            ('fc5', nn.Linear(64, 32)),
-            ('bn5', nn.BatchNorm1d(32)),
-            ('relu6', nn.ReLU()),
-            ('drop6', nn.Dropout(0.2)),
-            ('fc6', nn.Linear(32, output_size))
+            ('bn1', nn.BatchNorm1d(self.hidden_size)),
+            ('fc1', nn.Linear(self.hidden_size, output_size)),
         ]))
+
+        self.drop = nn.Dropout(p=dropout_prob)
+
 
     def forward(self, X, lengths):
         """
@@ -375,21 +364,12 @@ class LSTMModel(nn.Module):
         and it computes the backpropagation.
         """
 
-        # Initialize (with zeros) both hidden and cell state
-        # for the first input
-        h0 = torch.zeros(self.num_layers, X.size(0),
-                         self.hidden_size).requires_grad_()
-
-        # The cell state determines which information is relevant or not
-        # through input and forget gates respectively
-        c0 = torch.zeros(self.num_layers, X.size(0),
-                         self.hidden_size).requires_grad_()
-
         # Forward propagate LSTM
-        output, (hn, cn) = self.lstm(X, (h0.detach(), c0.detach()))  # output shape:(batch_size,seq_length,hidden_size)
+        packed_output, _ = self.lstm(X)  # output shape:(batch_size,seq_length,hidden_size)
+        output, _ = unpack(packed_output, batch_first=True)
         last_states = self.last_by_index(output, lengths)
 
-        #last_states = self.drop(last_states)
+        last_states = self.drop(last_states)
 
         output = self.fnn(last_states)
 
@@ -477,7 +457,7 @@ class Optimization:
                 y_train = batch_info[1]
                 X_train_original_len = batch_info[2]
 
-                #X_train_packed = pack(X_train, X_train_original_len, batch_first=True)
+                X_train_packed = pack(X_train.float(), X_train_original_len, batch_first=True)
 
                 # print(X_train_packed[0].shape)
                 # print(X_train_packed.data)
@@ -486,7 +466,7 @@ class Optimization:
                     self.model.train()
 
                     # Compute the model output
-                    out = self.model(X_train.float(), X_train_original_len)
+                    out = self.model(X_train_packed, X_train_original_len)
                     output = out.squeeze().float()
 
                     # Calculate loss
@@ -510,10 +490,10 @@ class Optimization:
                     y_val = val_batch_info[1]
                     X_val_original_len = val_batch_info[2]
 
-                    #X_val_packed = pack(X_val, X_val_original_len, batch_first=True)
+                    X_val_packed = pack(X_val.float(), X_val_original_len, batch_first=True)
 
                     self.model.eval()
-                    y_hat = self.model(X_val.float(), X_val_original_len)
+                    y_hat = self.model(X_val_packed, X_val_original_len)
                     y_hat = y_hat.squeeze().float()
 
                     val_loss = self.loss_fn(y_hat, y_val.type(torch.LongTensor))
@@ -559,7 +539,7 @@ class Optimization:
                 save_ckp(checkpoint, True, check_path, best_check_path)
                 f1_max = f1_score_macro
 
-            if counter_epoch >= 20:
+            if counter_epoch >= 15:
                 break
 
             print("\n")
@@ -575,7 +555,7 @@ class Optimization:
         plt.legend()
         #plt.title("LSTM Losses")
         plt.show()
-        plt.savefig("LSTM_binary_class_losses.png")
+        plt.savefig("LSTM_multi_class_losses.png")
         plt.close()
 
     def evaluate(self, test_loader, best_model):
@@ -590,7 +570,9 @@ class Optimization:
                 y_test = test_batch_info[1] # actual values
                 X_test_original_len = test_batch_info[2]
 
-                y_pred = best_model(X_test.float(), X_test_original_len)
+                X_test_packed = pack(X_test.float(), X_test_original_len, batch_first=True)
+
+                y_pred = best_model(X_test_packed, X_test_original_len)
                 y_pred = y_pred.squeeze().float()
 
                 # retrieve numpy array
@@ -604,39 +586,46 @@ class Optimization:
         values = np.concatenate(values).ravel()
         predictions = np.concatenate(predictions)
 
-        print("VALUES: ", len(values))
-        print("VS PREDICTIONS: ", len(predictions))
-
         values_tensor = (torch.Tensor(values))
         predictions_tensor = (torch.Tensor(predictions))
 
-        accuracy, f1_score_macro, cm, _ = calculate_metrics(predictions_tensor, values_tensor)
+        acc, f1_score_macro, cm, _ = calculate_metrics(predictions_tensor, values_tensor)
 
         print("\nClassification Report:\n"
-              "accuracy: {:0.2f}%,".format(accuracy * 100),
-              #"precision: {:0.2f}%,".format(precision_recall[0] * 100),
-              #"recall: {:0.2f}%,".format(precision_recall[1]*100),
+              "accuracy: {:0.2f}%,".format(acc * 100),
               "f1_score (macro): {:0.2f}%".format(f1_score_macro * 100))
         print("\nConfusion matrix\n", cm)
-        #
-        # print("y_test: ", values_tensor)
-        # print("y_pred: ", predictions_tensor)
 
-        return predictions, values, cm
+        return predictions_tensor, values_tensor, cm
 
 
-def plot_binary_cm(conf_matrix):
-    fig, ax = plt.subplots(figsize=(7.5, 7.5))
-    ax.matshow(conf_matrix, cmap=plt.cm.Blues, alpha=0.3)
-    for i in range(conf_matrix.shape[0]):
-        for j in range(conf_matrix.shape[1]):
-            ax.text(x=j, y=i, s=conf_matrix[i, j], va='center', ha='center', size='xx-large')
+def plot_confusion_matrix(name, cm, classes):
+    """
+    Plot confusion matrix
+    :name: name of classifier
+    :cm: estimates of confusion matrix
+    :classes: all the classes
+    """
+    plt.figure()
+    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title('Confusion matrix')
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
 
-    plt.xlabel('Predictions', fontsize=18)
-    plt.ylabel('Actuals', fontsize=18)
-    plt.title('Confusion Matrix', fontsize=18)
-    plt.show()
-    plt.savefig('binary_confusion_matrix.png')
+    fmt = 'd'
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+
+    plt.savefig(str(len(videos_path)) + '_shot_classifier_conf_mat_' + str(name) + '.eps', format='eps')
 
 
 def get_model(model, model_params):
@@ -649,59 +638,128 @@ def get_model(model, model_params):
     return models.get(model.lower())(**model_params)
 
 
+def plot_confusion_matrix(name, cm, classes):
+    """
+    Plot confusion matrix
+    :name: name of classifier
+    :cm: estimates of confusion matrix
+    :classes: all the classes
+    """
+    plt.figure()
+    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title('Confusion matrix')
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    fmt = 'd'
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.savefig("shot_classifier_conf_mat_" + str(name) + ".jpg")
+
+
 if __name__ == "__main__":
     warnings.filterwarnings('ignore')
     args = parse_arguments()
     videos_path = args.videos_path
     seed_all(42)
 
-    # LSTM parameters
-    n_epochs = 1
-    num_layers = 1
-    batch_size = 64
-
-    # for 3-class classification
-    output_size = 3
-
-    input_size = 43
-    hidden_size = 256
-    dropout = 0.2
-    learning_rate = 1e-2
-    weight_decay = 1e-4
-
-    model_params = {'input_size': input_size,
-                    'hidden_size': hidden_size,
-                    'num_layers': num_layers,
-                    'output_size': output_size,
-                    'dropout_prob': dropout}
-
     videos_path = [item for sublist in videos_path for item in sublist]
 
-    dataset = create_dataset(videos_path)
-    train_loader, val_loader, test_loader = data_preparation(
-        dataset, batch_size=batch_size)
+    preds = []
+    vals = []
 
-    model = get_model('lstm', model_params)
+    for i in range(0, 3):
+        # LSTM parameters
+        n_epochs = 100
+        input_size = 43
+        num_layers = 2
+        batch_size = 64
 
-    #initialize weights for both LSTM and Sequential
+        hidden_size = 80
+        dropout = 0.4
+        learning_rate = 1e-3
+        weight_decay = 1e-8
+        output_size = len(videos_path)
 
-    model.lstm.apply(weight_init)
-    for submodule in model.fnn:
-        submodule.apply(weight_init)
+        model_params = {'input_size': input_size,
+                        'hidden_size': hidden_size,
+                        'num_layers': num_layers,
+                        'output_size': output_size,
+                        'dropout_prob': dropout}
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(),
-                           lr=learning_rate, weight_decay=weight_decay)
 
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
-    opt = Optimization(model=model, loss_fn=criterion, optimizer=optimizer, scheduler=scheduler)
+        dataset = create_dataset(videos_path)
+        train_loader, val_loader, test_loader = data_preparation(
+            dataset, batch_size=batch_size)
 
-    opt.train(train_loader, val_loader, n_epochs=n_epochs)
-    opt.plot_losses()
+        model = get_model('lstm', model_params)
 
-    ckp_path = "best_checkpoint.pt"
-    best_model, optimizer, start_epoch, \
-    best_f1_score = load_ckp(ckp_path, model, optimizer)
+        params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print("Model parameters: {}".format(params))
+        print(model_params)
 
-    predictions, values, binary_confusion_matrix = opt.evaluate(test_loader, best_model)
-    #plot_binary_cm(binary_confusion_matrix)
+        #initialize weights for both LSTM and Sequential
+        model.lstm.apply(weight_init)
+        for submodule in model.fnn:
+            submodule.apply(weight_init)
+
+        #weights = torch.tensor([0.15, 1.0, 0.44])
+        #weights = torch.tensor([1.0, 6.48, 2.88])
+        #weights = torch.tensor([1.0, 833.0, 643.0])
+
+        #criterion = nn.CrossEntropyLoss(weight=weights)
+
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.Adam(model.parameters(),
+                               lr=learning_rate, weight_decay=weight_decay)
+
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
+        opt = Optimization(model=model, loss_fn=criterion, optimizer=optimizer, scheduler=scheduler)
+
+        opt.train(train_loader, val_loader, n_epochs=n_epochs)
+        opt.plot_losses()
+
+        ckp_path = "best_checkpoint.pt"
+        best_model, optimizer, start_epoch, best_f1_score = \
+            load_ckp(ckp_path, model, optimizer)
+
+        predictions, values, multi_confusion_matrix = \
+            opt.evaluate(test_loader, best_model)
+
+        preds.append(predictions)
+        vals.append(values)
+
+
+    vals = np.concatenate(vals).ravel()
+    preds = np.concatenate(preds)
+
+    class_labels = list(set(vals))
+
+    vals = torch.Tensor(vals)
+    preds = torch.Tensor(preds)
+
+    # np.save(str(len(videos_path)) + "_LSTM_handcrafted_y_test.npy", vals)
+    # np.save(str(len(videos_path)) + "_LSTM_handcrafted_y_pred.npy", preds)
+
+    accuracy, f1_score_macro, cm, class_labels = \
+        calculate_aggregated_metrics(preds, vals, class_labels)
+
+    print("\n10-Fold Classification Report:\n"
+          "accuracy: {:0.2f}%,".format(accuracy * 100),
+          # "precision: {:0.2f}%,".format(precision_recall[0] * 100),
+          # "recall: {:0.2f}%,".format(precision_recall[1] * 100),
+          "f1_score (macro): {:0.2f}%".format(f1_score_macro * 100))
+    print("\nConfusion matrix\n", cm)
+
+    np.set_printoptions(precision=2)
+    plot_confusion_matrix('LSTM', cm, classes=class_labels)
+

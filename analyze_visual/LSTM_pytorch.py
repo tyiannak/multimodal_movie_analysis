@@ -3,6 +3,7 @@ import sys
 import torch
 import random
 import shutil
+import fnmatch
 import warnings
 import itertools
 import argparse
@@ -198,7 +199,7 @@ def load_data(X, y, check_train, scaler):
         # keep only specific features (remove RGB histogram-based features)
         X_to_tensor = X_to_tensor[:, 45:89]
 
-        # X_to_tensor = np.array([ndimage.median_filter(s, 4) for s in X_to_tensor.T]).T
+        X_to_tensor = np.array([ndimage.median_filter(s, 4) for s in X_to_tensor.T]).T
 
         y = data[1]
         labels.append(y)
@@ -351,7 +352,20 @@ class LSTMModel(nn.Module):
             ('relu1', nn.ReLU()),
             ('bn1', nn.BatchNorm1d(self.hidden_size)),
             ('fc1', nn.Linear(self.hidden_size, output_size)),
+
         ]))
+
+        # self.fnn = nn.Sequential(OrderedDict([
+        #     ('fc1', nn.Linear(self.hidden_size, 64)),
+        #     ('relu1', nn.ReLU()),
+        #     ('bn1', nn.BatchNorm1d(64)),
+        #     # ('drop1', nn.Dropout(0.4)),
+        #     # ('fc2', nn.Linear(64, 16)),
+        #     # ('bn2', nn.BatchNorm1d(16)),
+        #     # ('relu2', nn.ReLU()),
+        #     # ('drop2', nn.Dropout(0.4)),
+        #     ('fc2', nn.Linear(64, output_size))
+        # ]))
 
         self.drop = nn.Dropout(p=dropout_prob)
 
@@ -677,16 +691,42 @@ if __name__ == "__main__":
     preds = []
     vals = []
 
+    num_of_shots_per_class = []
+    for folder in videos_path: # for each class-folder
+        # get list of np files in that folder (where features can have
+        # been saved):
+        np_feature_files = fnmatch.filter(os.listdir(folder), '*mp4.npy')
+        num_of_shots_per_class.append(len(np_feature_files))
+    print(num_of_shots_per_class)
+
+    minor_class = min(num_of_shots_per_class)
+    major_class = max(num_of_shots_per_class)
+
+    weights = []
+    # for class_folder_shots in num_of_shots_per_class:
+    #     weight_class = minor_class / class_folder_shots
+    #     weights.append(weight_class)
+
+    for class_folder_shots in num_of_shots_per_class:
+        weight_class = major_class / class_folder_shots
+        weights.append(weight_class)
+
+    weights = torch.FloatTensor(weights)
+    print("weights: ", weights)
+    # weights = torch.tensor([0.15, 1.0, 0.44])
+    #weights = torch.tensor([1.0, 6.48, 2.88])
+    # weights = torch.tensor([1.0, 833.0, 643.0])
+
     for i in range(0, 3):
         # LSTM parameters
         n_epochs = 100
         input_size = 43
         num_layers = 2
-        batch_size = 64
+        batch_size = 16
 
-        hidden_size = 80
-        dropout = 0.4
-        learning_rate = 1e-3
+        hidden_size = 64
+        dropout = 0.5
+        learning_rate = 1e-2
         weight_decay = 1e-8
         output_size = len(videos_path)
 
@@ -712,13 +752,9 @@ if __name__ == "__main__":
         for submodule in model.fnn:
             submodule.apply(weight_init)
 
-        #weights = torch.tensor([0.15, 1.0, 0.44])
-        #weights = torch.tensor([1.0, 6.48, 2.88])
-        #weights = torch.tensor([1.0, 833.0, 643.0])
+        criterion = nn.CrossEntropyLoss(weight=weights)
 
-        #criterion = nn.CrossEntropyLoss(weight=weights)
-
-        criterion = nn.CrossEntropyLoss()
+        #criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(),
                                lr=learning_rate, weight_decay=weight_decay)
 

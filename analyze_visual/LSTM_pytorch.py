@@ -711,10 +711,10 @@ if __name__ == "__main__":
         output_size = 1
         input_size = 43  # num of features
 
-        hidden_size = 80
+        hidden_size = 100
         num_layers = 2
         batch_size = 64
-        dropout = 0.4
+        dropout = 0.5
 
         learning_rate = 1e-3
         weight_decay = 1e-8

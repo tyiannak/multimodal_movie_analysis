@@ -290,7 +290,7 @@ def plot_precision_recall_curve(precision, recall, y_test):
     plt.close()
 
 
-def calculate_aggregated_metrics(predicted_values, actual_values, class_labels, threshold=0.5):
+def calculate_aggregated_metrics(predicted_values, actual_values, class_labels, threshold=0.0):
 
     y_pred = predicted_values >= threshold
     y = actual_values
@@ -313,11 +313,12 @@ def calculate_aggregated_metrics(predicted_values, actual_values, class_labels, 
     return acc, f1_score_macro, cm, class_labels, precision_recall_fscore
 
 
-def calculate_metrics(predicted_values, actual_values, threshold=0.5):
+def calculate_metrics(predicted_values, actual_values, threshold=0.0):
 
+    # print("PRIN ", predicted_values)
     y_pred = predicted_values >= threshold
     y = actual_values
-
+    # print("META ", y_pred)
     y_pred = y_pred.float()
 
     cm = confusion_matrix(y, y_pred)
@@ -407,7 +408,7 @@ class LSTMModel(nn.Module):
 
         last_states = self.drop(last_states)
         output = self.fnn(last_states)
-        output = self.m(output)
+        # output = self.m(output)
 
         return output
 
@@ -495,6 +496,8 @@ class Optimization:
 
                 X_train_packed = pack(X_train.float(), X_train_original_len, batch_first=True)
 
+                #print(" IS NAN: (train) ",torch.isnan(X_train).any())
+
                 with torch.set_grad_enabled(True):
                     self.model.train()
 
@@ -524,7 +527,7 @@ class Optimization:
                     X_val_original_len = val_batch_info[2]
 
                     X_val_packed = pack(X_val.float(), X_val_original_len, batch_first=True)
-
+                   # print(" IS NAN: (val) ", torch.isnan(X_val).any())
                     self.model.eval()
                     y_hat = self.model(X_val_packed, X_val_original_len)
                     y_hat = y_hat.squeeze().float()
@@ -605,7 +608,7 @@ class Optimization:
 
                 class_labels = list(set(y_test))
                 X_test_packed = pack(X_test.float(), X_test_original_len, batch_first=True)
-
+                #print(" IS NAN: (test) ", torch.isnan(X_test).any())
                 y_pred = best_model(X_test_packed, X_test_original_len)
                 y_pred = y_pred.squeeze().float()
 
@@ -722,7 +725,9 @@ if __name__ == "__main__":
                         'output_size': output_size,
                         'dropout_prob': dropout}
 
-        criterion = nn.BCELoss()
+        print("model params: ", model_params)
+        criterion = nn.BCEWithLogitsLoss()
+        print(criterion)
         model = get_model('lstm', model_params)
         optimizer = optim.Adam(model.parameters(),
                                lr=learning_rate, weight_decay=weight_decay)
@@ -730,7 +735,7 @@ if __name__ == "__main__":
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
         opt = Optimization(model=model, loss_fn=criterion,
                            optimizer=optimizer, scheduler=scheduler)
-
+        print(model)
         dataset = create_dataset(videos_path)
         train_loader, val_loader, test_loader = \
             data_preparation(dataset, batch_size=batch_size)

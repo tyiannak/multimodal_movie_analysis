@@ -234,10 +234,10 @@ def data_preparation(videos_dataset, batch_size):
     X = [x[0] for x in videos_dataset]
     y = [x[1] for x in videos_dataset]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=2,
+    X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         test_size=0.2, stratify=y)
-    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, random_state=2,
-                                                      test_size=0.13, stratify=y_train)
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
+                                                      test_size=0.12, stratify=y_train)
 
     # Define Scaler
     scaler = TimeSeriesStandardScaling()
@@ -352,7 +352,6 @@ class LSTMModel(nn.Module):
             ('relu1', nn.ReLU()),
             ('bn1', nn.BatchNorm1d(self.hidden_size)),
             ('fc1', nn.Linear(self.hidden_size, output_size)),
-
         ]))
 
         # self.fnn = nn.Sequential(OrderedDict([
@@ -604,7 +603,7 @@ class Optimization:
         predictions_tensor = (torch.Tensor(predictions))
 
         acc, f1_score_macro, cm, _ = calculate_metrics(predictions_tensor, values_tensor)
-
+        print("-----------------------------")
         print("\nClassification Report:\n"
               "accuracy: {:0.2f}%,".format(acc * 100),
               "f1_score (macro): {:0.2f}%".format(f1_score_macro * 100))
@@ -712,22 +711,22 @@ if __name__ == "__main__":
         weights.append(weight_class)
 
     weights = torch.FloatTensor(weights)
-    print("weights: ", weights)
-    # weights = torch.tensor([0.15, 1.0, 0.44])
-    #weights = torch.tensor([1.0, 6.48, 2.88])
+
+    # weights = torch.tensor
+    # weights = torch.tensor([1.0, 6.48, 2.88])
     # weights = torch.tensor([1.0, 833.0, 643.0])
 
-    for i in range(0, 3):
+    for i in range(0, 10):
         # LSTM parameters
         n_epochs = 100
         input_size = 43
-        num_layers = 2
-        batch_size = 16
+        num_layers = 1
 
+        batch_size = 32
         hidden_size = 64
-        dropout = 0.5
+        dropout = 0.3
         learning_rate = 1e-2
-        weight_decay = 1e-8
+        weight_decay = 0.0
         output_size = len(videos_path)
 
         model_params = {'input_size': input_size,
@@ -745,7 +744,9 @@ if __name__ == "__main__":
 
         params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         print("Model parameters: {}".format(params))
-        print(model_params)
+        print("batch_size:", batch_size)
+        print(model)
+        print("weights: ", weights)
 
         #initialize weights for both LSTM and Sequential
         model.lstm.apply(weight_init)
@@ -753,10 +754,11 @@ if __name__ == "__main__":
             submodule.apply(weight_init)
 
         criterion = nn.CrossEntropyLoss(weight=weights)
-
-        #criterion = nn.CrossEntropyLoss()
+        print(criterion)
+        # criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(model.parameters(),
                                lr=learning_rate, weight_decay=weight_decay)
+        print(optimizer)
 
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
         opt = Optimization(model=model, loss_fn=criterion, optimizer=optimizer, scheduler=scheduler)
@@ -783,8 +785,8 @@ if __name__ == "__main__":
     vals = torch.Tensor(vals)
     preds = torch.Tensor(preds)
 
-    # np.save(str(len(videos_path)) + "_LSTM_handcrafted_y_test.npy", vals)
-    # np.save(str(len(videos_path)) + "_LSTM_handcrafted_y_pred.npy", preds)
+    np.save(str(len(videos_path)) + "_LSTM_handcrafted_y_test.npy", vals)
+    np.save(str(len(videos_path)) + "_LSTM_handcrafted_y_pred.npy", preds)
 
     accuracy, f1_score_macro, cm, class_labels = \
         calculate_aggregated_metrics(preds, vals, class_labels)

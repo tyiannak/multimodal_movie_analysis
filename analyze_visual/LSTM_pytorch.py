@@ -32,9 +32,9 @@ matplotlib.use('Agg')
 
 
 """
-RUN (binary classification):
-big dataset (941 Static VS 583 Non Static):
-python3 LSTM_pytorch.py -v /media/ubuntu/Seagate/datasets/dataset_annotated_29_11_2021/dataset_annotated_5/3_class/Static /media/ubuntu/Seagate/datasets/dataset_annotated_29_11_2021/dataset_annotated_5/3_class/Zoom /media/ubuntu/Seagate/datasets/dataset_annotated_29_11_2021/dataset_annotated_5/3_class/Vertical_and_horizontal_movements
+RUN:
+python3 LSTM_pytorch.py -v /media/ubuntu/Seagate/datasets/Hand_Crafted_dataset/9_class/Travelling_out /media/ubuntu/Seagate/datasets/Hand_Crafted_dataset/9_class/Panoramic_lateral /media/ubuntu/Seagate/datasets/Hand_Crafted_dataset/9_class/Panoramic /media/ubuntu/Seagate/datasets/Hand_Crafted_dataset/9_class/Zoom_in /media/ubuntu/Seagate/datasets/Hand_Crafted_dataset/9_class/Vertical_movement /media/ubuntu/Seagate/datasets/Hand_Crafted_dataset/9_class/Static /media/ubuntu/Seagate/datasets/Hand_Crafted_dataset/9_class/Handled /media/ubuntu/Seagate/datasets/Hand_Crafted_dataset/9_class/Travelling_in /media/ubuntu/Seagate/datasets/Hand_Crafted_dataset/9_class/Aerial
+
 """
 
 
@@ -472,9 +472,6 @@ class Optimization:
 
                 X_train_packed = pack(X_train.float(), X_train_original_len, batch_first=True)
 
-                # print(X_train_packed[0].shape)
-                # print(X_train_packed.data)
-                # print(X_train_packed.batch_sizes)
                 with torch.set_grad_enabled(True):
                     self.model.train()
 
@@ -651,34 +648,6 @@ def get_model(model, model_params):
     return models.get(model.lower())(**model_params)
 
 
-def plot_confusion_matrix(name, cm, classes):
-    """
-    Plot confusion matrix
-    :name: name of classifier
-    :cm: estimates of confusion matrix
-    :classes: all the classes
-    """
-    plt.figure()
-    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
-    plt.title('Confusion matrix')
-    plt.colorbar()
-    tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
-    plt.yticks(tick_marks, classes)
-
-    fmt = 'd'
-    thresh = cm.max() / 2.
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, format(cm[i, j], fmt),
-                 horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
-
-    plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-    plt.savefig("shot_classifier_conf_mat_" + str(name) + ".jpg")
-
-
 if __name__ == "__main__":
     warnings.filterwarnings('ignore')
     args = parse_arguments()
@@ -712,21 +681,18 @@ if __name__ == "__main__":
 
     weights = torch.FloatTensor(weights)
 
-    # weights = torch.tensor
-    # weights = torch.tensor([1.0, 6.48, 2.88])
-    # weights = torch.tensor([1.0, 833.0, 643.0])
-
     for i in range(0, 10):
         # LSTM parameters
         n_epochs = 100
+
         input_size = 43
         num_layers = 1
 
-        batch_size = 32
-        hidden_size = 64
-        dropout = 0.3
+        batch_size = 8
+        hidden_size = 10
+        dropout = 0.0
         learning_rate = 1e-2
-        weight_decay = 0.0
+        weight_decay = 1e-3
         output_size = len(videos_path)
 
         model_params = {'input_size': input_size,
@@ -734,7 +700,6 @@ if __name__ == "__main__":
                         'num_layers': num_layers,
                         'output_size': output_size,
                         'dropout_prob': dropout}
-
 
         dataset = create_dataset(videos_path)
         train_loader, val_loader, test_loader = data_preparation(

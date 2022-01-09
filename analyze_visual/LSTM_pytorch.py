@@ -315,10 +315,8 @@ def calculate_aggregated_metrics(predicted_values, actual_values, class_labels, 
 
 def calculate_metrics(predicted_values, actual_values, threshold=0.0):
 
-    # print("PRIN ", predicted_values)
     y_pred = predicted_values >= threshold
     y = actual_values
-    # print("META ", y_pred)
     y_pred = y_pred.float()
 
     cm = confusion_matrix(y, y_pred)
@@ -368,18 +366,18 @@ class LSTMModel(nn.Module):
         ]))
 
         # self.fnn = nn.Sequential(OrderedDict([
-        #     ('fc1', nn.Linear(self.hidden_size, 128)),
+        #     ('fc1', nn.Linear(self.hidden_size, 256)),
         #     ('relu1', nn.ReLU()),
-        #     ('bn1', nn.BatchNorm1d(128)),
+        #     ('bn1', nn.BatchNorm1d(256)),
         #     #('drop1', nn.Dropout(0.6)),
-        #     ('fc2', nn.Linear(128, 32)),
-        #     ('bn2', nn.BatchNorm1d(32)),
+        #     ('fc2', nn.Linear(256, 64)),
         #     ('relu2', nn.ReLU()),
+        #     ('bn2', nn.BatchNorm1d(64)),
         #     #('drop2', nn.Dropout(0.6)),
-        #     ('fc3', nn.Linear(32, output_size))
+        #     ('fc3', nn.Linear(64, output_size))
         # ]))
 
-        self.m = nn.Sigmoid()
+        # self.m = nn.Sigmoid()
 
     def forward(self, X, lengths):
         """
@@ -711,7 +709,7 @@ if __name__ == "__main__":
         output_size = 1
         input_size = 43  # num of features
 
-        hidden_size = 100
+        hidden_size = 128
         num_layers = 2
         batch_size = 64
         dropout = 0.5
@@ -735,7 +733,10 @@ if __name__ == "__main__":
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
         opt = Optimization(model=model, loss_fn=criterion,
                            optimizer=optimizer, scheduler=scheduler)
+        print("batch size: ", batch_size)
         print(model)
+        print(optimizer)
+
         dataset = create_dataset(videos_path)
         train_loader, val_loader, test_loader = \
             data_preparation(dataset, batch_size=batch_size)

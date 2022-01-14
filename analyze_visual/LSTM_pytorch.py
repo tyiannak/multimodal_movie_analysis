@@ -709,14 +709,13 @@ if __name__ == "__main__":
         output_size = 1
         input_size = 43  # num of features
 
-        hidden_size = 128
+        hidden_size = 100
         num_layers = 2
-        batch_size = 64
-        dropout = 0.5
+        batch_size = 70
+        dropout = 0.4
 
         learning_rate = 1e-3
-        weight_decay = 1e-8
-
+        weight_decay = 1e-5
         model_params = {'input_size': input_size,
                         'hidden_size': hidden_size,
                         'num_layers': num_layers,

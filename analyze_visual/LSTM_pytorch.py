@@ -713,7 +713,6 @@ if __name__ == "__main__":
         num_layers = 2
         batch_size = 70
         dropout = 0.4
-
         learning_rate = 1e-3
         weight_decay = 1e-5
         model_params = {'input_size': input_size,
